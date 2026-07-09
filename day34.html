@@ -1,0 +1,608 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Day 34 — Handling Date and Time Features in Machine Learning 📅⏰</title>
+    <style>
+        :root {
+            --primary-color: #1a252f;
+            --secondary-color: #8e44ad;
+            --accent-color: #2980b9;
+            --bg-color: #ffffff;
+            --text-color: #2c3e50;
+            --code-bg: #1e1e2e;
+            --code-text: #a6e22e;
+            --warning-bg: #fff8e1;
+            --success-bg: #e8f8f5;
+            --danger-bg: #ffeaea;
+            --info-bg: #eaf2f8;
+            --border-color: #dcdde1;
+            --tree-bg: #f8f9fa;
+        }
+
+        html, body {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            min-height: 100%;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            line-height: 1.8;
+            color: var(--text-color);
+            background-color: var(--bg-color);
+        }
+
+        .container {
+            width: 100%;
+            max-width: 100%;
+            box-sizing: border-box;
+            padding: 60px 10%;
+        }
+
+        h1, h2, h3, h4, h5 {
+            color: var(--primary-color);
+            margin-top: 2.5em;
+            margin-bottom: 1em;
+            font-weight: 700;
+        }
+
+        h1 {
+            font-size: 3em;
+            text-align: center;
+            border-bottom: 5px solid var(--secondary-color);
+            padding-bottom: 30px;
+            margin-top: 0;
+            letter-spacing: -1px;
+        }
+
+        h2 {
+            font-size: 1.9em;
+            border-left: 6px solid var(--secondary-color);
+            padding-left: 20px;
+            margin-top: 4em;
+            background: linear-gradient(to right, rgba(142, 68, 173, 0.05), transparent);
+            padding-top: 10px;
+            padding-bottom: 10px;
+        }
+
+        h3 {
+            font-size: 1.35em;
+            color: #34495e;
+            margin-top: 2.5em;
+            padding-bottom: 8px;
+            border-bottom: 2px solid #eee;
+        }
+
+        h4 {
+            font-size: 1.15em;
+            color: var(--secondary-color);
+            margin-bottom: 0.8em;
+        }
+
+        p {
+            margin-bottom: 1.2em;
+            font-size: 1.05em;
+            color: #444;
+        }
+
+        strong {
+            color: var(--primary-color);
+            font-weight: 700;
+        }
+
+        ul, ol {
+            padding-left: 30px;
+            margin-bottom: 1.2em;
+        }
+
+        li {
+            margin-bottom: 0.6em;
+            font-size: 1.05em;
+            color: #555;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 2em 0;
+            font-size: 1em;
+            display: block;
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        th, td {
+            padding: 16px 22px;
+            text-align: left;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        th {
+            background: linear-gradient(135deg, var(--primary-color), #2c3e50);
+            color: #ffffff;
+            font-weight: 600;
+            text-transform: uppercase;
+            font-size: 0.85em;
+            letter-spacing: 0.5px;
+        }
+
+        tr:nth-child(even) {
+            background-color: #fafafa;
+        }
+
+        tr:hover {
+            background-color: #eef2f5;
+        }
+
+        pre {
+            background-color: var(--code-bg);
+            color: var(--code-text);
+            padding: 25px;
+            border-radius: 8px;
+            overflow-x: auto;
+            font-family: 'JetBrains Mono', 'Fira Code', 'Consolas', 'Courier New', monospace;
+            font-size: 0.95em;
+            line-height: 1.7;
+            margin: 1.5em 0;
+            border: 1px solid #333;
+            box-shadow: inset 0 0 20px rgba(0,0,0,0.3);
+        }
+
+        code {
+            font-family: 'JetBrains Mono', 'Fira Code', 'Consolas', 'Courier New', monospace;
+            background: #eef2f5;
+            color: #c0392b;
+            padding: 4px 8px;
+            border-radius: 5px;
+            font-size: 0.88em;
+            border: 1px solid #dce1e6;
+        }
+        
+        p code, li code, td code {
+            background: #eef2f5;
+            color: #c0392b;
+            padding: 3px 7px;
+            border-radius: 4px;
+            font-size: 0.9em;
+            border: 1px solid #dde4ea;
+        }
+
+        blockquote {
+            border-left: 6px solid var(--secondary-color);
+            margin: 2em 0;
+            padding: 25px 35px;
+            background: linear-gradient(to right, #f8f4ff, #ffffff);
+            color: #444;
+            font-style: italic;
+            font-size: 1.2em;
+            border-radius: 0 8px 8px 0;
+        }
+
+        .alert {
+            padding: 22px 28px;
+            margin: 2.5em 0;
+            border-radius: 0 10px 10px 0;
+            font-size: 1.05em;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+        }
+
+        .alert-warning { background-color: var(--warning-bg); border-left: 6px solid #f9a825; }
+        .alert-danger { background-color: var(--danger-bg); border-left: 6px solid #e53935; }
+        .alert-success { background-color: var(--success-bg); border-left: 6px solid #27ae60; }
+        .alert-info { background-color: var(--info-bg); border-left: 6px solid #3498db; }
+
+        .tree {
+            font-family: 'JetBrains Mono', 'Fira Code', monospace;
+            background: var(--tree-bg);
+            padding: 20px;
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+            white-space: pre;
+            line-height: 1.6;
+            margin: 1.5em 0;
+            font-size: 1em;
+            overflow-x: auto;
+            box-shadow: inset 0 0 0 0 #00000005;
+        }
+
+        .summary-box {
+            background: linear-gradient(135deg, #f5f7fa 0%, #e8f4f8 100%);
+            border: 2px solid var(--accent-color);
+            padding: 40px 45px;
+            border-radius: 12px;
+            margin-top: 4em;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.05);
+        }
+
+        .summary-box h2 {
+            border-left: none;
+            padding-left: 0;
+            margin-top: 0;
+            color: var(--primary-color);
+            text-align: center;
+            font-size: 1.8em;
+        }
+
+        .takeaway-box {
+            background: #fff;
+            border-left: 6px solid var(--secondary-color);
+            padding: 30px;
+            margin-top: 2em;
+            border-radius: 0 8px 8px 0;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.07);
+        }
+
+        @media (max-width: 768px) {
+            .container { padding: 25px 5%; }
+            h1 { font-size: 2.2em; }
+            h2 { font-size: 1.5em; }
+            th, td { padding: 12px 15px; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+
+    <h1>Day 34 — Handling Date and Time Features 📅⏰</h1>
+
+    <h2>1. Introduction</h2>
+    <p>In the previous lecture, we learned how to handle <strong>mixed variables</strong>. In this lesson, we will learn another important feature-engineering topic:</p>
+    <blockquote>
+        <strong>How to handle date- and time-based columns in a dataset.</strong>
+    </blockquote>
+    <p>Date and time columns often contain a large amount of hidden information. Instead of using the original date or time directly, we can extract useful features from it and provide those features to a machine-learning model. This lecture is mainly a <strong>code-based reference lesson</strong> covering useful pandas functions for date/time problems.</p>
+
+    <h2>Part 1: Why Are Date and Time Columns Important?</h2>
+    <p>Suppose a dataset contains the date: <code>22 August 2012</code>. Although this looks like a single value, it contains many pieces of hidden information: Day of the month, Month, Year, Day of the week, Week number, Quarter, Semester, Whether it is a weekday or weekend, and Time elapsed from another date.</p>
+    <table>
+        <thead><tr><th>Original date</th><th style="text-align:center;">Year</th><th style="text-align:center;">Month</th><th style="text-align:center;">Day</th><th>Day name</th><th style="text-align:center;">Quarter</th><th style="text-align:center;">Weekend?</th></tr></thead>
+        <tbody>
+            <tr><td>22-08-2012</td><td style="text-align:center;">2012</td><td style="text-align:center;">8</td><td style="text-align:center;">22</td><td>Wednesday</td><td style="text-align:center;">3</td><td style="text-align:center;">No</td></tr>
+        </tbody>
+    </table>
+    <p>This process is known as <strong>date feature extraction</strong> or <strong>date feature engineering</strong>.</p>
+
+    <h2>2. Real-World Example: Expense Tracker Application 💰</h2>
+    <p>Suppose users record their expenses along with the date and time of each transaction. Date and time information can help answer questions such as:</p>
+    <ul>
+        <li>Does the user spend more money on weekends or weekdays?</li>
+        <li>During which month or quarter is spending highest?</li>
+        <li>At what time of the day does the user usually spend money?</li>
+        <li>Are expenses higher during evenings or holidays?</li>
+    </ul>
+
+    <h2>3. Hidden Information Inside a Time Value</h2>
+    <p>Suppose we have the time: <code>15:58:30</code>. This single value contains Hour (<code>15</code>), Minute (<code>58</code>), and Second (<code>30</code>). Additional features can be created like Morning, Afternoon, Evening, Night, Business hours, and Time elapsed.</p>
+
+    <h2>4. Datasets Used in the Lecture</h2>
+    <p><strong>Dataset 1: <code>orders.csv</code></strong> (E-commerce order info: Date, Product, City, Quantity). Used for <strong>date-related</strong> feature engineering.</p>
+    <p><strong>Dataset 2: <code>messages.csv</code></strong> (Messaging app data: Date-time of message, Message content). Used for <strong>time-related</strong> feature engineering.</p>
+
+    <h2>5. The Main Problem: Dates Are Often Imported as Strings</h2>
+    <p>When a CSV file is imported, pandas may import the date column as <code>object</code> (strings). If it remains a string, we cannot directly extract Year, Month, Hour, etc.</p>
+    <div class="alert alert-danger">
+        <strong>The first task is to convert it into pandas datetime format.</strong>
+    </div>
+
+    <h2>6. Convert a Column into Datetime Format</h2>
+    <pre><code>df["date"] = pd.to_datetime(df["date"])</code></pre>
+    <p>After conversion, the data type becomes <code>datetime64[ns]</code>. Now pandas datetime functions can be applied via the <code>.dt</code> accessor.</p>
+
+    <h2>7 to 12. Extracting Basic Date Components</h2>
+    <pre><code># 7. Year
+df["year"] = df["date"].dt.year
+
+# 8. Month Number (1-12)
+df["month_number"] = df["date"].dt.month
+
+# 9. Month Name (String)
+df["month_name"] = df["date"].dt.month_name()
+
+# 10. Day of the Month (1-31)
+df["day"] = df["date"].dt.day
+
+# 11. Day of the Week as Number (Monday=0 ... Sunday=6)
+df["day_of_week"] = df["date"].dt.dayofweek
+
+# 12. Day Name (String)
+df["day_name"] = df["date"].dt.day_name()</code></pre>
+    <div class="alert alert-info">
+        <strong>Note on Day of Week:</strong> In pandas, numbering starts from <strong>Monday = 0</strong> and ends with <strong>Sunday = 6</strong>.
+    </div>
+
+    <h2>13. Determine Whether a Date Is a Weekend</h2>
+    <pre><code># Method 1: Using string names
+df["is_weekend"] = (
+    df["date"].dt.day_name()
+    .isin(["Saturday", "Sunday"])
+    .astype(int)
+)
+
+# Method 2: Shorter alternative using numbers (5=Sat, 6=Sun)
+df["is_weekend"] = (df["date"].dt.dayofweek >= 5).astype(int)</code></pre>
+    <table>
+        <thead><tr><th>day_name</th><th style="text-align:center;">is_weekend</th></tr></thead>
+        <tbody>
+            <tr><td>Tuesday</td><td style="text-align:center;">0</td></tr>
+            <tr><td>Saturday</td><td style="text-align:center;">1</td></tr>
+            <tr><td>Sunday</td><td style="text-align:center;">1</td></tr>
+        </tbody>
+    </table>
+
+    <h2>14. Extract the Week Number of the Year</h2>
+    <pre><code># Modern pandas syntax (replaces deprecated .dt.week)
+df["week_number"] = df["date"].dt.isocalendar().week</code></pre>
+
+    <h2>15. Extract the Quarter</h2>
+    <pre><code>df["quarter"] = df["date"].dt.quarter</code></pre>
+    <table>
+        <thead><tr><th>Quarter</th><th>Months</th></tr></thead>
+        <tbody>
+            <tr><td style="text-align:center;">Q1</td><td>January–March</td></tr>
+            <tr><td style="text-align:center;">Q2</td><td>April–June</td></tr>
+            <tr><td style="text-align:center;">Q3</td><td>July–September</td></tr>
+            <tr><td style="text-align:center;">Q4</td><td>October–December</td></tr>
+        </tbody>
+    </table>
+
+    <h2>16. Extract the Semester or Half-Year</h2>
+    <pre><code>import numpy as np
+
+# Using quarters
+df["semester"] = np.where(df["date"].dt.quarter.isin([1, 2]), 1, 2)
+
+# Simpler method using months
+df["semester"] = np.where(df["date"].dt.month <= 6, 1, 2)</code></pre>
+    <table>
+        <thead><tr><th>Semester</th><th>Months</th><th>Quarters</th></tr></thead>
+        <tbody>
+            <tr><td style="text-align:center;">1</td><td>January–June</td><td>Q1 and Q2</td></tr>
+            <tr><td style="text-align:center;">2</td><td>July–December</td><td>Q3 and Q4</td></tr>
+        </tbody>
+    </table>
+
+    <h2>17 to 20. Calculating Time Differences ⏳</h2>
+    <pre><code>today = pd.Timestamp("2021-04-21")
+
+# 17. Time Elapsed (Returns Timedelta object: days, hours, mins, secs)
+df["time_elapsed"] = today - df["date"]
+
+# 18. Extract Only the Number of Days
+df["days_elapsed"] = (today - df["date"]).dt.days
+
+# 19. Approximate Number of Months
+df["months_elapsed"] = (today - df["date"]) / np.timedelta64(1, "D") / 30.44
+
+# 20. Approximate Years
+df["years_elapsed"] = (today - df["date"]) / np.timedelta64(1, "D") / 365.25</code></pre>
+    <div class="alert alert-warning">
+        <strong>Note on Months/Years:</strong> Months do not have a fixed length (28, 29, 30, or 31 days). Therefore, month and year calculations are often approximate unless calendar-aware logic is used. <code>365.25</code> accounts for leap years.
+    </div>
+
+    <hr style="border: 1px solid #eee; margin: 4em 0;">
+
+    <h2>Part 2: Handling Time Features ⏰</h2>
+    <p>Now the lecture moves to the second dataset containing message timestamps like <code>2019-08-10 15:58:30</code>.</p>
+
+    <h2>21. Convert the Message Date Column into Datetime</h2>
+    <pre><code>time_df["date"] = pd.to_datetime(time_df["date"], errors="coerce")</code></pre>
+
+    <h2>22 to 25. Extracting Time Components</h2>
+    <pre><code># 22. Extract Hour (0-23)
+time_df["hour"] = time_df["date"].dt.hour
+
+# 23. Extract Minute (0-59)
+time_df["minute"] = time_df["date"].dt.minute
+
+# 24. Extract Second (0-59)
+time_df["second"] = time_df["date"].dt.second
+
+# 25. Extract Only the Time Portion
+time_df["time_only"] = time_df["date"].dt.time</code></pre>
+
+    <h2>26 to 30. Calculating Time Differences & Conversions</h2>
+    <pre><code>today = pd.Timestamp.now()
+
+# 26. Calculate Time Differences
+difference = today - time_df["date"]
+
+# 27. Convert to Seconds
+time_df["seconds_elapsed"] = difference.dt.total_seconds()
+
+# 28. Convert to Minutes
+time_df["minutes_elapsed"] = difference.dt.total_seconds() / 60
+
+# 29. Convert to Hours
+time_df["hours_elapsed"] = difference.dt.total_seconds() / 3600
+
+# 30. Convert to Days
+time_df["days_elapsed"] = difference.dt.total_seconds() / 86400</code></pre>
+    <div class="tree">1 minute = 60 seconds
+  1 hour   = 60 minutes = 3,600 seconds
+  1 day    = 24 hours   = 86,400 seconds</div>
+
+    <h2>31. Additional Feature: Part of the Day 🌅🌙</h2>
+    <pre><code>def part_of_day(hour):
+    if 5 <= hour < 12: return "Morning"
+    elif 12 <= hour < 17: return "Afternoon"
+    elif 17 <= hour < 21: return "Evening"
+    else: return "Night"
+
+time_df["part_of_day"] = time_df["hour"].apply(part_of_day)</code></pre>
+    <table>
+        <thead><tr><th style="text-align:center;">Hour</th><th>Part of day</th></tr></thead>
+        <tbody>
+            <tr><td style="text-align:center;">8</td><td>Morning</td></tr>
+            <tr><td style="text-align:center;">14</td><td>Afternoon</td></tr>
+            <tr><td style="text-align:center;">19</td><td>Evening</td></tr>
+            <tr><td style="text-align:center;">23</td><td>Night</td></tr>
+        </tbody>
+    </table>
+
+    <h2>32. Additional Useful Datetime Features</h2>
+    <pre><code>df["is_month_start"] = df["date"].dt.is_month_start
+df["is_month_end"] = df["date"].dt.is_month_end
+df["is_quarter_start"] = df["date"].dt.is_quarter_start
+df["is_quarter_end"] = df["date"].dt.is_quarter_end
+df["is_year_start"] = df["date"].dt.is_year_start
+df["is_year_end"] = df["date"].dt.is_year_end
+df["days_in_month"] = df["date"].dt.days_in_month
+df["is_leap_year"] = df["date"].dt.is_leap_year</code></pre>
+    <p>These features are highly useful in Financial analysis, Sales forecasting, Stock-market analysis, and Demand forecasting.</p>
+
+    <h2>33. Handling Invalid Date Values ⚠️</h2>
+    <p>Real datasets may contain invalid values like <code>2024-13-50</code> or <code>Unknown</code>. Using standard <code>pd.to_datetime()</code> may raise an error. A safer method is:</p>
+    <pre><code>df["date"] = pd.to_datetime(df["date"], errors="coerce")</code></pre>
+    <div class="alert alert-danger">
+        Invalid dates are converted into <code>NaT</code> (Not a Time), which is the datetime equivalent of <code>NaN</code>.
+    </div>
+
+    <h2>34. Handling Different Date Formats</h2>
+    <p>If the format is known, specify it to avoid parsing errors:</p>
+    <pre><code>df["date"] = pd.to_datetime(df["date"], format="%d-%m-%Y")</code></pre>
+    <table>
+        <thead><tr><th>Symbol</th><th>Meaning</th></tr></thead>
+        <tbody>
+            <tr><td><code>%d</code></td><td>Day (01-31)</td></tr>
+            <tr><td><code>%m</code></td><td>Month number (01-12)</td></tr>
+            <tr><td><code>%Y</code></td><td>Four-digit year (2025)</td></tr>
+            <tr><td><code>%y</code></td><td>Two-digit year (25)</td></tr>
+            <tr><td><code>%H</code></td><td>Hour (00-23)</td></tr>
+            <tr><td><code>%M</code></td><td>Minute (00-59)</td></tr>
+            <tr><td><code>%S</code></td><td>Second (00-59)</td></tr>
+        </tbody>
+    </table>
+
+    <h2>35. Time Zones 🌍</h2>
+    <pre><code># Localize to a timezone
+df["date"] = df["date"].dt.tz_localize("Asia/Kolkata")
+
+# Convert to another timezone
+df["new_york_time"] = df["date"].dt.tz_convert("America/New_York")</code></pre>
+    <div class="alert alert-info">
+        Timezone handling requires care because of UTC offsets and Daylight-saving time. It is relatively less common in beginner projects but important in Global apps, Server logs, and Financial markets.
+    </div>
+
+    <h2>36. Important Machine-Learning Consideration</h2>
+    <div class="alert alert-warning">
+        You should <strong>not</strong> automatically extract every possible date feature. Create only features relevant to the problem using <strong>Domain knowledge and the business problem</strong>.
+    </div>
+    <ul>
+        <li><strong>Expense prediction:</strong> Month, Weekend, Day of week, Part of day.</li>
+        <li><strong>Fraud detection:</strong> Hour, Minute, Time since previous transaction.</li>
+        <li><strong>Sales forecasting:</strong> Month, Quarter, Week number, Holiday indicator.</li>
+    </ul>
+
+    <h2>37. Important Issue: Cyclical Features 🔄</h2>
+    <p>Date and time features are cyclical. E.g., December (12) and January (1) are adjacent months, but their numeric difference is 11. To fix this for advanced ML, encode using Sine and Cosine:</p>
+    <pre><code># For the month (12 months cycle)
+df["month_sin"] = np.sin(2 * np.pi * df["month_number"] / 12)
+df["month_cos"] = np.cos(2 * np.pi * df["month_number"] / 12)
+
+# For the hour (24 hours cycle)
+df["hour_sin"] = np.sin(2 * np.pi * df["hour"] / 24)
+df["hour_cos"] = np.cos(2 * np.pi * df["hour"] / 24)</code></pre>
+
+    <h2>38. Complete Date Feature-Engineering Code</h2>
+    <pre><code>import pandas as pd
+import numpy as np
+
+df = pd.read_csv("orders.csv")
+
+# Convert into datetime safely
+df["date"] = pd.to_datetime(df["date"], errors="coerce")
+
+# Basic date features
+df["year"] = df["date"].dt.year
+df["month_number"] = df["date"].dt.month
+df["month_name"] = df["date"].dt.month_name()
+df["day"] = df["date"].dt.day
+df["day_of_week"] = df["date"].dt.dayofweek
+df["day_name"] = df["date"].dt.day_name()
+
+# Weekend feature
+df["is_weekend"] = (df["date"].dt.dayofweek >= 5).astype(int)
+
+# Week number (Modern pandas)
+df["week_number"] = df["date"].dt.isocalendar().week
+
+# Quarter & Semester
+df["quarter"] = df["date"].dt.quarter
+df["semester"] = np.where(df["date"].dt.month <= 6, 1, 2)
+
+# Date difference
+today = pd.Timestamp.now()
+df["days_elapsed"] = (today - df["date"]).dt.days
+
+print(df.head())</code></pre>
+
+    <h2>39. Complete Time Feature-Engineering Code</h2>
+    <pre><code>import pandas as pd
+
+time_df = pd.read_csv("messages.csv")
+
+# Convert into datetime safely
+time_df["date"] = pd.to_datetime(time_df["date"], errors="coerce")
+
+# Extract time components
+time_df["hour"] = time_df["date"].dt.hour
+time_df["minute"] = time_df["date"].dt.minute
+time_df["second"] = time_df["date"].dt.second
+time_df["time_only"] = time_df["date"].dt.time
+
+# Calculate elapsed time
+today = pd.Timestamp.now()
+difference = today - time_df["date"]
+
+time_df["seconds_elapsed"] = difference.dt.total_seconds()
+time_df["minutes_elapsed"] = difference.dt.total_seconds() / 60
+time_df["hours_elapsed"] = difference.dt.total_seconds() / 3600
+
+print(time_df.head())</code></pre>
+
+    <div class="summary-box">
+        <h2>40. Final Summary 📌</h2>
+        <p>The main steps for handling date and time features are:</p>
+        <ol>
+            <li><strong>Import dataset:</strong> <code>df = pd.read_csv("data.csv")</code></li>
+            <li><strong>Check data types:</strong> <code>df.info()</code></li>
+            <li><strong>Convert object to datetime:</strong> <code>df["date"] = pd.to_datetime(df["date"])</code></li>
+            <li><strong>Extract date features:</strong> <code>.dt.year</code>, <code>.month</code>, <code>.month_name()</code>, <code>.day</code>, <code>.dayofweek</code>, <code>.day_name()</code>, <code>.isocalendar().week</code>, <code>.quarter</code></li>
+            <li><strong>Create custom features:</strong> Weekend indicator, Semester, Part of the day, Time elapsed.</li>
+            <li><strong>Extract time components:</strong> <code>.hour</code>, <code>.minute</code>, <code>.second</code>, <code>.time</code></li>
+            <li><strong>Calculate differences:</strong> <code>today - df["date"]</code> and convert to Days/Hours/Minutes/Seconds.</li>
+        </ol>
+    </div>
+
+    <div class="takeaway-box">
+        <h2>Main Takeaway 🎯</h2>
+        <p>A date or timestamp is not merely one column. It can contain many hidden and useful features. For example:</p>
+        <div class="tree">2025-08-10 15:58:30
+       │
+       ├── Year             → 2025
+       ├── Month            → 8
+       ├── Month name       → August
+       ├── Day              → 10
+       ├── Day name         → Sunday
+       ├── Weekend          → Yes
+       ├── Week number       → 32
+       ├── Quarter          → 3
+       ├── Semester         → 2
+       ├── Hour             → 15
+       ├── Minute           → 58
+       ├── Second           → 30
+       └── Part of day      → Afternoon</div>
+        <p>These extracted features can significantly improve machine-learning models when they are relevant to the problem.</p>
+    </div>
+
+</div>
+
+</body>
+</html>
