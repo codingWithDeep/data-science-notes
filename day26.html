@@ -1,0 +1,695 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Day 26 — Ordinal Encoding & Label Encoding 📘</title>
+    <style>
+        :root {
+            --primary-color: #2c3e50;
+            --secondary-color: #3498db;
+            --bg-color: #f4f7f6;
+            --text-color: #333333;
+            --code-bg: #2d2d2d;
+            --code-text: #f8f8f2;
+            --warning-bg: #fff3cd;
+            --warning-border: #ffeeba;
+            --success-bg: #d4edda;
+            --danger-bg: #f8d7da;
+            --border-color: #e0e0e0;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: var(--text-color);
+            background-color: var(--bg-color);
+            margin: 0;
+            padding: 0;
+        }
+
+        .container {
+            max-width: 850px;
+            margin: 40px auto;
+            padding: 40px 50px;
+            background-color: #ffffff;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+            border-radius: 8px;
+            border-top: 5px solid var(--secondary-color);
+        }
+
+        h1, h2, h3 {
+            color: var(--primary-color);
+            margin-top: 2.5em;
+            margin-bottom: 1em;
+        }
+
+        h1 {
+            font-size: 2.2em;
+            border-bottom: 2px solid var(--border-color);
+            padding-bottom: 15px;
+            margin-top: 0;
+        }
+
+        h2 {
+            font-size: 1.6em;
+            border-left: 5px solid var(--secondary-color);
+            padding-left: 15px;
+        }
+
+        h3 {
+            font-size: 1.2em;
+        }
+
+        p {
+            margin-bottom: 1.2em;
+        }
+
+        strong {
+            color: var(--primary-color);
+        }
+
+        ul, ol {
+            padding-left: 25px;
+            margin-bottom: 1.2em;
+        }
+
+        li {
+            margin-bottom: 0.5em;
+        }
+
+        /* Tables */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 2em 0;
+            font-size: 0.95em;
+        }
+
+        th, td {
+            padding: 12px 15px;
+            text-align: left;
+            border: 1px solid var(--border-color);
+        }
+
+        th {
+            background-color: var(--primary-color);
+            color: #ffffff;
+            font-weight: 600;
+        }
+
+        tr:nth-child(even) {
+            background-color: #f9f9f9;
+        }
+
+        tr:hover {
+            background-color: #f1f5f8;
+        }
+
+        /* Code Blocks */
+        pre {
+            background-color: var(--code-bg);
+            color: var(--code-text);
+            padding: 20px;
+            border-radius: 5px;
+            overflow-x: auto;
+            font-family: 'Consolas', 'Courier New', monospace;
+            font-size: 0.9em;
+            line-height: 1.5;
+            margin: 1.5em 0;
+        }
+
+        code {
+            font-family: 'Consolas', 'Courier New', monospace;
+        }
+
+        /* Inline Code */
+        p code, li code {
+            background-color: #eef2f5;
+            color: #d63384;
+            padding: 3px 6px;
+            border-radius: 4px;
+            font-size: 0.9em;
+        }
+
+        /* Blockquotes */
+        blockquote {
+            border-left: 5px solid var(--secondary-color);
+            margin: 1.5em 0;
+            padding: 15px 25px;
+            background-color: #f8f9fa;
+            color: #555;
+            font-style: italic;
+        }
+
+        /* Warnings / Notes */
+        .warning {
+            background-color: var(--warning-bg);
+            border-left: 5px solid #ffc107;
+            padding: 15px 20px;
+            margin: 1.5em 0;
+            border-radius: 0 4px 4px 0;
+        }
+
+        .danger {
+            background-color: var(--danger-bg);
+            border-left: 5px solid #dc3545;
+            padding: 15px 20px;
+            margin: 1.5em 0;
+            border-radius: 0 4px 4px 0;
+        }
+
+        .success {
+            background-color: var(--success-bg);
+            border-left: 5px solid #28a745;
+            padding: 15px 20px;
+            margin: 1.5em 0;
+            border-radius: 0 4px 4px 0;
+        }
+
+        /* Tree structure styling */
+        .tree {
+            font-family: 'Consolas', 'Courier New', monospace;
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 5px;
+            border: 1px solid var(--border-color);
+            white-space: pre;
+            line-height: 1.4;
+            margin: 1.5em 0;
+        }
+
+        /* Footer / Summary Box */
+        .summary-box {
+            background-color: #e8f4f8;
+            border: 2px dashed var(--secondary-color);
+            padding: 25px;
+            border-radius: 8px;
+            margin-top: 3em;
+        }
+
+        .summary-box h2 {
+            border-left: none;
+            padding-left: 0;
+            margin-top: 0;
+            color: var(--secondary-color);
+        }
+
+        @media (max-width: 600px) {
+            .container {
+                padding: 20px;
+                margin: 20px auto;
+            }
+            h1 { font-size: 1.8em; }
+            h2 { font-size: 1.4em; }
+            table { font-size: 0.85em; }
+            th, td { padding: 8px; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+
+    <h1>Day 26 — Ordinal Encoding & Label Encoding 📘</h1>
+
+    <h2>1. Revision: Feature Engineering</h2>
+    <p>Feature Engineering means transforming raw data into a form that helps a Machine Learning model learn better.</p>
+    <p>Feature Engineering has different parts. One important part is <strong>Feature Transformation</strong>.</p>
+    <p>Under Feature Transformation, we study:</p>
+    <ul>
+        <li><strong>Feature Scaling</strong>
+            <ul>
+                <li>Standardization</li>
+                <li>Normalization</li>
+            </ul>
+        </li>
+        <li><strong>Encoding Categorical Data</strong>
+            <ul>
+                <li>Ordinal Encoding</li>
+                <li>One-Hot Encoding</li>
+                <li>Label Encoding</li>
+            </ul>
+        </li>
+        <li><strong>Mathematical Transformations</strong>
+            <ul>
+                <li>Log Transform</li>
+                <li>Reciprocal Transform</li>
+                <li>Square Root Transform</li>
+                <li>Box-Cox Transform</li>
+                <li>Yeo-Johnson Transform</li>
+            </ul>
+        </li>
+    </ul>
+    <p>In this topic, we will learn how to convert <strong>categorical data into numerical data</strong>.</p>
+
+    <h2>2. Types of Data</h2>
+    <p>Generally, data can be divided into two major types:</p>
+    <div class="tree">Data
+│
+├── Numerical Data
+│
+└── Categorical Data</div>
+
+    <h3>Numerical Data</h3>
+    <p>Numerical data contains numbers on which mathematical calculations can usually be performed.</p>
+    <table>
+        <thead>
+            <tr><th>Age</th><th>Height</th><th>Weight</th><th>Salary</th></tr>
+        </thead>
+        <tbody>
+            <tr><td>22</td><td>165 cm</td><td>65 kg</td><td>₹50,000</td></tr>
+        </tbody>
+    </table>
+    <p><strong>Examples of numerical features:</strong></p>
+    <ul>
+        <li>Age, Height, Weight, Salary, Temperature, Marks, Number of products purchased</li>
+    </ul>
+
+    <h3>Categorical Data</h3>
+    <p>Categorical data represents groups, labels, classes, or categories.</p>
+    <table>
+        <thead>
+            <tr><th>Gender</th><th>State</th><th>Branch</th><th>Nationality</th></tr>
+        </thead>
+        <tbody>
+            <tr><td>Male</td><td>Assam</td><td>Computer Science</td><td>Indian</td></tr>
+            <tr><td>Female</td><td>Karnataka</td><td>Mechanical</td><td>Indian</td></tr>
+        </tbody>
+    </table>
+    <p>Categorical values are generally stored as strings or text.</p>
+    <div class="tree">Male
+Female
+
+Assam
+West Bengal
+Karnataka
+
+Good
+Average
+Poor</div>
+
+    <h2>3. Types of Categorical Data</h2>
+    <p>Categorical data is mainly divided into two types:</p>
+    <div class="tree">Categorical Data
+│
+├── Nominal Data
+│
+└── Ordinal Data</div>
+
+    <h2>4. Nominal Categorical Data</h2>
+    <p>Nominal data contains categories that <strong>do not have any meaningful order, ranking, or hierarchy</strong>.</p>
+    <h3>Example: State</h3>
+    <div class="tree">Assam
+West Bengal
+Karnataka
+Maharashtra</div>
+    <p>We cannot say <code>Assam > Karnataka</code> or <code>Maharashtra < West Bengal</code>. There is no ranking between the states. Therefore, <code>State</code> is a <strong>Nominal Categorical Variable</strong>.</p>
+    
+    <h3>Example: Engineering Branch</h3>
+    <div class="tree">Computer Science
+Mechanical
+Civil
+Electrical
+Electronics</div>
+    <p>We cannot say <code>Computer Science > Mechanical</code>. These are only different categories. They do not have a natural order. Therefore, <code>Engineering Branch</code> is nominal data.</p>
+
+    <h3>Other examples</h3>
+    <ul>
+        <li><strong>Gender:</strong> Male, Female</li>
+        <li><strong>Colors:</strong> Red, Green, Blue</li>
+        <li><strong>City:</strong> Guwahati, Delhi, Mumbai</li>
+        <li><strong>Blood group:</strong> A+, B+, AB+, O+</li>
+    </ul>
+    <p>All these categories have <strong>no natural order</strong>.</p>
+
+    <h2>5. Ordinal Categorical Data</h2>
+    <p>Ordinal data contains categories that have a <strong>meaningful order, ranking, or hierarchy</strong>.</p>
+    <h3>Example: Product Review</h3>
+    <div class="tree">Poor < Average < Good</div>
+    <p>Here: <code>Good > Average > Poor</code>. Therefore, the categories have an order. So, <code>Review</code> is an <strong>Ordinal Categorical Variable</strong>.</p>
+    
+    <h3>More examples</h3>
+    <ul>
+        <li>Customer Satisfaction: <code>Very Bad < Bad < Average < Good < Excellent</code></li>
+        <li>Education: <code>High School < Undergraduate < Postgraduate</code></li>
+        <li>Size: <code>Small < Medium < Large</code></li>
+        <li>Level: <code>Low < Medium < High</code></li>
+        <li>Experience: <code>Beginner < Intermediate < Advanced</code></li>
+        <li>Designation: <code>Junior < Mid-Level < Senior</code></li>
+    </ul>
+
+    <h3>Nominal vs Ordinal Data</h3>
+    <table>
+        <thead>
+            <tr><th>Feature</th><th>Nominal Data</th><th>Ordinal Data</th></tr>
+        </thead>
+        <tbody>
+            <tr><td>Categories exist</td><td>Yes</td><td>Yes</td></tr>
+            <tr><td>Natural order exists</td><td>No</td><td>Yes</td></tr>
+            <tr><td>Ranking exists</td><td>No</td><td>Yes</td></tr>
+            <tr><td>Example 1</td><td>State</td><td>Product review</td></tr>
+            <tr><td>Example 2</td><td>Gender</td><td>Education level</td></tr>
+            <tr><td>Common encoding</td><td>One-Hot Encoding</td><td>Ordinal Encoding</td></tr>
+        </tbody>
+    </table>
+
+    <h2>6. Why Do We Need Encoding?</h2>
+    <p>Most categorical data is stored as text. However, most Machine Learning algorithms work with numbers and cannot directly understand strings such as "Good", "Poor", "Male", "Female".</p>
+    <p>Therefore, categorical values need to be converted into numerical values. This process is called:</p>
+    <blockquote>
+        <strong>Encoding</strong><br>
+        Converting categorical values into numerical values so that Machine Learning algorithms can process them.
+    </blockquote>
+
+    <h2>7. Common Encoding Techniques</h2>
+    <table>
+        <thead>
+            <tr><th>Encoding Technique</th><th>Used for</th></tr>
+        </thead>
+        <tbody>
+            <tr><td>Ordinal Encoding</td><td>Ordinal input features</td></tr>
+            <tr><td>One-Hot Encoding</td><td>Nominal input features</td></tr>
+            <tr><td>Label Encoding</td><td>Target/output labels</td></tr>
+        </tbody>
+    </table>
+
+    <h2>8. Ordinal Encoding</h2>
+    <p>Ordinal Encoding converts ordered categorical values into numerical values while preserving their order.</p>
+    <p>Suppose we have an education column:</p>
+    <table>
+        <thead><tr><th>Education</th></tr></thead>
+        <tbody>
+            <tr><td>High School</td></tr>
+            <tr><td>Undergraduate</td></tr>
+            <tr><td>Postgraduate</td></tr>
+        </tbody>
+    </table>
+    <p>The order is: <code>High School < Undergraduate < Postgraduate</code></p>
+    <p>After Ordinal Encoding:</p>
+    <table>
+        <thead><tr><th>Education</th><th>Encoded Value</th></tr></thead>
+        <tbody>
+            <tr><td>High School</td><td style="text-align:center;">0</td></tr>
+            <tr><td>Undergraduate</td><td style="text-align:center;">1</td></tr>
+            <tr><td>Postgraduate</td><td style="text-align:center;">2</td></tr>
+        </tbody>
+    </table>
+
+    <h2>9. How Does Ordinal Encoding Work?</h2>
+    <p>Suppose the feature is:</p>
+    <div class="tree">Education
+-----------
+Postgraduate
+High School
+Undergraduate
+Postgraduate</div>
+    <p>First, we identify that education has a natural order. Then, we provide this order to <code>OrdinalEncoder</code>. The encoder converts <code>High School → 0</code>, <code>Undergraduate → 1</code>, <code>Postgraduate → 2</code>.</p>
+    <p>The transformed data becomes:</p>
+    <div class="tree">Education
+---------
+2
+0
+1
+2</div>
+    
+    <div class="warning">
+        <strong>Important Point ⚠️</strong><br>
+        The Machine Learning model does not understand that <code>Postgraduate > Undergraduate > High School</code>. We must explicitly provide the correct order to <code>OrdinalEncoder</code>. The encoder cannot understand the semantic meaning of categories automatically.
+    </div>
+
+    <h2>10. Example Dataset</h2>
+    <p>Suppose we have customer data:</p>
+    <table>
+        <thead>
+            <tr><th>Age</th><th>Gender</th><th>Review</th><th>Education</th><th>Purchased</th></tr>
+        </thead>
+        <tbody>
+            <tr><td>30</td><td>Female</td><td>Average</td><td>School</td><td>No</td></tr>
+            <tr><td>68</td><td>Female</td><td>Poor</td><td>Undergraduate</td><td>No</td></tr>
+            <tr><td>70</td><td>Female</td><td>Good</td><td>Postgraduate</td><td>No</td></tr>
+            <tr><td>72</td><td>Female</td><td>Good</td><td>Postgraduate</td><td>Yes</td></tr>
+            <tr><td>16</td><td>Female</td><td>Average</td><td>Undergraduate</td><td>No</td></tr>
+            <tr><td>31</td><td>Female</td><td>Poor</td><td>School</td><td>Yes</td></tr>
+        </tbody>
+    </table>
+    <p>Our target is: <code>Purchased</code>. The goal is to predict whether a customer will purchase a recommended product.</p>
+
+    <h2>11. Identify the Type of Every Column</h2>
+    <table>
+        <thead>
+            <tr><th>Column</th><th>Data Type</th><th>Reason</th></tr>
+        </thead>
+        <tbody>
+            <tr><td>Age</td><td>Numerical</td><td>Contains numerical values</td></tr>
+            <tr><td>Gender</td><td>Nominal categorical</td><td>Male and Female have no order</td></tr>
+            <tr><td>Review</td><td>Ordinal categorical</td><td>Poor < Average < Good</td></tr>
+            <tr><td>Education</td><td>Ordinal categorical</td><td>School < Undergraduate < Postgraduate</td></tr>
+            <tr><td>Purchased</td><td>Nominal target</td><td>Yes and No have no ranking</td></tr>
+        </tbody>
+    </table>
+
+    <h3>Which Encoder Should Be Used?</h3>
+    <table>
+        <thead>
+            <tr><th>Column</th><th>Encoding Technique</th></tr>
+        </thead>
+        <tbody>
+            <tr><td>Gender</td><td>One-Hot Encoding</td></tr>
+            <tr><td>Review</td><td>Ordinal Encoding</td></tr>
+            <tr><td>Education</td><td>Ordinal Encoding</td></tr>
+            <tr><td>Purchased</td><td>Label Encoding</td></tr>
+        </tbody>
+    </table>
+    <p>In this lesson, <code>Gender</code> is ignored because One-Hot Encoding will be covered separately. We will focus on: <code>Review</code>, <code>Education</code>, and <code>Purchased</code>.</p>
+
+    <h2>12. Input Features and Target Variable</h2>
+    <p>In Machine Learning: <code>X = Input Features</code>, <code>y = Target or Output</code></p>
+    <p>For the example:</p>
+    <ul>
+        <li><strong>X:</strong> Review, Education</li>
+        <li><strong>y:</strong> Purchased</li>
+    </ul>
+
+    <h2>13. Ordinal Encoder vs Label Encoder</h2>
+    <div class="warning">
+        <strong>This is the most important difference. ⚠️</strong>
+    </div>
+    
+    <h3>OrdinalEncoder</h3>
+    <p><code>OrdinalEncoder</code> should be used for <strong>categorical input features (X)</strong>.</p>
+    <ul>
+        <li>Examples: Review, Education, Size, Experience Level</li>
+        <li>Can encode multiple feature columns at once.</li>
+        <li>Category order can be manually specified.</li>
+    </ul>
+
+    <h3>LabelEncoder</h3>
+    <p><code>LabelEncoder</code> should be used for the <strong>target/output variable (y)</strong>.</p>
+    <ul>
+        <li>Examples: Purchased (Yes/No), Placement (Placed/Not Placed), Rain (Yes/No), Email (Spam/Not Spam)</li>
+        <li>Usually encodes one-dimensional target values.</li>
+        <li>Category order is automatically decided.</li>
+    </ul>
+
+    <table>
+        <thead>
+            <tr><th>OrdinalEncoder</th><th>LabelEncoder</th></tr>
+        </thead>
+        <tbody>
+            <tr><td>Used for input features</td><td>Used for target labels</td></tr>
+            <tr><td>Applied to <code>X</code></td><td>Applied to <code>y</code></td></tr>
+            <tr><td>Can encode multiple columns</td><td>Usually encodes 1D target values</td></tr>
+            <tr><td>Order can be manually specified</td><td>Order is automatically decided</td></tr>
+        </tbody>
+    </table>
+    <p><strong>Remember:</strong> <code>OrdinalEncoder → X</code> &nbsp;&nbsp;|&nbsp;&nbsp; <code>LabelEncoder → y</code></p>
+
+    <h2>14. Train-Test Split</h2>
+    <p>Before performing encoding, divide the dataset into training and testing data.</p>
+    <pre><code>from sklearn.model_selection import train_test_split
+
+# Select the input features and target
+X = df.iloc[:, 2:4]
+y = df.iloc[:, -1]
+
+# Now perform the train-test split
+X_train, X_test, y_train, y_test = train_test_split(
+    X,
+    y,
+    test_size=0.2,
+    random_state=0
+)</code></pre>
+    <p>Meaning: 80% → Training Data, 20% → Testing Data</p>
+
+    <h2>15. Why Should We Split Before Encoding?</h2>
+    <p>The correct process is:</p>
+    <div class="tree">Original Data
+       ↓
+Train-Test Split
+       ↓
+Fit Encoder on Training Data
+       ↓
+Transform Training Data
+       ↓
+Transform Testing Data</div>
+    <p>We should learn the transformation only from the training data. Otherwise, information from the test data may enter the training process. This is called:</p>
+    <blockquote><strong>Data Leakage</strong></blockquote>
+    <div class="success">
+        <strong>Rule:</strong> First → Train-Test Split &nbsp;&nbsp;|&nbsp;&nbsp; Then → Encoding
+    </div>
+
+    <h2>16. Import OrdinalEncoder</h2>
+    <pre><code>from sklearn.preprocessing import OrdinalEncoder
+
+oe = OrdinalEncoder(
+    categories=[
+        ['Poor', 'Average', 'Good'],
+        ['School', 'Undergraduate', 'Postgraduate']
+    ]
+)</code></pre>
+
+    <h2>17. Understanding the <code>categories</code> Parameter</h2>
+    <p>The first input column is <code>Review</code>. Its order is: <code>Poor < Average < Good</code>.</p>
+    <p>The second input column is <code>Education</code>. Its order is: <code>School < Undergraduate < Postgraduate</code>.</p>
+    <div class="warning">
+        <strong>Important Rule:</strong> The order of lists must match the order of columns in <code>X_train</code>. The first list belongs to <code>Review</code>, the second list belongs to <code>Education</code>.
+    </div>
+
+    <h2>18 & 19. Fit and Transform</h2>
+    <p>Fit the encoder only on training data, then transform both:</p>
+    <pre><code>oe.fit(X_train)
+
+X_train_encoded = oe.transform(X_train)
+X_test_encoded = oe.transform(X_test)</code></pre>
+    <h3>Shorter Method</h3>
+    <pre><code>X_train_encoded = oe.fit_transform(X_train)
+X_test_encoded = oe.transform(X_test)</code></pre>
+    
+    <div class="danger">
+        <strong>❌ Wrong:</strong><br>
+        <code>X_test_encoded = oe.fit_transform(X_test)</code><br>
+        Never fit the encoder separately on the test data.
+    </div>
+    <div class="success">
+        <strong>✅ Correct:</strong><br>
+        Training Data → <code>fit_transform()</code><br>
+        Testing Data → <code>transform()</code>
+    </div>
+
+    <h2>20. Output of Ordinal Encoding</h2>
+    <p>If a row contains <code>Review = Good</code> and <code>Education = Undergraduate</code>, the output will be <code>[2, 1]</code>.</p>
+    <p>If a row contains <code>Review = Average</code> and <code>Education = School</code>, the output will be <code>[1, 0]</code>.</p>
+
+    <h2>21. Check Learned Categories</h2>
+    <pre><code>oe.categories_</code></pre>
+    <p>Output:</p>
+    <pre><code>[array(['Poor', 'Average', 'Good']), array(['School', 'Undergraduate', 'Postgraduate'])]</code></pre>
+    <p>The underscore <code>_</code> indicates an attribute that is created after fitting the encoder.</p>
+
+    <h2>22 - 25. Label Encoding</h2>
+    <p>Label Encoding is mainly used to convert categorical <strong>target labels</strong> into numerical labels.</p>
+    <pre><code>from sklearn.preprocessing import LabelEncoder
+
+le = LabelEncoder()
+
+# Fit and transform
+y_train_encoded = le.fit_transform(y_train)
+y_test_encoded = le.transform(y_test)</code></pre>
+    <p>Unlike <code>OrdinalEncoder</code>, we generally do not manually provide the category order. You can check learned classes using <code>le.classes_</code>.</p>
+
+    <h2>26. Complete Code</h2>
+    <pre><code>import pandas as pd
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import OrdinalEncoder, LabelEncoder
+
+# Select input features and target variable
+X = df[['Review', 'Education']]
+y = df['Purchased']
+
+# Train-test split
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=0)
+
+# Create and apply OrdinalEncoder
+oe = OrdinalEncoder(categories=[['Poor', 'Average', 'Good'], ['School', 'Undergraduate', 'Postgraduate']])
+X_train_encoded = oe.fit_transform(X_train)
+X_test_encoded = oe.transform(X_test)
+
+# Create and apply LabelEncoder
+le = LabelEncoder()
+y_train_encoded = le.fit_transform(y_train)
+y_test_encoded = le.transform(y_test)</code></pre>
+
+    <h2>28. Important Warning About LabelEncoder ⚠️</h2>
+    <p>According to the Scikit-learn documentation: <code>LabelEncoder</code> should be used to encode target values <code>y</code>, <strong>not input features <code>X</code></strong>.</p>
+    <div class="danger">
+        <strong>❌ Avoid:</strong> <code>le.fit_transform(X['Education'])</code> for input feature encoding.<br>
+        <strong>✅ Use:</strong> <code>OrdinalEncoder()</code> for ordinal input features.
+    </div>
+
+    <h2>29. Why Not Use LabelEncoder for Input Columns?</h2>
+    <p>For ordinal features, we should explicitly define the correct order. <code>LabelEncoder</code> may assign values based on its internal class ordering (e.g., alphabetically) rather than the actual semantic ranking that we want.</p>
+
+    <h2>30. What About Nominal Columns?</h2>
+    <p>Suppose we have Gender (Male, Female). There is no meaningful order. We should not use Ordinal Encoding because it may create an artificial relationship (e.g., <code>Male > Female</code>).</p>
+    <p>Therefore, nominal input columns are generally encoded using <strong>One-Hot Encoding</strong>.</p>
+
+    <h2>31. What If Different Columns Need Different Transformations?</h2>
+    <p>Doing every transformation separately can become difficult. Scikit-learn provides <strong>ColumnTransformer</strong>.</p>
+    <p><code>ColumnTransformer</code> allows us to apply different transformations to different columns in a single step. These transformations can later be combined using <code>ColumnTransformer</code> and <code>Pipeline</code>. (Will be studied in a later lesson).</p>
+
+    <h2>32. Important Practical Notes ⭐</h2>
+    <ol>
+        <li>Ordinal Encoding is used when categories have a meaningful order.</li>
+        <li>One-Hot Encoding is generally used when categories have no order.</li>
+        <li>Label Encoding is designed for target labels.</li>
+        <li>Use <code>OrdinalEncoder</code> on input features (<code>X</code>).</li>
+        <li>Use <code>LabelEncoder</code> on target values (<code>y</code>).</li>
+        <li>Always perform the train-test split before fitting the encoder.</li>
+        <li>Fit the encoder only on training data.</li>
+        <li>Use the same fitted encoder to transform testing data.</li>
+        <li>Never fit the encoder separately on testing data.</li>
+        <li>For Ordinal Encoding, manually provide the correct category order.</li>
+        <li>The order of category lists must match the order of input columns.</li>
+        <li>Do not use Ordinal Encoding for nominal categories because it may create a false order.</li>
+        <li>Do not use <code>LabelEncoder</code> for input feature columns.</li>
+    </ol>
+
+    <div class="summary-box">
+        <h2>Final Summary 🧠</h2>
+        <div class="tree">Categorical Data
+│
+├── Nominal Data
+│       │
+│       ├── No natural order
+│       │
+│       ├── Examples: Gender, State, City, Branch
+│       │
+│       └── One-Hot Encoding
+│
+└── Ordinal Data
+        │
+        ├── Natural order exists
+        │
+        ├── Examples: Poor < Average < Good
+        │
+        └── Ordinal Encoding</div>
+        <br>
+        <p>For the target:</p>
+        <div class="tree">Target Variable (y)
+       │
+       ↓
+Label Encoding</div>
+        <br>
+        <p><strong>The easiest rule to remember is:</strong></p>
+        <ul>
+            <li><strong>Ordinal Input Feature</strong> → <code>OrdinalEncoder</code></li>
+            <li><strong>Nominal Input Feature</strong> → <code>OneHotEncoder</code></li>
+            <li><strong>Categorical Target</strong> → <code>LabelEncoder</code></li>
+        </ul>
+    </div>
+
+</div>
+
+</body>
+</html>
