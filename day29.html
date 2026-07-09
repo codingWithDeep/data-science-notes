@@ -1,0 +1,790 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Day 29 — Scikit-Learn Pipelines</title>
+    <style>
+        :root {
+            --primary-color: #1a252f;
+            --secondary-color: #2980b9;
+            --bg-color: #ffffff;
+            --text-color: #333333;
+            --code-bg: #1e1e1e;
+            --code-text: #d4d4d4;
+            --warning-bg: #fff8e1;
+            --success-bg: #e8f5e9;
+            --danger-bg: #ffebee;
+            --info-bg: #e3f2fd;
+            --border-color: #e0e0e0;
+            --tree-bg: #f5f7fa;
+        }
+
+        html, body {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            min-height: 100%;
+        }
+
+        body {
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            line-height: 1.75;
+            color: var(--text-color);
+            background-color: var(--bg-color);
+        }
+
+        .container {
+            width: 100%;
+            max-width: 100%;
+            box-sizing: border-box;
+            padding: 50px 10%;
+        }
+
+        h1, h2, h3, h4, h5 {
+            color: var(--primary-color);
+            margin-top: 2.5em;
+            margin-bottom: 1em;
+        }
+
+        h1 {
+            font-size: 2.8em;
+            border-bottom: 4px solid var(--secondary-color);
+            padding-bottom: 20px;
+            margin-top: 0;
+        }
+
+        h2 {
+            font-size: 2em;
+            border-left: 6px solid var(--secondary-color);
+            padding-left: 20px;
+            margin-top: 3.5em;
+        }
+
+        h3 {
+            font-size: 1.4em;
+            color: #34495e;
+            margin-top: 2em;
+        }
+
+        h4 {
+            font-size: 1.15em;
+            color: #2c3e50;
+            margin-bottom: 0.8em;
+        }
+
+        p {
+            margin-bottom: 1.2em;
+            font-size: 1.05em;
+        }
+
+        strong {
+            color: var(--primary-color);
+            font-weight: 600;
+        }
+
+        ul, ol {
+            padding-left: 30px;
+            margin-bottom: 1.2em;
+        }
+
+        li {
+            margin-bottom: 0.6em;
+            font-size: 1.05em;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 2em 0;
+            font-size: 1em;
+            display: block;
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        th, td {
+            padding: 14px 20px;
+            text-align: left;
+            border: 1px solid var(--border-color);
+        }
+
+        th {
+            background-color: var(--primary-color);
+            color: #ffffff;
+            font-weight: 600;
+        }
+
+        tr:nth-child(even) {
+            background-color: #f8f9fa;
+        }
+
+        tr:hover {
+            background-color: #eef2f5;
+        }
+
+        pre {
+            background-color: var(--code-bg);
+            color: var(--code-text);
+            padding: 25px;
+            border-radius: 6px;
+            overflow-x: auto;
+            font-family: 'Fira Code', 'Consolas', 'Courier New', monospace;
+            font-size: 0.95em;
+            line-height: 1.6;
+            margin: 1.5em 0;
+            border: 1px solid #444;
+        }
+
+        code {
+            font-family: 'Fira Code', 'Consolas', 'Courier New', monospace;
+        }
+
+        p code, li code, td code {
+            background-color: #eef2f5;
+            color: #c0392b;
+            padding: 3px 7px;
+            border-radius: 4px;
+            font-size: 0.9em;
+            border: 1px solid #dde4ea;
+        }
+
+        blockquote {
+            border-left: 6px solid var(--secondary-color);
+            margin: 2em 0;
+            padding: 20px 30px;
+            background-color: #f4f8fb;
+            color: #444;
+            font-style: italic;
+            font-size: 1.15em;
+        }
+
+        .alert {
+            padding: 20px 25px;
+            margin: 2em 0;
+            border-radius: 0 6px 6px 0;
+            font-size: 1.05em;
+        }
+
+        .alert-warning { background-color: var(--warning-bg); border-left: 6px solid #f9a825; }
+        .alert-danger { background-color: var(--danger-bg); border-left: 6px solid #e53935; }
+        .alert-success { background-color: var(--success-bg); border-left: 6px solid #43a047; }
+        .alert-info { background-color: var(--info-bg); border-left: 6px solid #2980b9; }
+
+        .tree {
+            font-family: 'Fira Code', 'Consolas', 'Courier New', monospace;
+            background: var(--tree-bg);
+            padding: 20px;
+            border-radius: 6px;
+            border: 1px solid var(--border-color);
+            white-space: pre;
+            line-height: 1.5;
+            margin: 1.5em 0;
+            font-size: 1em;
+            overflow-x: auto;
+        }
+
+        .summary-box {
+            background-color: #e8f0fe;
+            border: 2px dashed var(--secondary-color);
+            padding: 35px 40px;
+            border-radius: 8px;
+            margin-top: 3em;
+        }
+
+        .summary-box h2 {
+            border-left: none;
+            padding-left: 0;
+            margin-top: 0;
+            color: var(--secondary-color);
+        }
+
+        @media (max-width: 768px) {
+            .container { padding: 20px 5%; }
+            h1 { font-size: 2em; }
+            h2 { font-size: 1.5em; }
+            th, td { padding: 10px 15px; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+
+    <h1>Day 29 — Scikit-Learn Pipelines</h1>
+    <h2>Topics Covered</h2>
+    <ol>
+        <li>What is a Pipeline?</li>
+        <li>Why do we need Pipelines?</li>
+        <li>Problems when building models without Pipelines</li>
+        <li>Titanic Dataset example</li>
+        <li>Train–Test Split</li>
+        <li>Missing-value imputation</li>
+        <li>One-Hot Encoding</li>
+        <li>Feature scaling</li>
+        <li>Feature selection</li>
+        <li>Creating a Pipeline</li>
+        <li><code>Pipeline</code> vs <code>make_pipeline</code></li>
+        <li>Training and prediction using a Pipeline</li>
+        <li>Exploring and debugging a Pipeline</li>
+        <li>Pipeline visualization</li>
+        <li>Cross-validation using Pipelines</li>
+        <li>Hyperparameter tuning using Pipelines</li>
+        <li>Exporting a Pipeline using Pickle</li>
+        <li>Using a Pipeline in production</li>
+    </ol>
+
+    <h2>1. Introduction to Scikit-Learn Pipelines</h2>
+    <p>A machine-learning project usually contains several steps.</p>
+    <div class="tree">Raw Data
+    ↓
+Handle Missing Values
+    ↓
+Encode Categorical Features
+    ↓
+Scale Numerical Features
+    ↓
+Select Important Features
+    ↓
+Train the Machine-Learning Model
+    ↓
+Prediction</div>
+    <p>Performing every operation separately makes the code long, repetitive, difficult to maintain, and more prone to mistakes.</p>
+    <p>Scikit-Learn provides <strong>Pipelines</strong> to combine all these operations into a single organized workflow.</p>
+
+    <h2>2. What Is a Pipeline?</h2>
+    <p>A Pipeline is a mechanism that combines multiple machine-learning steps sequentially.</p>
+    <p>The output produced by one step automatically becomes the input of the next step.</p>
+    <div class="tree">Input Data
+     ↓
+Step 1
+     ↓
+Step 2
+     ↓
+Step 3
+     ↓
+Machine-Learning Model
+     ↓
+Final Prediction</div>
+    <p>The Pipeline internally manages the transfer of data between all the steps.</p>
+    <div class="tree">Raw Dataset
+      ↓
+Missing-Value Imputation
+      ↓
+One-Hot Encoding
+      ↓
+Feature Scaling
+      ↓
+Feature Selection
+      ↓
+Decision Tree
+      ↓
+Prediction</div>
+    <p>Instead of manually performing every transformation, we provide the original data to the Pipeline. The Pipeline automatically performs every operation in the correct order.</p>
+
+    <h2>3. Why Do We Need Pipelines?</h2>
+    <p>Suppose a dataset contains: Missing values, Categorical variables, Numerical variables, Features with different scales.</p>
+    <p>Without a Pipeline, we may perform these operations manually:</p>
+    <pre><code># Step 1: Handle missing values
+# Step 2: Encode categorical columns
+# Step 3: Scale numerical columns
+# Step 4: Select important features
+# Step 5: Train the model</code></pre>
+    <p>The same preprocessing operations must also be applied to: Training data, Testing data, Validation data, New unseen data, User input received after deployment. This repetition creates several problems.</p>
+    
+    <h3>Problems Without Pipelines</h3>
+    <ol>
+        <li>The same preprocessing code must be written multiple times.</li>
+        <li>The order of transformations must be remembered manually.</li>
+        <li>Training and production code may become inconsistent.</li>
+        <li>A change in preprocessing requires changes in several files.</li>
+        <li>There is a greater possibility of human error.</li>
+        <li>Deployment becomes complicated.</li>
+        <li>Data leakage becomes more likely if preprocessing is performed incorrectly.</li>
+    </ol>
+    <p>Pipelines solve these problems by storing preprocessing and the machine-learning model together.</p>
+
+    <h2>4. Main Advantages of Pipelines</h2>
+    <ol>
+        <li><strong>Cleaner Code:</strong> All preprocessing operations are organized inside one object.</li>
+        <li><strong>Less Repetition:</strong> The same preprocessing code does not need to be rewritten for training, testing, and production.</li>
+        <li><strong>Correct Order of Operations:</strong> Every transformation is automatically executed in the order specified in the Pipeline.</li>
+        <li><strong>Consistent Preprocessing:</strong> The same learned transformations are applied to Training, Testing, Validation, and Production data.</li>
+        <li><strong>Easier Deployment:</strong> Only one trained Pipeline object needs to be exported.</li>
+        <li><strong>Easier Maintenance:</strong> If preprocessing changes, the Pipeline can be retrained and replaced without rewriting the production code.</li>
+        <li><strong>Reduced Data Leakage:</strong> During cross-validation, preprocessing is fitted separately inside every training fold.</li>
+        <li><strong>Easier Hyperparameter Tuning:</strong> Model parameters and preprocessing parameters can be tuned together.</li>
+    </ol>
+
+    <h2>5. Titanic Dataset Example</h2>
+    <p>The Titanic dataset is used to demonstrate Pipelines. The objective is to predict whether a passenger survived the Titanic disaster. The target column is <code>Survived</code> (<code>0</code> → Did not survive, <code>1</code> → Survived).</p>
+    <table>
+        <thead><tr><th>Feature</th><th>Description</th></tr></thead>
+        <tbody>
+            <tr><td><code>Pclass</code></td><td>Passenger class</td></tr>
+            <tr><td><code>Sex</code></td><td>Passenger gender</td></tr>
+            <tr><td><code>Age</code></td><td>Passenger age</td></tr>
+            <tr><td><code>SibSp</code></td><td>Number of siblings or spouses aboard</td></tr>
+            <tr><td><code>Parch</code></td><td>Number of parents or children aboard</td></tr>
+            <tr><td><code>Fare</code></td><td>Ticket fare</td></tr>
+            <tr><td><code>Embarked</code></td><td>Port from which the passenger boarded</td></tr>
+        </tbody>
+    </table>
+
+    <h2>6. Importing the Required Libraries</h2>
+    <pre><code>import numpy as np
+import pandas as pd
+
+from sklearn.model_selection import train_test_split
+from sklearn.impute import SimpleImputer
+from sklearn.preprocessing import OneHotEncoder, MinMaxScaler
+from sklearn.compose import ColumnTransformer
+from sklearn.feature_selection import SelectKBest, chi2
+from sklearn.tree import DecisionTreeClassifier
+from sklearn.pipeline import Pipeline, make_pipeline
+from sklearn.metrics import accuracy_score</code></pre>
+
+    <h2>7 & 8. Loading the Dataset & Removing Unnecessary Columns</h2>
+    <pre><code>df = pd.read_csv("train.csv")
+df.drop(columns=["PassengerId", "Name", "Ticket", "Cabin"], inplace=True)</code></pre>
+    <p>These columns were removed to keep the example simple. The primary objective is to understand Pipelines.</p>
+
+    <h2>9. Separating Features and Target</h2>
+    <pre><code>X = df.drop(columns=["Survived"])
+y = df["Survived"]</code></pre>
+    <p>The remaining feature order is approximately: <code>0 → Pclass, 1 → Sex, 2 → Age, 3 → SibSp, 4 → Parch, 5 → Fare, 6 → Embarked</code>. The order is important because column indexes are used later inside <code>ColumnTransformer</code>.</p>
+
+    <h2>10. Train–Test Split</h2>
+    <pre><code>X_train, X_test, y_train, y_test = train_test_split(
+    X, y, test_size=0.2, random_state=42
+)</code></pre>
+
+    <hr style="border: 1px solid #eee; margin: 3em 0;">
+
+    <h2>Part I — Building the Model Without a Pipeline</h2>
+    <p>The lecture first builds the entire workflow manually to demonstrate the problems that occur without Pipelines.</p>
+
+    <h3>11. Checking Missing Values</h3>
+    <pre><code>X_train.isnull().sum()</code></pre>
+    <p>Missing values are present in: <code>Age</code> and <code>Embarked</code>.</p>
+
+    <h3>12. Applying Imputation</h3>
+    <pre><code>si_age = SimpleImputer() # Default is strategy="mean"
+si_embarked = SimpleImputer(strategy="most_frequent")
+
+# Training Data
+X_train_age = si_age.fit_transform(X_train[["Age"]])
+X_train_embarked = si_embarked.fit_transform(X_train[["Embarked"]])
+
+# Testing Data
+X_test_age = si_age.transform(X_test[["Age"]])
+X_test_embarked = si_embarked.transform(X_test[["Embarked"]])</code></pre>
+    <div class="alert alert-danger">
+        <strong>Important rule:</strong> Training Data uses <code>fit_transform()</code>. Testing Data uses <code>transform()</code>. The testing data must never be used to learn preprocessing statistics. Otherwise, data leakage may occur.
+    </div>
+
+    <h3>13. One-Hot Encoding</h3>
+    <pre><code>ohe_sex = OneHotEncoder(sparse_output=False, handle_unknown="ignore")
+ohe_embarked = OneHotEncoder(sparse_output=False, handle_unknown="ignore")
+
+# Training Data
+X_train_sex = ohe_sex.fit_transform(X_train[["Sex"]])
+X_train_embarked = ohe_embarked.fit_transform(X_train_embarked)
+
+# Testing Data
+X_test_sex = ohe_sex.transform(X_test[["Sex"]])
+X_test_embarked = ohe_embarked.transform(X_test_embarked)</code></pre>
+    <div class="alert alert-info">
+        <strong>Why use <code>handle_unknown="ignore"</code>?</strong> Suppose a new category appears in testing/production data. Without it, Scikit-Learn may generate an error. With it, unknown categories are ignored and represented using zeros.
+    </div>
+
+    <h3>14. Combining All the Features</h3>
+    <pre><code>X_train_remaining = X_train.drop(columns=["Sex", "Age", "Embarked"])
+X_test_remaining = X_test.drop(columns=["Sex", "Age", "Embarked"])
+
+X_train_transformed = np.concatenate(
+    (X_train_remaining.values, X_train_age, X_train_sex, X_train_embarked), axis=1
+)
+
+X_test_transformed = np.concatenate(
+    (X_test_remaining.values, X_test_age, X_test_sex, X_test_embarked), axis=1
+)</code></pre>
+    <p>The order must remain identical during training, testing, and production.</p>
+
+    <h3>15. Training the Decision Tree</h3>
+    <pre><code>clf = DecisionTreeClassifier()
+clf.fit(X_train_transformed, y_train)
+y_pred = clf.predict(X_test_transformed)
+accuracy_score(y_test, y_pred)</code></pre>
+
+    <h3>16. Problems With the Manual Approach</h3>
+    <ul>
+        <li>Every preprocessing object must be managed separately.</li>
+        <li>Every transformation must be repeated manually.</li>
+        <li>The feature order must be remembered.</li>
+        <li>Several arrays must be concatenated.</li>
+        <li>Several objects must be exported.</li>
+        <li>Production code becomes long and the possibility of mistakes increases.</li>
+    </ul>
+
+    <h3>17 & 18. Exporting & Loading the Model Without a Pipeline</h3>
+    <pre><code>import pickle
+
+# Exporting multiple files
+pickle.dump(clf, open("models/clf.pkl", "wb"))
+pickle.dump(ohe_sex, open("models/ohe_sex.pkl", "wb"))
+pickle.dump(ohe_embarked, open("models/ohe_embarked.pkl", "wb"))
+
+# Loading multiple files in production
+clf = pickle.load(open("models/clf.pkl", "rb"))
+ohe_sex = pickle.load(open("models/ohe_sex.pkl", "rb"))
+ohe_embarked = pickle.load(open("models/ohe_embarked.pkl", "rb"))</code></pre>
+    <p>Multiple files must be transferred to production.</p>
+
+    <h3>19. Creating New Passenger Data (Manual Nightmare)</h3>
+    <pre><code>test_input = np.array([2, "male", 31.0, 0, 0, 10.5, "S"], dtype=object).reshape(1, 7)</code></pre>
+    <p>The same preprocessing steps must now be repeated manually (encode Sex, encode Embarked, extract numerical values, concatenate in exactly the same order). Only then can the model generate a prediction. <strong>This creates long and difficult production code.</strong></p>
+
+    <hr style="border: 1px solid #eee; margin: 3em 0;">
+
+    <h2>Part II — Building the Same Model Using a Pipeline</h2>
+
+    <h2>20. Pipeline Strategy</h2>
+    <div class="tree">Raw Titanic Data
+          ↓
+Missing-Value Imputation
+          ↓
+One-Hot Encoding
+          ↓
+Min-Max Scaling
+          ↓
+Feature Selection
+          ↓
+Decision Tree Classifier
+          ↓
+Prediction</div>
+
+    <h2>21. Step 1 — Missing-Value Imputation</h2>
+    <pre><code>trf1 = ColumnTransformer(
+    transformers=[
+        ("impute_age", SimpleImputer(), [2]),
+        ("impute_embarked", SimpleImputer(strategy="most_frequent"), [6])
+    ],
+    remainder="passthrough"
+)</code></pre>
+    <p>The Age column is at index <code>2</code>. The Embarked column is at index <code>6</code>.</p>
+    <div class="alert alert-info">
+        <strong>Meaning of <code>remainder="passthrough"</code>:</strong> By default, unselected columns are removed. Using <code>"passthrough"</code> keeps the remaining columns.
+    </div>
+
+    <h2>22. Why Are Column Indexes Used?</h2>
+    <p>After a transformation, Scikit-Learn may return a NumPy array. A NumPy array does not contain DataFrame column names. Therefore, later transformations may not be able to find columns using names. Using column indexes can make sequential transformations easier. However, column positions must be checked carefully because <code>ColumnTransformer</code> may change the order of the output columns.</p>
+
+    <h2>23. Step 2 — One-Hot Encoding</h2>
+    <pre><code>trf2 = ColumnTransformer(
+    transformers=[
+        ("ohe_sex_embarked", 
+         OneHotEncoder(sparse_output=False, handle_unknown="ignore"), 
+         [1, 6])
+    ],
+    remainder="passthrough"
+)</code></pre>
+    <p>Because missing values have already been handled by <code>trf1</code>, both categorical features can now be encoded together.</p>
+
+    <h2>24. Step 3 — Feature Scaling</h2>
+    <pre><code>trf3 = ColumnTransformer(
+    transformers=[
+        ("scale", MinMaxScaler(), slice(0, 10))
+    ]
+)</code></pre>
+    <p>Min-Max Scaling converts values approximately into the range <code>0 to 1</code>. Formula: <code>X_scaled = (X − X_min) / (X_max − X_min)</code>. Min-Max Scaling is used here because the lecture later applies Chi-Square feature selection, which requires non-negative feature values.</p>
+
+    <h2>25. Step 4 — Feature Selection</h2>
+    <pre><code>trf4 = SelectKBest(score_func=chi2, k=8)</code></pre>
+    <p>Meaning: Select the eight features with the highest Chi-Square scores. Feature selection is optional. Removing this step may improve or reduce model performance depending on the dataset.</p>
+
+    <h2>26. Step 5 — Machine-Learning Model</h2>
+    <pre><code>trf5 = DecisionTreeClassifier()</code></pre>
+    <p>This is the final estimator. The final step of a supervised-learning Pipeline is usually a machine-learning model.</p>
+
+    <h2>27. Creating the Pipeline</h2>
+    <pre><code>pipe = Pipeline(
+    steps=[
+        ("trf1", trf1),
+        ("trf2", trf2),
+        ("trf3", trf3),
+        ("trf4", trf4),
+        ("trf5", trf5)
+    ]
+)</code></pre>
+    <div class="tree">X
+↓
+trf1 → Missing values handled
+↓
+trf2 → Categorical variables encoded
+↓
+trf3 → Features scaled
+↓
+trf4 → Best features selected
+↓
+trf5 → Decision Tree trained</div>
+
+    <h2>28. Pipeline vs <code>make_pipeline</code></h2>
+    <h3>Method 1 — <code>Pipeline</code></h3>
+    <pre><code>pipe = Pipeline([
+    ("imputer", trf1),
+    ("encoder", trf2),
+    ("scaler", trf3),
+    ("selector", trf4),
+    ("model", trf5)
+])</code></pre>
+    <p><strong>Advantages:</strong> More readable, Easier debugging, Easier parameter tuning, Complete control over step names.</p>
+
+    <h3>Method 2 — <code>make_pipeline</code></h3>
+    <pre><code>pipe = make_pipeline(trf1, trf2, trf3, trf4, trf5)</code></pre>
+    <p><strong>Advantages:</strong> Shorter, Simpler, Less code. Step names are automatically generated.</p>
+    <p>The lecture prefers <code>Pipeline</code> because custom names improve readability and debugging.</p>
+
+    <h2>29. Training the Complete Pipeline</h2>
+    <pre><code>pipe.fit(X_train, y_train)</code></pre>
+    <p>Only one command is required. Internally, Scikit-Learn performs all the fits and transforms sequentially.</p>
+
+    <h2>30. Making Predictions</h2>
+    <pre><code>y_pred = pipe.predict(X_test)</code></pre>
+    <p>The Pipeline automatically performs all preprocessing before generating predictions. There is no need to manually impute, encode, scale, select, or concatenate.</p>
+
+    <h2>31. Pipeline With a Model vs Pipeline Without a Model</h2>
+    <div class="alert alert-info">
+        <strong>Pipeline Containing Only Transformers (Imputation → Encoding → Scaling):</strong><br>
+        Use <code>pipe.fit_transform(X_train)</code> or <code>pipe.fit(X_train)</code> then <code>pipe.transform(X_train)</code>.
+    </div>
+    <div class="alert alert-success">
+        <strong>Pipeline Containing a Machine-Learning Model:</strong><br>
+        Use <code>pipe.fit(X_train, y_train)</code> and <code>pipe.predict(X_test)</code>. The final model does not normally implement <code>transform()</code>.
+    </div>
+
+    <h2>32. Visualizing the Pipeline</h2>
+    <pre><code>from sklearn import set_config
+set_config(display="diagram")
+
+# Then just type the variable name in a Jupyter cell:
+pipe</code></pre>
+    <p>The diagram shows the entire flow visually, making a complex workflow easier to understand.</p>
+
+    <h2>33 & 34. Exploring the Pipeline</h2>
+    <pre><code># Returns a dictionary-like object
+pipe.named_steps
+
+# Accessing an individual step
+pipe.named_steps["trf1"]
+pipe.named_steps["trf5"]</code></pre>
+    <p>This is useful for debugging, inspecting parameters, examining learned values, and understanding the Pipeline.</p>
+
+    <h2>35. Accessing Learned Imputation Values</h2>
+    <p>The underscore in <code>transformers_</code> usually indicates that the attribute is available after fitting.</p>
+    <pre><code># Accessing the mean Age learned by trf1
+pipe.named_steps["trf1"].transformers_[0][1].statistics_
+
+# Accessing the most frequent Embarked value learned by trf1
+pipe.named_steps["trf1"].transformers_[1][1].statistics_</code></pre>
+
+    <h2>36 & 37. Evaluating the Pipeline</h2>
+    <pre><code>accuracy_score(y_test, y_pred)</code></pre>
+    <p>The lecture obtains an accuracy of approximately <code>62%</code>. (Feature selection may reduce performance if it removes useful information).</p>
+
+    <h2>38. Cross-Validation Using a Pipeline</h2>
+    <pre><code>from sklearn.model_selection import cross_val_score
+
+scores = cross_val_score(pipe, X_train, y_train, cv=5, scoring="accuracy")
+scores.mean()</code></pre>
+    <div class="alert alert-info">
+        <strong>Why Pipelines Are Important During Cross-Validation:</strong><br>
+        Without a Pipeline, preprocessing may accidentally be fitted using the entire dataset before cross-validation. That can leak information from validation folds into training. With a Pipeline, <strong>every training fold fits its own Imputer, Encoder, Scaler, and Selector.</strong> The validation fold is only transformed. This produces a more reliable evaluation.
+    </div>
+
+    <h2>40. Hyperparameter Tuning Using Pipelines</h2>
+    <pre><code>from sklearn.model_selection import GridSearchCV
+
+# Pipeline parameters use: step_name__parameter_name (TWO underscores)
+params = {
+    "trf5__max_depth": [1, 2, 3, 4, 5, None]
+}
+
+grid = GridSearchCV(pipe, params, cv=5, scoring="accuracy")
+grid.fit(X_train, y_train)
+
+grid.best_score_
+grid.best_params_</code></pre>
+
+    <h2>41 & 42. Pipeline Parameter Naming Rule & Tuning Preprocessing</h2>
+    <p>Preprocessing parameters can also be tuned alongside model parameters.</p>
+    <pre><code>params = {
+    "trf4__k": [5, 6, 7, 8],
+    "trf5__max_depth": [2, 3, 4, 5, None]
+}</code></pre>
+    <p>Grid Search tests different combinations of Number of selected features + Decision-tree depth.</p>
+
+    <h2>43. Exporting the Complete Pipeline</h2>
+    <pre><code>import pickle
+
+pickle.dump(pipe, open("pipe.pkl", "wb"))</code></pre>
+    <p>Only one file is required: <code>pipe.pkl</code>. It already contains the Age imputer, Embarked imputer, One-Hot Encoder, MinMaxScaler, Feature selector, and Decision Tree.</p>
+
+    <h2>44. Loading the Pipeline in Production</h2>
+    <pre><code>pipe = pickle.load(open("pipe.pkl", "rb"))
+
+test_input = pd.DataFrame([{
+    "Pclass": 2, "Sex": "male", "Age": 31,
+    "SibSp": 0, "Parch": 0, "Fare": 10.5, "Embarked": "S"
+}])
+
+prediction = pipe.predict(test_input)</code></pre>
+    <p>The Pipeline automatically performs all preprocessing.</p>
+
+    <h2>45 & 46. Production Code: Without vs With a Pipeline</h2>
+    <div class="tree">Without a Pipeline:
+Load classifier → Load imputers → Load encoders → Handle missing values → 
+Encode categories → Scale features → Select features → Maintain feature order → 
+Combine arrays → Predict
+
+With a Pipeline:
+pipe = pickle.load(open("pipe.pkl", "rb"))
+prediction = pipe.predict(test_input)</div>
+
+    <h2>47. Updating the Model</h2>
+    <p>Suppose a preprocessing step is changed (e.g., Remove feature selection, Change the scaler, Add a new transformer). With Pipelines:</p>
+    <ol>
+        <li>Update the training Pipeline.</li>
+        <li>Retrain the Pipeline.</li>
+        <li>Export a new <code>pipe.pkl</code>.</li>
+        <li>Replace the old Pipeline file on the server.</li>
+    </ol>
+    <p><strong>The prediction code can remain unchanged.</strong></p>
+
+    <h2>48. Important Pipeline Rules</h2>
+    <div class="alert alert-warning">
+        <strong>Rule 1:</strong> All intermediate Pipeline steps must implement <code>fit()</code> and <code>transform()</code> (or <code>fit_transform()</code>). Examples: <code>SimpleImputer</code>, <code>OneHotEncoder</code>, <code>StandardScaler</code>, <code>PCA</code>, <code>SelectKBest</code>.
+    </div>
+    <div class="alert alert-success">
+        <strong>Rule 2:</strong> The final step may be a machine-learning estimator implementing <code>fit()</code> and <code>predict()</code>. Examples: <code>DecisionTreeClassifier</code>, <code>LogisticRegression</code>, <code>RandomForestClassifier</code>.
+    </div>
+    <div class="alert alert-danger">
+        <strong>Rule 3:</strong> Do not fit preprocessing objects using testing data. Correct: <code>imputer.fit(X_train)</code> then <code>imputer.transform(X_test)</code>. Incorrect: <code>imputer.fit(X_test)</code>.
+    </div>
+    <div class="alert alert-info">
+        <strong>Rule 4:</strong> Use <code>handle_unknown="ignore"</code> when One-Hot Encoding categories that may contain unseen values in production.
+    </div>
+    <div class="alert alert-info">
+        <strong>Rule 5:</strong> Use <code>remainder="passthrough"</code> when unselected columns must remain in the output.
+    </div>
+
+    <h2>49. Extra Information — Pipeline vs ColumnTransformer</h2>
+    <h3>Pipeline</h3>
+    <p>Pipeline applies operations sequentially.</p>
+    <div class="tree">Step 1 → Step 2 → Step 3
+Example: Imputation → Encoding → Scaling → Model</div>
+
+    <h3>ColumnTransformer</h3>
+    <p>ColumnTransformer applies different transformations to different columns.</p>
+    <div class="tree">Age           → Mean Imputation
+Embarked      → Most-Frequent Imputation
+Numerical Cols → Scaling
+Categorical Cols → One-Hot Encoding</div>
+
+    <h3>Together</h3>
+    <div class="tree">Pipeline
+├── ColumnTransformer
+│      ├── Numerical Pipeline
+│      └── Categorical Pipeline
+↓
+Machine-Learning Model</div>
+
+    <h2>50. A Better Real-World Pipeline Structure</h2>
+    <p>A cleaner modern design is to use sub-pipelines with column names instead of manually tracking changing column indexes.</p>
+    <pre><code>numeric_features = ["Age", "Fare", "SibSp", "Parch"]
+categorical_features = ["Sex", "Embarked", "Pclass"]
+
+# Numerical Pipeline
+numeric_pipe = Pipeline(steps=[
+    ("imputer", SimpleImputer(strategy="median")),
+    ("scaler", MinMaxScaler())
+])
+
+# Categorical Pipeline
+categorical_pipe = Pipeline(steps=[
+    ("imputer", SimpleImputer(strategy="most_frequent")),
+    ("encoder", OneHotEncoder(handle_unknown="ignore"))
+])
+
+# Combine both using ColumnTransformer
+preprocessor = ColumnTransformer(
+    transformers=[
+        ("num", numeric_pipe, numeric_features),
+        ("cat", categorical_pipe, categorical_features)
+    ]
+)
+
+# Create the final Pipeline
+model = Pipeline(steps=[
+    ("preprocessor", preprocessor),
+    ("classifier", DecisionTreeClassifier(random_state=42))
+])
+
+# Train and Predict
+model.fit(X_train, y_train)
+y_pred = model.predict(X_test)</code></pre>
+
+    <h2>51. Final Complete Workflow</h2>
+    <div class="tree">Load Dataset
+↓
+Remove Unnecessary Columns
+↓
+Separate X and y
+↓
+Train–Test Split
+↓
+Create Numerical Preprocessing
+↓
+Create Categorical Preprocessing
+↓
+Combine Them Using ColumnTransformer
+↓
+Add Preprocessor and Model to Pipeline
+↓
+Train Using pipe.fit()
+↓
+Predict Using pipe.predict()
+↓
+Evaluate the Model
+↓
+Perform Cross-Validation
+↓
+Tune Hyperparameters
+↓
+Export the Complete Pipeline
+↓
+Load the Pipeline in Production
+↓
+Predict Directly From Raw User Input</div>
+
+    <div class="summary-box">
+        <h2>Final Summary</h2>
+        <p>A Scikit-Learn Pipeline combines preprocessing and model training into one organized workflow. The output of one step automatically becomes the input of the next step.</p>
+        
+        <p><strong>Without Pipelines:</strong> Long code, Repeated preprocessing, Multiple exported objects, Manual feature ordering, Difficult deployment, Higher probability of errors.</p>
+        
+        <p><strong>With Pipelines:</strong> Clean code, Automatic preprocessing, Consistent transformations, Reduced data leakage, Easy cross-validation, Easy hyperparameter tuning, Simple deployment, One exported Pipeline file.</p>
+        
+        <p>The most important production advantage is:</p>
+        <pre><code>prediction = pipe.predict(new_data)</code></pre>
+        <p>The Pipeline automatically performs: Imputation → Encoding → Scaling → Feature Selection → Prediction.</p>
+        
+        <p style="text-align: center; margin-top: 3em; font-weight: bold; color: var(--secondary-color);">
+            This is why Pipelines are one of the most important tools for building clean, reliable, maintainable, and production-ready machine-learning systems.
+        </p>
+    </div>
+
+</div>
+
+</body>
+</html>
