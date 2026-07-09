@@ -1,0 +1,676 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Day 31 — Power Transformer: Box–Cox and Yeo–Johnson 📘</title>
+    <style>
+        :root {
+            --primary-color: #1a252f;
+            --secondary-color: #2980b9;
+            --bg-color: #ffffff;
+            --text-color: #333333;
+            --code-bg: #1e1e1e;
+            --code-text: #d4d4d4;
+            --warning-bg: #fff8e1;
+            --success-bg: #e8f5e9;
+            --danger-bg: #ffebee;
+            --info-bg: #e3f2fd;
+            --border-color: #e0e0e0;
+            --tree-bg: #f5f7fa;
+        }
+
+        html, body {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            min-height: 100%;
+        }
+
+        body {
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            line-height: 1.75;
+            color: var(--text-color);
+            background-color: var(--bg-color);
+        }
+
+        .container {
+            width: 100%;
+            max-width: 100%;
+            box-sizing: border-box;
+            padding: 50px 10%;
+        }
+
+        h1, h2, h3, h4, h5 {
+            color: var(--primary-color);
+            margin-top: 2.5em;
+            margin-bottom: 1em;
+        }
+
+        h1 {
+            font-size: 2.8em;
+            border-bottom: 4px solid var(--secondary-color);
+            padding-bottom: 20px;
+            margin-top: 0;
+        }
+
+        h2 {
+            font-size: 2em;
+            border-left: 6px solid var(--secondary-color);
+            padding-left: 20px;
+            margin-top: 3.5em;
+        }
+
+        h3 {
+            font-size: 1.4em;
+            color: #34495e;
+            margin-top: 2em;
+        }
+
+        h4 {
+            font-size: 1.15em;
+            color: #2c3e50;
+            margin-bottom: 0.8em;
+        }
+
+        p {
+            margin-bottom: 1.2em;
+            font-size: 1.05em;
+        }
+
+        strong {
+            color: var(--primary-color);
+            font-weight: 600;
+        }
+
+        ul, ol {
+            padding-left: 30px;
+            margin-bottom: 1.2em;
+        }
+
+        li {
+            margin-bottom: 0.6em;
+            font-size: 1.05em;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 2em 0;
+            font-size: 1em;
+            display: block;
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        th, td {
+            padding: 14px 20px;
+            text-align: left;
+            border: 1px solid var(--border-color);
+        }
+
+        th {
+            background-color: var(--primary-color);
+            color: #ffffff;
+            font-weight: 600;
+        }
+
+        tr:nth-child(even) {
+            background-color: #f8f9fa;
+        }
+
+        tr:hover {
+            background-color: #eef2f5;
+        }
+
+        pre {
+            background-color: var(--code-bg);
+            color: var(--code-text);
+            padding: 25px;
+            border-radius: 6px;
+            overflow-x: auto;
+            font-family: 'Fira Code', 'Consolas', 'Courier New', monospace;
+            font-size: 0.95em;
+            line-height: 1.6;
+            margin: 1.5em 0;
+            border: 1px solid #444;
+        }
+
+        code {
+            font-family: 'Fira Code', 'Consolas', 'Courier New', monospace;
+        }
+
+        p code, li code, td code {
+            background-color: #eef2f5;
+            color: #c0392b;
+            padding: 3px 7px;
+            border-radius: 4px;
+            font-size: 0.9em;
+            border: 1px solid #dde4ea;
+        }
+
+        blockquote {
+            border-left: 6px solid var(--secondary-color);
+            margin: 2em 0;
+            padding: 20px 30px;
+            background-color: #f4f8fb;
+            color: #444;
+            font-style: italic;
+            font-size: 1.15em;
+        }
+
+        .alert {
+            padding: 20px 25px;
+            margin: 2em 0;
+            border-radius: 0 6px 6px 0;
+            font-size: 1.05em;
+        }
+
+        .alert-warning { background-color: var(--warning-bg); border-left: 6px solid #f9a825; }
+        .alert-danger { background-color: var(--danger-bg); border-left: 6px solid #e53935; }
+        .alert-success { background-color: var(--success-bg); border-left: 6px solid #43a047; }
+        .alert-info { background-color: var(--info-bg); border-left: 6px solid #2980b9; }
+
+        .tree {
+            font-family: 'Fira Code', 'Consolas', 'Courier New', monospace;
+            background: var(--tree-bg);
+            padding: 20px;
+            border-radius: 6px;
+            border: 1px solid var(--border-color);
+            white-space: pre;
+            line-height: 1.5;
+            margin: 1.5em 0;
+            font-size: 1em;
+            overflow-x: auto;
+        }
+
+        .math {
+            display: block;
+            text-align: center;
+            font-family: 'Times New Roman', Times, serif;
+            font-size: 1.2em;
+            font-style: italic;
+            margin: 1.5em 0;
+            padding: 15px;
+            color: #2c3e50;
+            background: #f8f9fa;
+            border-left: 4px solid var(--secondary-color);
+        }
+
+        .summary-box {
+            background-color: #e8f0fe;
+            border: 2px dashed var(--secondary-color);
+            padding: 35px 40px;
+            border-radius: 8px;
+            margin-top: 3em;
+        }
+
+        .summary-box h2 {
+            border-left: none;
+            padding-left: 0;
+            margin-top: 0;
+            color: var(--secondary-color);
+        }
+
+        @media (max-width: 768px) {
+            .container { padding: 20px 5%; }
+            h1 { font-size: 2em; }
+            h2 { font-size: 1.5em; }
+            th, td { padding: 10px 15px; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+
+    <h1>Day 31 — Power Transformer: Box–Cox and Yeo–Johnson Transformations</h1>
+
+    <h2>1. Introduction</h2>
+    <p>In the previous lecture, we started studying <strong>mathematical transformations</strong> used in machine learning. We learned about the <code>FunctionTransformer</code> class and covered transformations such as:</p>
+    <ul>
+        <li>Log transformation</li>
+        <li>Reciprocal transformation</li>
+        <li>Square transformation</li>
+        <li>Square-root transformation</li>
+        <li>Custom mathematical transformations</li>
+    </ul>
+    <p>In this lecture, we continue mathematical transformations and study another important Scikit-learn class:</p>
+    <pre><code>PowerTransformer</code></pre>
+    <p>The <code>PowerTransformer</code> class provides two major transformation methods:</p>
+    <ol>
+        <li><strong>Box–Cox Transformation</strong></li>
+        <li><strong>Yeo–Johnson Transformation</strong></li>
+    </ol>
+    <p>There is another transformation known as the <strong>Quantile Transformer</strong>, but it will be studied separately because it works differently from power transformations.</p>
+
+    <h2>2. Why Do We Need Mathematical Transformations?</h2>
+    <p>Real-world numerical data is often not normally distributed. A feature may be: Right-skewed, Left-skewed, Highly concentrated in one region, Spread unevenly, Affected by extreme values, Heteroscedastic (meaning its variance changes across different value ranges).</p>
+    <p>For example, consider a feature containing the ages of concrete samples:</p>
+    <div class="tree">1, 2, 3, 5, 7, 14, 28, 56, 90, 180, 365</div>
+    <p>Most observations may have small ages, while only a few observations have very large ages. Therefore, the distribution becomes highly right-skewed.</p>
+    <p>Power transformations attempt to change such distributions into distributions that are: More symmetric, More Gaussian-like, Less skewed, More stable in variance.</p>
+    <p>The objective is not always to create a perfectly normal distribution. The transformation tries to make the data <strong>closer to a normal distribution</strong>.</p>
+
+    <h2>3. What Is a Power Transformation?</h2>
+    <p>A power transformation raises feature values to a particular power. For example: <code>x^λ</code></p>
+    <p>Where <code>x</code> = original feature value, and <code>λ</code> = transformation parameter or power.</p>
+    <p>Possible powers may include: <code>x⁻², x⁻¹, x⁻⁰·⁵, x⁰·⁵, x¹, x¹·⁵, x²</code></p>
+    <p>The main question is:</p>
+    <blockquote>Which value of <code>λ</code> transforms the feature into the best approximation of a normal distribution?</blockquote>
+    <p>Instead of manually trying every possible power, the Power Transformer automatically estimates an appropriate value of <code>λ</code>. Each input feature receives its <strong>own lambda value</strong>.</p>
+    <p>Suppose a dataset contains eight input columns (Cement, Blast Furnace Slag, Fly Ash, Water, Superplasticizer, Coarse Aggregate, Fine Aggregate, Age). The transformer estimates eight different lambda values: <code>λ₁, λ₂, λ₃, ..., λ₈</code></p>
+    <p>Therefore, the same transformation power is not necessarily applied to every column.</p>
+
+    <h2>4. Box–Cox Transformation</h2>
+    <p>The Box–Cox transformation was introduced by statisticians <strong>George Box and David Cox</strong>. Its purpose is to transform a non-normal continuous numerical variable into a more Gaussian-like distribution.</p>
+    <p>It is a general family of transformations. Several commonly used transformations are special or approximate cases of Box–Cox. The Box–Cox transformation is defined as:</p>
+    <div class="math">
+        T(x; λ) = (x^λ - 1) / λ &nbsp;&nbsp;&nbsp; if λ ≠ 0<br><br>
+        T(x; λ) = ln(x) &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; if λ = 0
+    </div>
+    <p>The subtraction by 1 and division by <code>λ</code> make the transformation continuous around <code>λ = 0</code>.</p>
+
+    <h2>5. Meaning of Different Lambda Values</h2>
+    <p>Different values of lambda produce transformations similar to familiar mathematical transformations.</p>
+    <table>
+        <thead><tr><th style="text-align:center;">Lambda value</th><th>Approximate transformation</th></tr></thead>
+        <tbody>
+            <tr><td style="text-align:center;">-2</td><td><code>1/x²</code></td></tr>
+            <tr><td style="text-align:center;">-1</td><td>Reciprocal transformation</td></tr>
+            <tr><td style="text-align:center;">-0.5</td><td>Reciprocal square-root transformation</td></tr>
+            <tr><td style="text-align:center;">0</td><td>Log transformation</td></tr>
+            <tr><td style="text-align:center;">0.5</td><td>Square-root-like transformation</td></tr>
+            <tr><td style="text-align:center;">1</td><td>Approximately no transformation</td></tr>
+            <tr><td style="text-align:center;">2</td><td>Square-like transformation</td></tr>
+        </tbody>
+    </table>
+    <p>For example, if <code>λ = 0</code>, the Box–Cox transformation becomes <code>log(x)</code>. If <code>λ = 0.5</code>, the transformation behaves similarly to <code>√x</code>. Therefore, Box–Cox can be considered a generalized power transformation.</p>
+
+    <h2>6. How Is the Best Lambda Selected?</h2>
+    <p>The transformer tests different possible lambda values and selects the value that makes the transformed data approximately normal.</p>
+    <p>Conceptually, it may examine values such as <code>-2.0, -1.5, -1.0, -0.5, 0, 0.5, 1.0, 1.5, 2.0</code>. However, Scikit-learn does not simply test a small fixed list. It performs numerical optimization to estimate a more precise value (e.g., <code>0.172</code> or <code>-0.021</code>).</p>
+    <p>The optimal lambda is estimated using the <strong>Maximum Likelihood Estimation technique</strong>. For this stage of machine-learning study, it is sufficient to understand:</p>
+    <blockquote>The Power Transformer automatically estimates the lambda value that makes each feature as Gaussian-like as possible.</blockquote>
+
+    <h2>7. Restrictions of Box–Cox Transformation</h2>
+    <p>The most important restriction is:</p>
+    <blockquote>Box–Cox accepts only strictly positive values. Therefore: <code>x > 0</code></blockquote>
+    <p>The following values are valid: <code>0.1, 1, 5, 50, 1000</code></p>
+    <p>The following values are invalid: <code>0, -1, -50</code></p>
+    <p>Box–Cox cannot directly handle Zero values or Negative values.</p>
+    <div class="alert alert-danger">
+        <strong>Example:</strong> <code>X = [[1], [2], [5], [10]]</code> is valid. However, <code>X = [[0], [1], [5], [10]]</code> is invalid because it contains zero. Similarly, <code>X = [[-5], [1], [5], [10]]</code> is invalid because it contains a negative number.
+    </div>
+
+    <h2>8. Yeo–Johnson Transformation</h2>
+    <p>The Yeo–Johnson transformation was introduced by <strong>In-Kwon Yeo and Richard Johnson</strong>. It is an extension or modification of the Box–Cox transformation.</p>
+    <p>Its major advantage is:</p>
+    <blockquote>Yeo–Johnson supports positive values, zero values, and negative values. (<code>x < 0, x = 0, x > 0</code> are all supported).</blockquote>
+    <p>This removes the major limitation of Box–Cox.</p>
+
+    <h2>9. Box–Cox vs Yeo–Johnson</h2>
+    <table>
+        <thead><tr><th>Property</th><th style="text-align:center;">Box–Cox</th><th style="text-align:center;">Yeo–Johnson</th></tr></thead>
+        <tbody>
+            <tr><td>Supports positive values</td><td style="text-align:center;">✅</td><td style="text-align:center;">✅</td></tr>
+            <tr><td>Supports zero</td><td style="text-align:center;">❌</td><td style="text-align:center;">✅</td></tr>
+            <tr><td>Supports negative values</td><td style="text-align:center;">❌</td><td style="text-align:center;">✅</td></tr>
+            <tr><td>Estimates lambda automatically</td><td style="text-align:center;">✅</td><td style="text-align:center;">✅</td></tr>
+            <tr><td>Attempts to reduce skewness</td><td style="text-align:center;">✅</td><td style="text-align:center;">✅</td></tr>
+            <tr><td>Attempts to stabilize variance</td><td style="text-align:center;">✅</td><td style="text-align:center;">✅</td></tr>
+            <tr><td>Available in <code>PowerTransformer</code></td><td style="text-align:center;">✅</td><td style="text-align:center;">✅</td></tr>
+            <tr><td>Default Scikit-learn method</td><td style="text-align:center;">❌</td><td style="text-align:center;">✅</td></tr>
+        </tbody>
+    </table>
+    <p>Yeo–Johnson is the default method because it can safely work with a wider range of numerical data.</p>
+
+    <h2>10. Scikit-Learn PowerTransformer</h2>
+    <pre><code>from sklearn.preprocessing import PowerTransformer
+
+# Default is yeo-johnson
+pt = PowerTransformer()
+
+# Equivalent to:
+pt = PowerTransformer(method="yeo-johnson")
+
+# For Box-Cox:
+pt = PowerTransformer(method="box-cox")</code></pre>
+
+    <h2>11. Important Parameters</h2>
+    <pre><code>PowerTransformer(
+    method="yeo-johnson",
+    standardize=True
+)</code></pre>
+    <h3><code>method</code></h3>
+    <p>Possible values: <code>method="box-cox"</code> or <code>method="yeo-johnson"</code></p>
+    
+    <h3><code>standardize</code></h3>
+    <p>The default value is <code>standardize=True</code>. This means that after applying the power transformation, Scikit-learn also standardizes the transformed values (Mean ≈ 0, Standard deviation ≈ 1).</p>
+    <div class="tree">Original data
+      ↓
+Power transformation
+      ↓
+Standardization
+      ↓
+Final transformed data</div>
+    <p>If standardization is not required: <code>PowerTransformer(method="yeo-johnson", standardize=False)</code></p>
+
+    <h2>12. What Problems Does PowerTransformer Address?</h2>
+    <p>According to Scikit-learn, power transformations are useful for: Making data more Gaussian-like, Reducing skewness, Stabilizing variance, Reducing problems related to heteroscedasticity, Improving the relationship between variables, Helping some models learn more effectively.</p>
+    <p>Power transformations are: Parametric, Monotonic, Feature-wise transformations.</p>
+    <p>A <strong>monotonic transformation</strong> generally preserves the order of observations. If <code>x₁ < x₂</code>, then the transformed values usually preserve <code>T(x₁) < T(x₂)</code>. The numerical scale changes, but the ordering remains consistent.</p>
+
+    <h2>13. Concrete Compressive Strength Dataset</h2>
+    <p>The lecture uses a concrete dataset. The objective is to predict <code>Concrete Compressive Strength</code>.</p>
+    <p>The input features include: Cement, Blast Furnace Slag, Fly Ash, Water, Superplasticizer, Coarse Aggregate, Fine Aggregate, Age.</p>
+    <p>The target variable is <code>Concrete Compressive Strength</code>. This is a <strong>regression problem</strong> because the target is a continuous numerical value.</p>
+
+    <h2>14. Importing Required Libraries</h2>
+    <pre><code>import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+import seaborn as sns
+from scipy import stats
+
+from sklearn.model_selection import train_test_split, cross_val_score
+from sklearn.linear_model import LinearRegression
+from sklearn.preprocessing import PowerTransformer
+from sklearn.metrics import r2_score</code></pre>
+
+    <h2>15 & 16. Loading the Dataset & Checking Missing Values</h2>
+    <pre><code>df = pd.read_csv("concrete_data.csv")
+df.shape
+df.info()
+df.describe()
+df.isnull().sum()</code></pre>
+    <p>The lecture dataset did not contain missing values. Missing values should generally be handled before applying transformations.</p>
+
+    <h2>17. Checking Zero and Negative Values</h2>
+    <pre><code>df.min()</code></pre>
+    <p>Several columns in the concrete dataset contain zero values (Blast Furnace Slag, Fly Ash, Superplasticizer). The values are not negative, but the presence of zero is enough to prevent direct application of Box–Cox.</p>
+
+    <h2>18 & 19. Separating Features and Target & Train-Test Split</h2>
+    <pre><code>X = df.drop(columns=["Strength"])
+y = df["Strength"]
+
+X_train, X_test, y_train, y_test = train_test_split(
+    X, y, test_size=0.2, random_state=42
+)</code></pre>
+
+    <h2>20. Baseline Linear Regression Model</h2>
+    <pre><code>lr = LinearRegression()
+lr.fit(X_train, y_train)
+y_pred = lr.predict(X_test)
+r2_score(y_test, y_pred)</code></pre>
+    <p>The lecture obtained an R² score of approximately <strong>0.62</strong>.</p>
+
+    <h2>21. Evaluating with Cross-Validation</h2>
+    <pre><code>scores = cross_val_score(LinearRegression(), X, y, scoring="r2", cv=10)
+scores.mean()</code></pre>
+    <p>The average cross-validation result was approximately <strong>0.46</strong>. The cross-validation score was lower than the single train-test score. This indicates that model performance depends on the selected train-test split. Cross-validation generally provides a more reliable estimate.</p>
+
+    <h2>22 & 23. Checking Feature Distributions & Q–Q Plots</h2>
+    <pre><code>X.hist(bins=30, figsize=(15, 10))
+plt.show()
+
+stats.probplot(X["Age"], dist="norm", plot=plt)
+plt.show()</code></pre>
+    <p>Observations: Cement (Slightly right-skewed), Blast Furnace Slag (Strongly right-skewed), Fly Ash (Irregular or multimodal), Water (Relatively reasonable), Superplasticizer (Right-skewed), Coarse Aggregate (Fairly symmetric), Fine Aggregate (Fairly reasonable), Age (<strong>Extremely right-skewed</strong>).</p>
+
+    <h2>24. Why Scaling Was Initially Skipped</h2>
+    <p>Normally, scaling could improve numerical consistency. However, the purpose was to compare "Without power transformation" with "With power transformation" under similar conditions. Since <code>PowerTransformer</code> uses <code>standardize=True</code> by default, the transformed model also receives standardized data.</p>
+
+    <h2>25. Applying Box–Cox Transformation</h2>
+    <p>Since Box–Cox requires <code>x > 0</code>, a small positive constant was added to handle zeros in the dataset.</p>
+    <pre><code>pt_boxcox = PowerTransformer(method="box-cox")
+
+# Adding a small constant
+X_train_positive = X_train + 0.000001
+X_test_positive = X_test + 0.000001
+
+X_train_boxcox = pt_boxcox.fit_transform(X_train_positive)
+X_test_boxcox = pt_boxcox.transform(X_test_positive)</code></pre>
+
+    <h2>26. Important Improvement: Avoid Arbitrarily Adding Epsilon</h2>
+    <p>Adding a very small number can technically make Box–Cox work, but it is not always statistically appropriate. A safer shift is:</p>
+    <div class="math">X_shifted = X - min(X) + ε</div>
+    <pre><code>epsilon = 1e-6
+shift = 1 - X_train.min()
+X_train_positive = X_train + shift
+X_test_positive = X_test + shift</code></pre>
+    <div class="alert alert-info">
+        The shift must be learned from the training data only and then applied unchanged to the test data. In many practical situations, using Yeo–Johnson is simpler because it naturally supports zeros and negative values.
+    </div>
+
+    <h2>27. Lambda Values</h2>
+    <pre><code>pt_boxcox.lambdas_</code></pre>
+    <p>This returns one lambda value for every feature. Create a readable table:</p>
+    <pre><code>lambda_df = pd.DataFrame({
+    "Feature": X.columns,
+    "Lambda": pt_boxcox.lambdas_
+})
+lambda_df</code></pre>
+
+    <h2>28. Important Formula Clarification</h2>
+    <p>The lecture explains the transformation intuitively as <code>x^λ</code>. However, Box–Cox does not simply calculate <code>x^λ</code>. The actual formula is <code>(x^λ - 1) / λ</code> when <code>λ ≠ 0</code>.</p>
+    <blockquote>Saying "The feature is raised to the lambda power" is a useful intuition but not the complete mathematical formula.</blockquote>
+
+    <h2>29 & 30. Training Linear Regression After Box–Cox & Cross-Validation</h2>
+    <pre><code>lr_boxcox = LinearRegression()
+lr_boxcox.fit(X_train_boxcox, y_train)
+y_pred_boxcox = lr_boxcox.predict(X_test_boxcox)
+print(r2_score(y_test, y_pred_boxcox)) # Improved to ~0.80</code></pre>
+    <p>Cross-Validation improved from ~0.46 to ~0.60. A stricter experiment should use a pipeline to prevent data leakage.</p>
+
+    <h2>31. Correct Pipeline for Box–Cox</h2>
+    <pre><code>from sklearn.pipeline import Pipeline
+
+boxcox_pipeline = Pipeline(steps=[
+    ("power", PowerTransformer(method="box-cox")),
+    ("model", LinearRegression())
+])
+
+scores = cross_val_score(boxcox_pipeline, X_positive, y, scoring="r2", cv=10)
+print(scores.mean())</code></pre>
+
+    <h2>32. Before-and-After Distribution Comparison</h2>
+    <pre><code>X_train_boxcox_df = pd.DataFrame(X_train_boxcox, columns=X.columns)
+
+fig, axes = plt.subplots(nrows=len(X.columns), ncols=2, figsize=(12, 30))
+
+for i, column in enumerate(X.columns):
+    sns.histplot(X_train[column], kde=True, ax=axes[i, 0])
+    axes[i, 0].set_title(f"{column} — Before")
+
+    sns.histplot(X_train_boxcox_df[column], kde=True, ax=axes[i, 1])
+    axes[i, 1].set_title(f"{column} — After")
+
+plt.tight_layout()
+plt.show()</code></pre>
+    <p><strong>Observations:</strong> Cement became somewhat more symmetric. Blast Furnace Slag improved but did not become perfectly normal. Some bimodal features remained bimodal. Age showed the largest improvement.</p>
+
+    <h2>33. Why Some Features Do Not Become Normal</h2>
+    <p>Power transformations cannot guarantee perfect normality. A feature may remain non-normal because of: Multiple modes, Zero inflation, Strong outliers, Mixed populations, Discrete values, Measurement limits, Complex underlying distributions. A monotonic power transformation usually cannot merge two peaks into one normal distribution.</p>
+
+    <h2>34. Applying Yeo–Johnson Transformation</h2>
+    <pre><code>pt_yeojohnson = PowerTransformer(method="yeo-johnson")
+
+# No need to add constants for zeros/negatives
+X_train_yj = pt_yeojohnson.fit_transform(X_train)
+X_test_yj = pt_yeojohnson.transform(X_test)</code></pre>
+
+    <h2>35 & 36. Train Linear Regression After Yeo–Johnson & Cross-Validation</h2>
+    <pre><code>lr_yj = LinearRegression()
+lr_yj.fit(X_train_yj, y_train)
+y_pred_yj = lr_yj.predict(X_test_yj)
+print(r2_score(y_test, y_pred_yj)) # Slightly higher than Box-Cox (~0.80+)</code></pre>
+    <p>Cross-validation progression:</p>
+    <div class="tree">Without transformation: 0.46
+Box-Cox: 0.60
+Yeo-Johnson: 0.61</div>
+
+    <h2>37. Comparing Lambda Values</h2>
+    <pre><code>boxcox = PowerTransformer(method="box-cox")
+yeojohnson = PowerTransformer(method="yeo-johnson")
+
+# After fitting both:
+comparison = pd.DataFrame({
+    "Feature": X.columns,
+    "Box-Cox Lambda": boxcox.lambdas_,
+    "Yeo-Johnson Lambda": yeojohnson.lambdas_
+})
+comparison</code></pre>
+    <p>The lecture observed similar lambda values for some columns, but noticeable differences in features containing many zeros. This occurs because the mathematical definitions are different.</p>
+
+    <h2>38. Box–Cox and Yeo–Johnson Formulas</h2>
+    
+    <h3>Box–Cox</h3>
+    <div class="math">
+        T(x; λ) = (x^λ - 1) / λ &nbsp;&nbsp;&nbsp; if λ ≠ 0<br><br>
+        T(x; λ) = ln(x) &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; if λ = 0<br><br>
+        <strong>Requirement: x > 0</strong>
+    </div>
+
+    <h3>Yeo–Johnson (For x ≥ 0)</h3>
+    <div class="math">
+        T(x; λ) = ((x+1)^λ - 1) / λ &nbsp;&nbsp;&nbsp; if λ ≠ 0<br><br>
+        T(x; λ) = ln(x+1) &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; if λ = 0
+    </div>
+
+    <h3>Yeo–Johnson (For x < 0)</h3>
+    <div class="math">
+        T(x; λ) = ((-x+1)^(2-λ) - 1) / (2-λ) &nbsp;&nbsp;&nbsp; if λ ≠ 2<br><br>
+        T(x; λ) = -ln(-x+1) &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; if λ = 2
+    </div>
+    <p>This piecewise formula allows Yeo–Johnson to support negative numbers.</p>
+
+    <h2>39. Why Did Model Performance Improve?</h2>
+    <div class="alert alert-warning">
+        <strong>Important correction:</strong> Linear regression does not strictly require every feature to be normally distributed. Linear regression mainly assumes: A linear relationship between predictors and target, Independent errors, Approximately constant error variance, Normally distributed residuals mainly for statistical inference, Low multicollinearity, Errors with mean close to zero.
+    </div>
+    <p>Power transformations may improve linear regression because they can: Make nonlinear relationships more linear, Reduce skewness, Stabilize variance, Reduce the influence of extreme values, Improve numerical conditioning, Make residual behavior better.</p>
+    <blockquote>The improvement is <strong>not</strong> simply because "Linear regression requires normally distributed features." That statement is incorrect.</blockquote>
+
+    <h2>40. PowerTransformer and StandardScaler</h2>
+    <p>Because <code>standardize=True</code> is the default, PowerTransformer performs standardization after transformation. Therefore, <code>PowerTransformer()</code> approximately performs: Power transformation + Standard scaling.</p>
+    <p>If you want only the mathematical transformation: <code>PowerTransformer(standardize=False)</code></p>
+
+    <h2>41. Data Leakage Warning</h2>
+    <div class="alert alert-danger">
+        <strong>Incorrect approach:</strong> Transforming the complete <code>X</code> before <code>train_test_split</code>. This is incorrect because the transformer learns lambda values from the future test data.
+    </div>
+    <div class="alert alert-success">
+        <strong>Best approach:</strong> Use a <code>Pipeline</code> containing <code>PowerTransformer</code> so it fits only on training folds.
+    </div>
+
+    <h2>42. Should the Target Variable Be Transformed?</h2>
+    <p>Sometimes the target variable is highly skewed (e.g., House prices, Income). Scikit-learn provides <code>TransformedTargetRegressor</code> for this.</p>
+    <pre><code>from sklearn.compose import TransformedTargetRegressor
+
+model = TransformedTargetRegressor(
+    regressor=LinearRegression(),
+    transformer=PowerTransformer(method="yeo-johnson")
+)</code></pre>
+    <p>This transforms the target during training and automatically converts predictions back to the original scale.</p>
+
+    <h2>43. When Should Power Transformation Be Used?</h2>
+    <p>Consider using it when: Numerical features are strongly skewed, Variance changes significantly, Extreme values dominate the feature, Relationships appear nonlinear, Linear models perform poorly, Residual plots indicate heteroscedasticity.</p>
+    <p>It may help models such as: Linear/Ridge/Lasso/Elastic Net Regression, Logistic Regression, Linear SVM, K-Nearest Neighbors, Neural networks.</p>
+
+    <h2>44. When Is It Usually Less Important?</h2>
+    <p>Tree-based models generally do not require normally distributed features (Decision Tree, Random Forest, XGBoost, LightGBM, etc.). Tree models split values based on thresholds and are mostly unaffected by monotonic transformations (e.g., <code>Age < 28</code> becomes <code>Transformed Age < 0.42</code>).</p>
+
+    <h2>45. FunctionTransformer vs PowerTransformer</h2>
+    <table>
+        <thead><tr><th>Feature</th><th>FunctionTransformer</th><th>PowerTransformer</th></tr></thead>
+        <tbody>
+            <tr><td>Transformation</td><td>Manually selected</td><td>Automatically optimized</td></tr>
+            <tr><td>Log/Square root/Reciprocal</td><td>Manual</td><td>Can approximate automatically</td></tr>
+            <tr><td>Lambda estimation</td><td>❌</td><td>✅</td></tr>
+            <tr><td>Box–Cox / Yeo–Johnson</td><td>Not built in directly</td><td>✅</td></tr>
+            <tr><td>Automatic standardization</td><td>❌</td><td>✅</td></tr>
+            <tr><td>Custom function support</td><td>✅</td><td>❌</td></tr>
+        </tbody>
+    </table>
+
+    <h2>46. Complete Recommended Workflow</h2>
+    <pre><code>import pandas as pd
+from sklearn.model_selection import train_test_split, cross_val_score
+from sklearn.preprocessing import PowerTransformer
+from sklearn.linear_model import LinearRegression
+from sklearn.pipeline import Pipeline
+from sklearn.metrics import r2_score
+
+df = pd.read_csv("concrete_data.csv")
+X = df.drop(columns=["Strength"])
+y = df["Strength"]
+
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+
+pipeline = Pipeline(steps=[
+    ("power_transform", PowerTransformer(method="yeo-johnson")),
+    ("linear_regression", LinearRegression())
+])
+
+pipeline.fit(X_train, y_train)
+y_pred = pipeline.predict(X_test)
+
+print("Test R²:", r2_score(y_test, y_pred))
+
+cv_scores = cross_val_score(pipeline, X, y, scoring="r2", cv=10)
+print("Mean CV R²:", cv_scores.mean())</code></pre>
+
+    <h2>47. Important Practical Rules</h2>
+    <ol>
+        <li>Check the distribution before transforming.</li>
+        <li>Do not transform a feature only because it is non-normal.</li>
+        <li>Box–Cox requires: <code>x > 0</code></li>
+        <li>Yeo–Johnson supports: <code>x < 0, x = 0, x > 0</code></li>
+        <li>Yeo–Johnson is the default Scikit-learn method.</li>
+        <li>Each feature receives its own lambda value.</li>
+        <li>Lambda values are estimated using maximum likelihood.</li>
+        <li>PowerTransformer standardizes data by default.</li>
+        <li>Fit the transformer only on training data.</li>
+        <li>Use pipelines to prevent data leakage.</li>
+        <li>Evaluate using cross-validation.</li>
+        <li>Do not assume that transformation will always improve performance.</li>
+        <li>Compare: No transformation vs FunctionTransformer vs Box-Cox vs Yeo-Johnson.</li>
+        <li>Select the method with the best validation performance.</li>
+        <li>Do not transform categorical variables using PowerTransformer.</li>
+    </ol>
+
+    <div class="summary-box">
+        <h2>48. Final Lecture Summary</h2>
+        <div class="tree">Mathematical Transformations
+│
+├── FunctionTransformer
+│   ├── Log transformation
+│   ├── Reciprocal transformation
+│   ├── Square transformation
+│   ├── Square-root transformation
+│   └── Custom transformations
+│
+└── PowerTransformer
+    │
+    ├── Box–Cox
+    │   ├── Positive values only
+    │   ├── Does not support zero
+    │   └── Does not support negative values
+    │
+    └── Yeo–Johnson
+        ├── Supports positive values
+        ├── Supports zero
+        ├── Supports negative values
+        └── Default Scikit-learn method</div>
+        <br>
+        <blockquote>
+            The main idea is: <strong>PowerTransformer automatically finds a suitable power parameter for every numerical feature to make the data more Gaussian-like, stabilize variance, reduce skewness, and potentially improve machine-learning performance.</strong>
+        </blockquote>
+        <p>For real-world projects, do not automatically apply a transformation to every dataset. Compare the results using proper cross-validation and select the preprocessing method that provides the best generalization performance. 📊</p>
+    </div>
+
+</div>
+
+</body>
+</html>
