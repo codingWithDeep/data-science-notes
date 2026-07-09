@@ -1,0 +1,619 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Day 32 — Encoding Numerical Features: Discretization, Binning, and Binarization 📘</title>
+    <style>
+        :root {
+            --primary-color: #1a252f;
+            --secondary-color: #2980b9;
+            --bg-color: #ffffff;
+            --text-color: #333333;
+            --code-bg: #1e1e1e;
+            --code-text: #d4d4d4;
+            --warning-bg: #fff8e1;
+            --success-bg: #e8f5e9;
+            --danger-bg: #ffebee;
+            --info-bg: #e3f2fd;
+            --border-color: #e0e0e0;
+            --tree-bg: #f5f7fa;
+        }
+
+        html, body {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            min-height: 100%;
+        }
+
+        body {
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            line-height: 1.75;
+            color: var(--text-color);
+            background-color: var(--bg-color);
+        }
+
+        .container {
+            width: 100%;
+            max-width: 100%;
+            box-sizing: border-box;
+            padding: 50px 10%;
+        }
+
+        h1, h2, h3, h4, h5 {
+            color: var(--primary-color);
+            margin-top: 2.5em;
+            margin-bottom: 1em;
+        }
+
+        h1 {
+            font-size: 2.8em;
+            border-bottom: 4px solid var(--secondary-color);
+            padding-bottom: 20px;
+            margin-top: 0;
+        }
+
+        h2 {
+            font-size: 2em;
+            border-left: 6px solid var(--secondary-color);
+            padding-left: 20px;
+            margin-top: 3.5em;
+        }
+
+        h3 {
+            font-size: 1.4em;
+            color: #34495e;
+            margin-top: 2em;
+        }
+
+        h4 {
+            font-size: 1.15em;
+            color: #2c3e50;
+            margin-bottom: 0.8em;
+        }
+
+        p {
+            margin-bottom: 1.2em;
+            font-size: 1.05em;
+        }
+
+        strong {
+            color: var(--primary-color);
+            font-weight: 600;
+        }
+
+        ul, ol {
+            padding-left: 30px;
+            margin-bottom: 1.2em;
+        }
+
+        li {
+            margin-bottom: 0.6em;
+            font-size: 1.05em;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 2em 0;
+            font-size: 1em;
+            display: block;
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        th, td {
+            padding: 14px 20px;
+            text-align: left;
+            border: 1px solid var(--border-color);
+        }
+
+        th {
+            background-color: var(--primary-color);
+            color: #ffffff;
+            font-weight: 600;
+        }
+
+        tr:nth-child(even) {
+            background-color: #f8f9fa;
+        }
+
+        tr:hover {
+            background-color: #eef2f5;
+        }
+
+        pre {
+            background-color: var(--code-bg);
+            color: var(--code-text);
+            padding: 25px;
+            border-radius: 6px;
+            overflow-x: auto;
+            font-family: 'Fira Code', 'Consolas', 'Courier New', monospace;
+            font-size: 0.95em;
+            line-height: 1.6;
+            margin: 1.5em 0;
+            border: 1px solid #444;
+        }
+
+        code {
+            font-family: 'Fira Code', 'Consolas', 'Courier New', monospace;
+        }
+
+        p code, li code, td code {
+            background-color: #eef2f5;
+            color: #c0392b;
+            padding: 3px 7px;
+            border-radius: 4px;
+            font-size: 0.9em;
+            border: 1px solid #dde4ea;
+        }
+
+        blockquote {
+            border-left: 6px solid var(--secondary-color);
+            margin: 2em 0;
+            padding: 20px 30px;
+            background-color: #f4f8fb;
+            color: #444;
+            font-style: italic;
+            font-size: 1.15em;
+        }
+
+        .alert {
+            padding: 20px 25px;
+            margin: 2em 0;
+            border-radius: 0 6px 6px 0;
+            font-size: 1.05em;
+        }
+
+        .alert-warning { background-color: var(--warning-bg); border-left: 6px solid #f9a825; }
+        .alert-danger { background-color: var(--danger-bg); border-left: 6px solid #e53935; }
+        .alert-success { background-color: var(--success-bg); border-left: 6px solid #43a047; }
+        .alert-info { background-color: var(--info-bg); border-left: 6px solid #2980b9; }
+
+        .tree {
+            font-family: 'Fira Code', 'Consolas', 'Courier New', monospace;
+            background: var(--tree-bg);
+            padding: 20px;
+            border-radius: 6px;
+            border: 1px solid var(--border-color);
+            white-space: pre;
+            line-height: 1.5;
+            margin: 1.5em 0;
+            font-size: 1em;
+            overflow-x: auto;
+        }
+
+        .math {
+            display: block;
+            text-align: center;
+            font-family: 'Times New Roman', Times, serif;
+            font-size: 1.2em;
+            font-style: italic;
+            margin: 1.5em 0;
+            padding: 15px;
+            color: #2c3e50;
+            background: #f8f9fa;
+            border-left: 4px solid var(--secondary-color);
+            line-height: 1.8;
+        }
+
+        .summary-box {
+            background-color: #e8f0fe;
+            border: 2px dashed var(--secondary-color);
+            padding: 35px 40px;
+            border-radius: 8px;
+            margin-top: 3em;
+        }
+
+        .summary-box h2 {
+            border-left: none;
+            padding-left: 0;
+            margin-top: 0;
+            color: var(--secondary-color);
+        }
+
+        @media (max-width: 768px) {
+            .container { padding: 20px 5%; }
+            h1 { font-size: 2em; }
+            h2 { font-size: 1.5em; }
+            th, td { padding: 10px 15px; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+
+    <h1>Day 32 — Encoding Numerical Features: Discretization, Binning, and Binarization</h1>
+    
+    <p>This lecture continues the <strong>Feature Engineering</strong> series. In previous lectures, we learned how to encode categorical features. In Day 32, the focus is the opposite: converting <strong>continuous numerical features into discrete categories or binary values</strong>.</p>
+
+    <h2>1. Encoding Numerical Features</h2>
+    <p>Normally, numerical data is already suitable for machine-learning models. However, in some problems, representing numerical values as <strong>categories</strong> may provide a simpler and more meaningful representation.</p>
+    
+    <p>For example, suppose a Google Play Store dataset contains the number of app downloads:</p>
+    <table>
+        <thead><tr><th>App</th><th style="text-align:right;">Number of Downloads</th></tr></thead>
+        <tbody>
+            <tr><td>App A</td><td style="text-align:right;">500</td></tr>
+            <tr><td>App B</td><td style="text-align:right;">15,000</td></tr>
+            <tr><td>App C</td><td style="text-align:right;">1,500,000</td></tr>
+            <tr><td>App D</td><td style="text-align:right;">100,000,000</td></tr>
+        </tbody>
+    </table>
+    
+    <p>Instead of using the exact download numbers, we can create categories:</p>
+    <table>
+        <thead><tr><th style="text-align:right;">Number of Downloads</th><th>Download Category</th></tr></thead>
+        <tbody>
+            <tr><td style="text-align:right;">0–1,000</td><td>Very Low</td></tr>
+            <tr><td style="text-align:right;">1,001–10,000</td><td>Low</td></tr>
+            <tr><td style="text-align:right;">10,001–100,000</td><td>Medium</td></tr>
+            <tr><td style="text-align:right;">100,001–1,000,000</td><td>High</td></tr>
+            <tr><td style="text-align:right;">More than 1 million</td><td>Very High</td></tr>
+        </tbody>
+    </table>
+
+    <blockquote>
+        Numerical data should not always remain numerical. Depending on the problem, converting numerical values into categories may produce a more useful representation.
+    </blockquote>
+
+    <p>The two major techniques discussed in this lecture are:</p>
+    <ol>
+        <li><strong>Discretization or Binning</strong></li>
+        <li><strong>Binarization</strong></li>
+    </ol>
+
+    <h2>2. What Is Discretization?</h2>
+    <p><strong>Discretization</strong> is the process of converting continuous numerical values into a limited number of discrete intervals. It is also known as: Binning, Bucketing, or Interval discretization.</p>
+    
+    <p>Suppose we have the following values: <code>1, 3, 5, 7, 9, 12, 15, 18, 21, 25, 28</code>. We can divide the complete numerical range into intervals:</p>
+    <div class="tree">Bin 1 → 0–10
+Bin 2 → 10–20
+Bin 3 → 20–30</div>
+    
+    <table>
+        <thead><tr><th style="text-align:right;">Original Value</th><th style="text-align:center;">Bin</th></tr></thead>
+        <tbody>
+            <tr><td style="text-align:right;">3</td><td style="text-align:center;">Bin 1</td></tr>
+            <tr><td style="text-align:right;">7</td><td style="text-align:center;">Bin 1</td></tr>
+            <tr><td style="text-align:right;">12</td><td style="text-align:center;">Bin 2</td></tr>
+            <tr><td style="text-align:right;">18</td><td style="text-align:center;">Bin 2</td></tr>
+            <tr><td style="text-align:right;">21</td><td style="text-align:center;">Bin 3</td></tr>
+            <tr><td style="text-align:right;">28</td><td style="text-align:center;">Bin 3</td></tr>
+        </tbody>
+    </table>
+    <p>The process is similar to constructing a <strong>histogram</strong>. Therefore, discretization can be understood as converting continuous numerical values into histogram-like intervals.</p>
+
+    <h2>3. Why Do We Use Discretization?</h2>
+    
+    <h3>Benefit 1: Reduces the Effect of Outliers</h3>
+    <p>Suppose most salaries are between ₹20,000 and ₹100,000, but one person earns ₹10,000,000. After binning, the exact extreme value is masked by the "High-income bin". The effect of the outlier may be reduced. <em>(Note: binning does not remove the outlier, it only reduces the importance of its exact magnitude).</em></p>
+
+    <h3>Benefit 2: Can Improve the Distribution of Values</h3>
+    <p>Some binning techniques can distribute observations more evenly, which may improve the representation of highly skewed numerical features.</p>
+
+    <h3>Benefit 3: Captures Nonlinear Relationships</h3>
+    <p>Age groups may represent a relationship with insurance risk more effectively than exact ages (e.g., 0–18 Low, 19–35 Medium, 36–60 High, Above 60 Very High).</p>
+
+    <h3>Benefit 4: Improves Interpretability</h3>
+    <p>Compare: <code>Age coefficient = 0.034</code> vs. <code>"People aged 60 or above have a higher predicted risk."</code> The second explanation is easier for business stakeholders to understand.</p>
+
+    <h2>4. Types of Discretization</h2>
+    
+    <h3>A. Unsupervised Binning</h3>
+    <p>The target variable is <strong>not used</strong> while creating bins. The lecture discusses three techniques:</p>
+    <ol>
+        <li>Equal-width or uniform binning</li>
+        <li>Equal-frequency or quantile binning</li>
+        <li>K-Means binning</li>
+    </ol>
+
+    <h3>B. Supervised Binning</h3>
+    <p>The target variable is used while selecting the bin boundaries. An example is <code>Decision-tree-based binning</code>. (Mentioned but not explained in detail).</p>
+
+    <h3>C. Custom or Domain-Based Binning</h3>
+    <p>Bins are manually created using domain, business, or industry rules. Example: Age 0–17 → Child, Age 18–59 → Adult, Age 60+ → Senior citizen.</p>
+
+    <h2>5. Equal-Width or Uniform Binning</h2>
+    <p>Equal-width binning divides the complete numerical range into intervals having the <strong>same width</strong>.</p>
+    
+    <div class="math">
+        Bin Width = (Maximum Value - Minimum Value) / (Number of Bins)
+    </div>
+
+    <p>Suppose: Min = 0, Max = 100, Number of bins = 10. Then: Width = 10.</p>
+    <div class="tree">Bin 1 → 0–10
+Bin 2 → 10–20
+...
+Bin 10 → 90–100</div>
+
+    <h4>Advantages</h4>
+    <ul>
+        <li>Simple to understand and calculate</li>
+        <li>Reduces the effect of extreme values</li>
+        <li>Useful when values are relatively uniformly distributed</li>
+    </ul>
+
+    <h4>Limitations</h4>
+    <div class="alert alert-danger">
+        <strong>Major Flaw:</strong> Equal-width binning does <strong>not</strong> guarantee an equal number of observations in every bin. For skewed data, you might get 900 observations in Bin 1, and only 1 observation in Bin 5. It generally does <strong>not</strong> improve the value spread of highly skewed features.
+    </div>
+
+    <h2>6. Equal-Frequency or Quantile Binning</h2>
+    <p>Equal-frequency binning attempts to place approximately the <strong>same number of observations in every bin</strong>. It is also called Quantile binning.</p>
+    
+    <p>Suppose we want ten bins. The data is divided using 10th, 20th, 30th... 100th percentiles. Each bin contains approximately <code>100% / 10 = 10%</code> of the observations.</p>
+
+    <table>
+        <thead><tr><th>Bin</th><th>Numerical Range</th><th style="text-align:right;">Number of Observations</th></tr></thead>
+        <tbody>
+            <tr><td>Bin 1</td><td>0–16</td><td style="text-align:right;">Approximately 100</td></tr>
+            <tr><td>Bin 2</td><td>16–20</td><td style="text-align:right;">Approximately 100</td></tr>
+            <tr><td>Bin 3</td><td>20–22</td><td style="text-align:right;">Approximately 100</td></tr>
+        </tbody>
+    </table>
+    
+    <table>
+        <thead><tr><th>Property</th><th>Equal Width</th><th>Quantile</th></tr></thead>
+        <tbody>
+            <tr><td>Bin widths</td><td>Equal</td><td>Usually different</td></tr>
+            <tr><td>Number of observations</td><td>May be very different</td><td>Approximately equal</td></tr>
+            <tr><td>Handles skewed data</td><td>Limited</td><td>Usually better</td></tr>
+        </tbody>
+    </table>
+
+    <div class="alert alert-warning">
+        <strong>Limitation:</strong> If many observations have exactly the same value, it may not be possible to create perfectly equal-frequency bins because quantile boundaries may become identical.
+    </div>
+
+    <h2>7. K-Means Binning</h2>
+    <p>K-Means binning uses the <strong>K-Means clustering algorithm</strong> to identify groups in numerical data. It is useful when observations naturally occur in clusters with large empty gaps between them.</p>
+    
+    <h3>How K-Means Works</h3>
+    <ol>
+        <li><strong>Initialize:</strong> Select K initial cluster centres (centroids) randomly.</li>
+        <li><strong>Calculate Distances:</strong> Measure distance between every observation and every centroid.</li>
+        <li><strong>Assign:</strong> Assign every observation to its nearest centroid.</li>
+        <li><strong>Update:</strong> Calculate new centroids as the mean of all observations in the cluster.</li>
+        <li><strong>Repeat:</strong> Stop when assignments or centroids no longer change significantly.</li>
+    </ol>
+    
+    <div class="alert alert-info">
+        <strong>When to use:</strong> When data naturally forms clusters, large gaps exist between groups, or equal-width/quantile boundaries divide natural groups incorrectly.<br>
+        <strong>Limitations:</strong> More computationally expensive, results depend on initialization, and it is not useful when data has no natural clusters.
+    </div>
+
+    <h2>8. Encoding the Discretized Variable</h2>
+    <p>After creating bins, the resulting categories must be encoded.</p>
+    
+    <h3>A. Ordinal Encoding</h3>
+    <p>Bins are represented using ordered integers: <code>Bin 1 → 0, Bin 2 → 1, Bin 3 → 2</code>. This is generally appropriate because numerical intervals naturally have an order (e.g., Low income < Medium income < High income).</p>
+    
+    <h3>B. One-Hot Encoding</h3>
+    <p>Every bin is converted into a separate binary column. This may be useful when the relationship between bins is not expected to be monotonic, but ordinal encoding is more commonly used for naturally ordered intervals.</p>
+
+    <h2>9. <code>KBinsDiscretizer</code> in Scikit-Learn</h2>
+    <pre><code>from sklearn.preprocessing import KBinsDiscretizer
+
+discretizer = KBinsDiscretizer(
+    n_bins=10,
+    encode="ordinal",
+    strategy="quantile"
+)</code></pre>
+
+    <table>
+        <thead><tr><th>Parameter</th><th>Purpose</th></tr></thead>
+        <tbody>
+            <tr><td><code>n_bins</code></td><td>Number of bins</td></tr>
+            <tr><td><code>strategy</code></td><td><code>"uniform"</code> (equal-width), <code>"quantile"</code> (equal-freq), <code>"kmeans"</code></td></tr>
+            <tr><td><code>encode</code></td><td><code>"ordinal"</code> (ints), <code>"onehot"</code> (sparse), <code>"onehot-dense"</code> (dense array)</td></tr>
+        </tbody>
+    </table>
+
+    <h2>10. Simple Code Example</h2>
+    <pre><code>import numpy as np
+from sklearn.preprocessing import KBinsDiscretizer
+
+X = np.array([[5], [10], [15], [20], [30], [50], [100]])
+
+discretizer = KBinsDiscretizer(n_bins=3, encode="ordinal", strategy="quantile")
+
+X_binned = discretizer.fit_transform(X)
+print(X_binned)
+# Possible Output: [[0.] [0.] [0.] [1.] [1.] [2.] [2.]]</code></pre>
+
+    <h3>Viewing Bin Boundaries</h3>
+    <pre><code>print(discretizer.bin_edges_)
+# Possible Output: [array([ 5., 15., 30., 100.])]</code></pre>
+    <p>Intervals: Bin 0 → 5–15, Bin 1 → 15–30, Bin 2 → 30–100.</p>
+
+    <h2>11. Titanic Dataset Example</h2>
+    <p>The lecture uses the Titanic dataset and selects numerical columns such as <code>Age</code> and <code>Fare</code>. Target: <code>Survived</code>.</p>
+    
+    <h3>Applying Binning Using <code>ColumnTransformer</code></h3>
+    <pre><code>from sklearn.compose import ColumnTransformer
+from sklearn.preprocessing import KBinsDiscretizer
+
+age_discretizer = KBinsDiscretizer(n_bins=10, encode="ordinal", strategy="quantile")
+fare_discretizer = KBinsDiscretizer(n_bins=10, encode="ordinal", strategy="quantile")
+
+transformer = ColumnTransformer(
+    transformers=[
+        ("age_binning", age_discretizer, ["Age"]),
+        ("fare_binning", fare_discretizer, ["Fare"])
+    ]
+)
+
+X_train_transformed = transformer.fit_transform(X_train)
+X_test_transformed = transformer.transform(X_test)</code></pre>
+    
+    <div class="alert alert-danger">
+        <strong>Important:</strong> Fit the transformer only on the training dataset. Do not fit it separately on the testing dataset because that can cause <strong>data leakage</strong>.
+    </div>
+
+    <h3>Inspecting a Transformer</h3>
+    <pre><code>transformer.named_transformers_["age_binning"].bin_edges_</code></pre>
+
+    <h2>12. Important Lesson About Accuracy</h2>
+    <div class="alert alert-warning">
+        Feature engineering does <strong>not</strong> guarantee better accuracy. A transformation may improve, reduce, or produce almost no change in accuracy. The usefulness depends on the dataset, feature distribution, model, number of bins, and binning strategy. Always compare performance using cross-validation.
+    </div>
+
+    <h2>13. Choosing the Number of Bins</h2>
+    <p>The number of bins is a hyperparameter.</p>
+    <ul>
+        <li><strong>Too few bins</strong> may remove useful information (e.g., grouping ages 0–40 into one bin).</li>
+        <li><strong>Too many bins</strong> may provide very little simplification (e.g., Age 20 → Bin 20, Age 21 → Bin 21 behaves almost like the original feature).</li>
+    </ul>
+    <p>Test different values: <code>n_bins = [3, 5, 7, 10, 15]</code> and select using cross-validation.</p>
+
+    <h2>14. Custom or Domain-Based Binning</h2>
+    <p>Custom binning means creating intervals manually using domain knowledge.</p>
+    
+    <h4>Examples from Different Domains</h4>
+    <table>
+        <thead><tr><th>Domain</th><th>Feature</th><th style="text-align:right;">Range</th><th>Category</th></tr></thead>
+        <tbody>
+            <tr><td>Banking</td><td>Credit Score</td><td style="text-align:right;">Below 580</td><td>Poor</td></tr>
+            <tr><td>Healthcare</td><td>BMI</td><td style="text-align:right;">18.5–24.9</td><td>Normal</td></tr>
+            <tr><td>Business</td><td>Spending</td><td style="text-align:right;">Above ₹100,000</td><td>High-value</td></tr>
+        </tbody>
+    </table>
+    <p>Domain boundaries should come from reliable domain standards rather than arbitrary assumptions.</p>
+
+    <h3>Custom Binning Using Pandas</h3>
+    <pre><code>import pandas as pd
+
+ages = pd.Series([10, 20, 35, 55, 70])
+
+categories = pd.cut(
+    ages,
+    bins=[0, 18, 60, float("inf")],
+    labels=["Child", "Adult", "Senior"]
+)
+
+print(categories)</code></pre>
+
+    <h3><code>pd.cut()</code> vs <code>pd.qcut()</code></h3>
+    <table>
+        <thead><tr><th>Function</th><th>Method</th></tr></thead>
+        <tbody>
+            <tr><td><code>pd.cut()</code></td><td>Creates manually specified or equal-width intervals</td></tr>
+            <tr><td><code>pd.qcut()</code></td><td>Creates quantile-based intervals</td></tr>
+        </tbody>
+    </table>
+
+    <hr style="border: 1px solid #eee; margin: 3em 0;">
+
+    <h2>15. What Is Binarization?</h2>
+    <p>Binarization converts numerical values into only two possible values: <code>0</code> or <code>1</code>. It uses a threshold.</p>
+    
+    <div class="math">
+        x_binary = 0 &nbsp;&nbsp; if x ≤ threshold<br>
+        x_binary = 1 &nbsp;&nbsp; if x > threshold
+    </div>
+
+    <h3>Income Example</h3>
+    <p>Annual income ≤ ₹600,000 → 0 (Not taxable). Annual income > ₹600,000 → 1 (Taxable).</p>
+    
+    <h3>Image-Processing Example</h3>
+    <p>Grayscale image pixels (0 to 255) converted to black and white using a threshold of 127.5. Pixel ≤ 127.5 → 0 (Black). Pixel > 127.5 → 1 (White).</p>
+
+    <h2>16. Scikit-Learn <code>Binarizer</code></h2>
+    <pre><code>from sklearn.preprocessing import Binarizer
+import numpy as np
+
+X = np.array([[2], [5], [10], [15], [20]])
+
+binarizer = Binarizer(threshold=10)
+
+X_binary = binarizer.transform(X)
+print(X_binary)
+# Output: [[0] [0] [0] [1] [1]]</code></pre>
+    <p>Values less than or equal to 10 become 0. Values greater than 10 become 1.</p>
+    
+    <h4>Important Parameters</h4>
+    <ul>
+        <li><code>threshold</code>: Defines the dividing value.</li>
+        <li><code>copy</code>: If <code>True</code>, preserves original input. If <code>False</code>, modifies data directly.</li>
+    </ul>
+
+    <h2>17. Titanic Family Example & Logic Correction</h2>
+    <p>The lecture creates a family-size feature: <code>Family = SibSp + Parch</code>.</p>
+    
+    <p>Using <code>Binarizer(threshold=0)</code> on Family size yields:</p>
+    <table>
+        <thead><tr><th style="text-align:right;">Family Members</th><th style="text-align:center;">Binary Value</th></tr></thead>
+        <tbody>
+            <tr><td style="text-align:right;">0</td><td style="text-align:center;">0</td></tr>
+            <tr><td style="text-align:right;">1</td><td style="text-align:center;">1</td></tr>
+            <tr><td style="text-align:right;">2</td><td style="text-align:center;">1</td></tr>
+        </tbody>
+    </table>
+    
+    <div class="alert alert-danger">
+        <strong>Important Correction:</strong> With the above output, <code>0</code> means "No family member travelling", and <code>1</code> means "At least one family member travelling". Therefore, a more accurate feature name is <code>TravellingWithFamily</code>.<br><br>
+        If the desired feature is <code>TravellingAlone</code>, the values should be reversed using Pandas:<br>
+        <code>data["TravellingAlone"] = (data["Family"] == 0).astype(int)</code><br>
+        Now: <code>1</code> → Travelling alone, <code>0</code> → Travelling with family. <em>The feature name and encoded meaning must agree!</em>
+    </div>
+
+    <h2>18. Discretization vs Binarization</h2>
+    <table>
+        <thead><tr><th>Property</th><th>Discretization</th><th>Binarization</th></tr></thead>
+        <tbody>
+            <tr><td>Number of output groups</td><td>Two or more</td><td>Exactly two</td></tr>
+            <tr><td>Output</td><td>Multiple bins</td><td>0 and 1</td></tr>
+            <tr><td>Example</td><td>Low, medium, high income</td><td>Taxable or not taxable</td></tr>
+            <tr><td>Main tool</td><td><code>KBinsDiscretizer</code></td><td><code>Binarizer</code></td></tr>
+            <tr><td>Uses multiple boundaries</td><td>Yes</td><td>No</td></tr>
+            <tr><td>Uses one threshold</td><td>Not necessarily</td><td>Yes</td></tr>
+        </tbody>
+    </table>
+
+    <h2>19. When Should Discretization Be Used?</h2>
+    <p><strong>Consider</strong> when: Distribution is highly skewed, extreme values have excessive influence, natural groups exist, business rules define intervals, or interpretability is important.</p>
+    <p><strong>Avoid</strong> when: Exact numerical differences are important, the model handles non-linearity well, or binning would remove important information.</p>
+
+    <h2>20. Important Data-Science Considerations</h2>
+    
+    <h3>Information Loss</h3>
+    <p>Original: 21, 25, 29. After binning: All → Bin 2. The model can no longer distinguish between them. Discretization trades numerical precision for simplicity.</p>
+    
+    <h3>Artificial Discontinuities</h3>
+    <p>If Bin 1 is Age 0–30 and Bin 2 is Age 31–60, a person aged 30 and a person aged 31 are almost identical but placed in different categories.</p>
+    
+    <h3>Fit Only on Training Data & Use Pipelines</h3>
+    <div class="alert alert-success">
+        <strong>Correct Workflow:</strong><br>
+        <pre><code>from sklearn.pipeline import Pipeline
+
+pipeline = Pipeline(steps=[
+    ("binning", discretizer),
+    ("model", model)
+])</code></pre>
+        Pipelines reduce the risk of data leakage.
+    </div>
+
+    <div class="summary-box">
+        <h2>21. Final Summary</h2>
+        <ol>
+            <li><strong>Discretization or binning</strong> converts continuous numerical values into intervals.</li>
+            <li><strong>Equal-width binning</strong> creates intervals with equal numerical widths (bad for skewed data).</li>
+            <li><strong>Quantile binning</strong> creates intervals containing approximately equal numbers of observations (good for skewed data).</li>
+            <li><strong>K-Means binning</strong> identifies intervals based on natural clusters.</li>
+            <li><strong>Custom binning</strong> creates intervals using business or domain knowledge.</li>
+            <li>Scikit-learn provides <code>KBinsDiscretizer</code> with <code>uniform</code>, <code>quantile</code>, and <code>kmeans</code> strategies.</li>
+            <li>Discretized values can be encoded using <strong>Ordinal encoding</strong> or <strong>One-hot encoding</strong>.</li>
+            <li><strong>Binarization</strong> converts numerical values into <code>0</code> or <code>1</code> using a threshold via <code>Binarizer</code>.</li>
+            <li>Binning may improve interpretability, robustness to extreme values, and skewed distributions, but it may also cause information loss, artificial boundaries, and reduced accuracy.</li>
+        </ol>
+        <p style="margin-top: 1.5em;">The correct strategy and number of bins should be selected using <strong>cross-validation and domain knowledge</strong>. 📊</p>
+    </div>
+
+</div>
+
+</body>
+</html>
