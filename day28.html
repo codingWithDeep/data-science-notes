@@ -1,0 +1,891 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Day 28 — Column Transformer in Scikit-Learn 📘</title>
+    <style>
+        :root {
+            --primary-color: #1a252f;
+            --secondary-color: #2980b9;
+            --bg-color: #ffffff;
+            --text-color: #333333;
+            --code-bg: #1e1e1e;
+            --code-text: #d4d4d4;
+            --warning-bg: #fff8e1;
+            --success-bg: #e8f5e9;
+            --danger-bg: #ffebee;
+            --info-bg: #e3f2fd;
+            --border-color: #e0e0e0;
+            --tree-bg: #f5f7fa;
+        }
+
+        html, body {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            min-height: 100%;
+        }
+
+        body {
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            line-height: 1.75;
+            color: var(--text-color);
+            background-color: var(--bg-color);
+        }
+
+        .container {
+            width: 100%;
+            max-width: 100%;
+            box-sizing: border-box;
+            padding: 50px 10%;
+        }
+
+        h1, h2, h3, h4, h5 {
+            color: var(--primary-color);
+            margin-top: 2.5em;
+            margin-bottom: 1em;
+        }
+
+        h1 {
+            font-size: 2.8em;
+            border-bottom: 4px solid var(--secondary-color);
+            padding-bottom: 20px;
+            margin-top: 0;
+        }
+
+        h2 {
+            font-size: 2em;
+            border-left: 6px solid var(--secondary-color);
+            padding-left: 20px;
+            margin-top: 3.5em;
+        }
+
+        h3 {
+            font-size: 1.4em;
+            color: #34495e;
+            margin-top: 2em;
+        }
+
+        h4 {
+            font-size: 1.15em;
+            color: #2c3e50;
+            margin-bottom: 0.8em;
+        }
+
+        p {
+            margin-bottom: 1.2em;
+            font-size: 1.05em;
+        }
+
+        strong {
+            color: var(--primary-color);
+            font-weight: 600;
+        }
+
+        ul, ol {
+            padding-left: 30px;
+            margin-bottom: 1.2em;
+        }
+
+        li {
+            margin-bottom: 0.6em;
+            font-size: 1.05em;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 2em 0;
+            font-size: 1em;
+            display: block;
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        th, td {
+            padding: 14px 20px;
+            text-align: left;
+            border: 1px solid var(--border-color);
+        }
+
+        th {
+            background-color: var(--primary-color);
+            color: #ffffff;
+            font-weight: 600;
+        }
+
+        tr:nth-child(even) {
+            background-color: #f8f9fa;
+        }
+
+        tr:hover {
+            background-color: #eef2f5;
+        }
+
+        pre {
+            background-color: var(--code-bg);
+            color: var(--code-text);
+            padding: 25px;
+            border-radius: 6px;
+            overflow-x: auto;
+            font-family: 'Fira Code', 'Consolas', 'Courier New', monospace;
+            font-size: 0.95em;
+            line-height: 1.6;
+            margin: 1.5em 0;
+            border: 1px solid #444;
+        }
+
+        code {
+            font-family: 'Fira Code', 'Consolas', 'Courier New', monospace;
+        }
+
+        p code, li code, td code {
+            background-color: #eef2f5;
+            color: #c0392b;
+            padding: 3px 7px;
+            border-radius: 4px;
+            font-size: 0.9em;
+            border: 1px solid #dde4ea;
+        }
+
+        blockquote {
+            border-left: 6px solid var(--secondary-color);
+            margin: 2em 0;
+            padding: 20px 30px;
+            background-color: #f4f8fb;
+            color: #444;
+            font-style: italic;
+            font-size: 1.15em;
+        }
+
+        blockquote p {
+            margin-bottom: 0;
+        }
+
+        .alert {
+            padding: 20px 25px;
+            margin: 2em 0;
+            border-radius: 0 6px 6px 0;
+            font-size: 1.05em;
+        }
+
+        .alert-warning {
+            background-color: var(--warning-bg);
+            border-left: 6px solid #f9a825;
+        }
+
+        .alert-danger {
+            background-color: var(--danger-bg);
+            border-left: 6px solid #e53935;
+        }
+
+        .alert-success {
+            background-color: var(--success-bg);
+            border-left: 6px solid #43a047;
+        }
+
+        .alert-info {
+            background-color: var(--info-bg);
+            border-left: 6px solid #2980b9;
+        }
+
+        .tree {
+            font-family: 'Fira Code', 'Consolas', 'Courier New', monospace;
+            background: var(--tree-bg);
+            padding: 20px;
+            border-radius: 6px;
+            border: 1px solid var(--border-color);
+            white-space: pre;
+            line-height: 1.5;
+            margin: 1.5em 0;
+            font-size: 1em;
+            overflow-x: auto;
+        }
+
+        .summary-box {
+            background-color: #e8f0fe;
+            border: 2px dashed var(--secondary-color);
+            padding: 35px 40px;
+            border-radius: 8px;
+            margin-top: 3em;
+        }
+
+        .summary-box h2 {
+            border-left: none;
+            padding-left: 0;
+            margin-top: 0;
+            color: var(--secondary-color);
+        }
+
+        .qa-block {
+            margin-bottom: 2em;
+            padding-bottom: 1.5em;
+            border-bottom: 1px solid #eee;
+        }
+
+        .qa-block:last-child {
+            border-bottom: none;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 20px 5%;
+            }
+            h1 { font-size: 2em; }
+            h2 { font-size: 1.5em; }
+            th, td { padding: 10px 15px; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+
+    <h1>Day 28 — Column Transformer in Scikit-Learn</h1>
+    <h2>Complete Data Science Notes 📘</h2>
+    
+    <p>Today’s topic is one of the most important concepts in Machine Learning preprocessing: <strong>Column Transformer</strong>.</p>
+    <p>Until now, we studied different feature-engineering techniques separately, such as:</p>
+    <ul>
+        <li>Handling missing values using <code>SimpleImputer</code></li>
+        <li>Encoding ordinal categorical data using <code>OrdinalEncoder</code></li>
+        <li>Encoding nominal categorical data using <code>OneHotEncoder</code></li>
+        <li>Feature scaling</li>
+        <li>Feature transformation</li>
+    </ul>
+    <p>The problem is that a real dataset usually contains <strong>different types of columns</strong>, and every column may require a different preprocessing technique.</p>
+    
+    <p>For example, suppose we have customer data containing these columns:</p>
+    <table>
+        <thead>
+            <tr><th>Column</th><th>Data Type</th><th>Problem</th><th>Required Transformation</th></tr>
+        </thead>
+        <tbody>
+            <tr><td>Age</td><td>Numerical</td><td>Missing values</td><td><code>SimpleImputer</code></td></tr>
+            <tr><td>City</td><td>Nominal categorical</td><td>Text categories</td><td><code>OneHotEncoder</code></td></tr>
+            <tr><td>Gender</td><td>Nominal categorical</td><td>Text categories</td><td><code>OneHotEncoder</code></td></tr>
+            <tr><td>Review</td><td>Ordinal categorical</td><td>Ordered categories</td><td><code>OrdinalEncoder</code></td></tr>
+        </tbody>
+    </table>
+
+    <p>Applying all these transformations separately creates multiple NumPy arrays. We then have to manually combine all the transformed arrays into one final training dataset.</p>
+    <p>This becomes complicated, repetitive, and difficult to maintain.</p>
+    
+    <blockquote>
+        <p>The solution is: <strong><code>ColumnTransformer</code></strong></p>
+    </blockquote>
+
+    <h2>1. What is a Column Transformer?</h2>
+    <p><code>ColumnTransformer</code> is a class provided by Scikit-Learn that allows us to apply <strong>different preprocessing transformations to different columns simultaneously</strong>.</p>
+    <p>It can perform operations such as:</p>
+    <div class="tree">Numerical column          → SimpleImputer
+Ordinal categorical column → OrdinalEncoder
+Nominal categorical columns → OneHotEncoder
+Unchanged columns           → Passthrough</div>
+    <p>After completing all transformations, <code>ColumnTransformer</code> automatically combines the outputs and creates <strong>one final transformed feature matrix</strong>.</p>
+
+    <h3>Without <code>ColumnTransformer</code>:</h3>
+    <div class="tree">Original DataFrame
+       │
+       ├── Fever → SimpleImputer → Array 1
+       │
+       ├── Cough → OrdinalEncoder → Array 2
+       │
+       ├── Gender and City → OneHotEncoder → Array 3
+       │
+       └── Age → Keep unchanged → Array 4
+                                      │
+                                      ▼
+                           Manually concatenate
+                                      │
+                                      ▼
+                           Final NumPy array</div>
+
+    <h3>With <code>ColumnTransformer</code>:</h3>
+    <div class="tree">Original DataFrame
+        │
+        ▼
+ColumnTransformer
+        │
+        ├── Fever → SimpleImputer
+        ├── Cough → OrdinalEncoder
+        ├── Gender → OneHotEncoder
+        ├── City → OneHotEncoder
+        └── Age → Passthrough
+        │
+        ▼
+One final transformed feature matrix</div>
+
+    <p>Therefore, <code>ColumnTransformer</code> makes preprocessing:</p>
+    <ul>
+        <li>Faster</li>
+        <li>Cleaner</li>
+        <li>Easier</li>
+        <li>Less repetitive</li>
+        <li>Less error-prone</li>
+        <li>Easier to use inside a Machine Learning pipeline</li>
+    </ul>
+
+    <h2>2. Dataset Used in the Lecture</h2>
+    <p>The lecture uses a manually created sample dataset containing information about <strong>100 patients</strong>.</p>
+    <p>The dataset contains six columns:</p>
+    <table>
+        <thead>
+            <tr><th>Column</th><th>Description</th></tr>
+        </thead>
+        <tbody>
+            <tr><td><code>age</code></td><td>Age of the patient</td></tr>
+            <tr><td><code>gender</code></td><td>Gender of the patient</td></tr>
+            <tr><td><code>fever</code></td><td>Body temperature of the patient</td></tr>
+            <tr><td><code>cough</code></td><td>Severity of the patient’s cough</td></tr>
+            <tr><td><code>city</code></td><td>City where the patient lives</td></tr>
+            <tr><td><code>has_covid</code></td><td>Whether the patient has COVID</td></tr>
+        </tbody>
+    </table>
+    <pre><code>import pandas as pd
+
+df = pd.read_csv("covid_toy.csv")
+df.head()</code></pre>
+    <p>The dataset may look like this:</p>
+    <table>
+        <thead>
+            <tr><th style="text-align:right;">age</th><th>gender</th><th style="text-align:right;">fever</th><th>cough</th><th>city</th><th>has_covid</th></tr>
+        </thead>
+        <tbody>
+            <tr><td style="text-align:right;">60</td><td>Male</td><td style="text-align:right;">103</td><td>Mild</td><td>Kolkata</td><td>No</td></tr>
+            <tr><td style="text-align:right;">27</td><td>Male</td><td style="text-align:right;">100</td><td>Mild</td><td>Delhi</td><td>Yes</td></tr>
+            <tr><td style="text-align:right;">42</td><td>Male</td><td style="text-align:right;">101</td><td>Mild</td><td>Delhi</td><td>No</td></tr>
+            <tr><td style="text-align:right;">31</td><td>Female</td><td style="text-align:right;">98</td><td>Mild</td><td>Kolkata</td><td>No</td></tr>
+            <tr><td style="text-align:right;">65</td><td>Female</td><td style="text-align:right;">101</td><td>Mild</td><td>Mumbai</td><td>No</td></tr>
+        </tbody>
+    </table>
+    <div class="alert alert-warning">
+        This is only a toy dataset created for understanding preprocessing. It should not be treated as a medically accurate dataset.
+    </div>
+
+    <h2>3. Understanding Every Feature</h2>
+    <p>Before applying transformations, a Data Scientist must understand the type and meaning of every feature.</p>
+
+    <h3><code>age</code></h3>
+    <p><code>age</code> is a numerical feature. Examples: <code>25</code>, <code>42</code>, <code>60</code>, <code>75</code>.</p>
+    <p>In this lecture, no transformation is applied to the <code>age</code> column.</p>
+    <div class="tree">age → No transformation → Passthrough</div>
+
+    <h3><code>fever</code></h3>
+    <p><code>fever</code> is also a numerical feature. Examples: <code>98°F</code>, <code>100°F</code>, <code>102°F</code>, <code>103°F</code>.</p>
+    <p>However, the column contains missing values. We can check missing values using:</p>
+    <pre><code>df.isnull().sum()</code></pre>
+    <p>Possible output:</p>
+    <div class="tree">age           0
+gender        0
+fever        10
+cough         0
+city          0
+has_covid     0</div>
+    <p>There are approximately ten missing values in the <code>fever</code> column. Therefore, we use <code>SimpleImputer()</code>.</p>
+    <p>By default, <code>SimpleImputer()</code> is equivalent to <code>SimpleImputer(strategy="mean")</code>. It calculates the average temperature from the available values and replaces every missing value with that mean.</p>
+    <div class="tree">Fever
+   ↓
+Calculate mean
+   ↓
+Replace missing values</div>
+
+    <h3><code>cough</code></h3>
+    <p>The <code>cough</code> feature contains categories such as: <code>Mild</code>, <code>Strong</code>.</p>
+    <pre><code>df["cough"].value_counts()</code></pre>
+    <div class="tree">Mild      62
+Strong    38</div>
+    <p>These categories have a meaningful order: <code>Mild < Strong</code>. Therefore, <code>cough</code> is an <strong>ordinal categorical feature</strong>.</p>
+    <p>We should use <code>OrdinalEncoder()</code>. The category order should be explicitly provided:</p>
+    <pre><code>OrdinalEncoder(categories=[["Mild", "Strong"]])</code></pre>
+    <div class="tree">Mild   → 0
+Strong → 1</div>
+    <div class="alert alert-danger">
+        <strong>Warning:</strong> The order of categories matters. If we accidentally write <code>categories=[["Strong", "Mild"]]</code>, then the encoding becomes <code>Strong → 0</code> and <code>Mild → 1</code>. This would reverse the intended order.
+    </div>
+
+    <h3><code>gender</code></h3>
+    <p>The <code>gender</code> feature contains categories such as: <code>Male</code>, <code>Female</code>.</p>
+    <p>There is no mathematical or ranking relationship between these categories (<code>Male > Female</code> is false). Therefore, <code>gender</code> is a <strong>nominal categorical feature</strong>. We use <code>OneHotEncoder()</code>.</p>
+
+    <h3><code>city</code></h3>
+    <p>The <code>city</code> column contains categories such as: <code>Kolkata</code>, <code>Bengaluru</code>, <code>Delhi</code>, <code>Mumbai</code>.</p>
+    <p>There is no natural order among cities. Therefore, <code>city</code> is also a <strong>nominal categorical feature</strong>. We use <code>OneHotEncoder()</code>.</p>
+
+    <h3><code>has_covid</code></h3>
+    <p>This is the target column. It may contain: <code>Yes</code>, <code>No</code>.</p>
+    <p>In this lecture, preprocessing is performed only on the input features. The target can later be encoded using <code>LabelEncoder()</code>.</p>
+    <pre><code>from sklearn.preprocessing import LabelEncoder
+
+le = LabelEncoder()
+
+y_train = le.fit_transform(y_train)
+y_test = le.transform(y_test)</code></pre>
+    <div class="tree">No  → 0
+Yes → 1</div>
+
+    <h2>4. Train-Test Split</h2>
+    <p>Before preprocessing, separate the input features and target variable.</p>
+    <pre><code>X = df.drop(columns=["has_covid"])
+y = df["has_covid"]</code></pre>
+    <p>Perform the train-test split:</p>
+    <pre><code>from sklearn.model_selection import train_test_split
+
+X_train, X_test, y_train, y_test = train_test_split(
+    X,
+    y,
+    test_size=0.2,
+    random_state=42
+)</code></pre>
+    <p>If the dataset contains 100 rows: Training data → 80 rows, Testing data → 20 rows.</p>
+    <pre><code>X_train.shape
+# Output: (80, 5)</code></pre>
+    <p>The five input columns are: <code>age</code>, <code>gender</code>, <code>fever</code>, <code>cough</code>, <code>city</code>.</p>
+
+    <h2>5. Ordinary Method — Without ColumnTransformer 😵</h2>
+    <p>First, we will perform every transformation manually. This demonstrates why preprocessing becomes difficult without <code>ColumnTransformer</code>.</p>
+
+    <h3>Step 1: Impute Missing Values in <code>fever</code></h3>
+    <pre><code>from sklearn.impute import SimpleImputer
+
+si = SimpleImputer()
+
+# Apply fit_transform() only to the training data
+X_train_fever = si.fit_transform(X_train[["fever"]])
+
+# Apply only transform() to the testing data
+X_test_fever = si.transform(X_test[["fever"]])</code></pre>
+    <p><strong>Important:</strong> <code>X_train[["fever"]]</code> uses double brackets because Scikit-Learn expects a two-dimensional input. Its shape is <code>(80, 1)</code>.</p>
+
+    <div class="alert alert-info">
+        <strong>Why <code>fit_transform()</code> on Training Data?</strong><br>
+        During <code>fit()</code>, the imputer learns the mean from Training fever values and stores it.<br>
+        During <code>transform()</code>, it uses the already learned mean on Testing fever values.
+    </div>
+    <div class="alert alert-danger">
+        <strong>Incorrect:</strong> <code>X_test_fever = si.fit_transform(X_test[["fever"]])</code><br>
+        The incorrect method learns information from the testing dataset and may cause <strong>data leakage</strong>.
+    </div>
+
+    <h3>Step 2: Ordinal Encoding of <code>cough</code></h3>
+    <pre><code>from sklearn.preprocessing import OrdinalEncoder
+
+oe = OrdinalEncoder(categories=[["Mild", "Strong"]])
+
+X_train_cough = oe.fit_transform(X_train[["cough"]])
+X_test_cough = oe.transform(X_test[["cough"]])</code></pre>
+    <p>Output shape is: <code>(80, 1)</code></p>
+
+    <h3>Step 3: One-Hot Encoding of <code>gender</code> and <code>city</code></h3>
+    <pre><code>from sklearn.preprocessing import OneHotEncoder
+
+ohe = OneHotEncoder(drop="first", sparse_output=False)
+# Older Scikit-Learn versions may use: sparse=False
+
+X_train_gender_city = ohe.fit_transform(X_train[["gender", "city"]])
+X_test_gender_city = ohe.transform(X_test[["gender", "city"]])</code></pre>
+    
+    <div class="alert alert-info">
+        <strong>Why <code>drop="first"</code>?</strong><br>
+        Gender (2 categories - 1 dropped = 1 output column).<br>
+        City (4 categories - 1 dropped = 3 output columns).<br>
+        Total: <code>X_train_gender_city.shape</code> produces <code>(80, 4)</code>.
+    </div>
+
+    <h3>Step 4: Extract the Unchanged <code>age</code> Column</h3>
+    <pre><code># A simpler method is:
+X_train_age = X_train[["age"]].values
+X_test_age = X_test[["age"]].values</code></pre>
+    <p>Shape: <code>(80, 1)</code></p>
+
+    <h3>Step 5: Concatenate All Arrays</h3>
+    <pre><code>import numpy as np
+
+X_train_transformed = np.concatenate(
+    (
+        X_train_age,
+        X_train_fever,
+        X_train_cough,
+        X_train_gender_city
+    ),
+    axis=1
+)
+
+X_test_transformed = np.concatenate(
+    (
+        X_test_age,
+        X_test_fever,
+        X_test_cough,
+        X_test_gender_city
+    ),
+    axis=1
+)</code></pre>
+    <p>The final number of columns is: Age (1) + Fever (1) + Cough (1) + Gender and City (4) = <strong>7 columns</strong>.</p>
+    <pre><code>X_train_transformed.shape
+# Output: (80, 7)
+
+X_test_transformed.shape
+# Output: (20, 7)</code></pre>
+
+    <h3>Problems with the Manual Method</h3>
+    <p>The manual approach requires:</p>
+    <ol>
+        <li>Creating a separate transformer for every feature type</li>
+        <li>Applying <code>fit_transform()</code> separately</li>
+        <li>Applying <code>transform()</code> separately</li>
+        <li>Storing every output in a different variable</li>
+        <li>Extracting unchanged columns manually</li>
+        <li>Combining all arrays manually</li>
+        <li>Maintaining the correct column order</li>
+        <li>Repeating the same operations for testing data</li>
+    </ol>
+    <p>Imagine a dataset containing 50, 100, or 500 columns. The preprocessing code would become difficult to manage. <strong>This is why we use <code>ColumnTransformer</code>.</strong></p>
+
+    <h2>6. Modern Method — Using ColumnTransformer 😎</h2>
+    <pre><code>from sklearn.compose import ColumnTransformer
+from sklearn.impute import SimpleImputer
+from sklearn.preprocessing import OrdinalEncoder, OneHotEncoder
+
+transformer = ColumnTransformer(
+    transformers=[
+        (
+            "tnf1",
+            SimpleImputer(),
+            ["fever"]
+        ),
+        (
+            "tnf2",
+            OrdinalEncoder(categories=[["Mild", "Strong"]]),
+            ["cough"]
+        ),
+        (
+            "tnf3",
+            OneHotEncoder(drop="first", sparse_output=False),
+            ["gender", "city"]
+        )
+    ],
+    remainder="passthrough"
+)
+
+# Now transform the datasets
+X_train_transformed = transformer.fit_transform(X_train)
+X_test_transformed = transformer.transform(X_test)</code></pre>
+    <p>That is all. The same work that required many separate steps can now be handled through one preprocessing object.</p>
+
+    <h2>7. Understanding ColumnTransformer Syntax</h2>
+    <p>General syntax:</p>
+    <pre><code>ColumnTransformer(
+    transformers=[
+        (
+            "transformer_name",
+            transformer_object,
+            ["column_name"]
+        )
+    ],
+    remainder="passthrough"
+)</code></pre>
+    <p>Every transformer is provided as a tuple containing three elements: <code>(name, transformer, columns)</code></p>
+
+    <h3>Element 1: Transformer Name</h3>
+    <p>The name is simply an identifier. You can use any meaningful name like <code>"fever_imputer"</code>, <code>"cough_encoder"</code>, <code>"nominal_encoder"</code>. Meaningful names make the code easier to understand than <code>"tnf1"</code>, <code>"tnf2"</code>.</p>
+
+    <h3>Element 2: Transformer Object</h3>
+    <p>This specifies the transformation to apply. Examples: <code>SimpleImputer()</code>, <code>OrdinalEncoder()</code>, <code>OneHotEncoder()</code>, <code>StandardScaler()</code>.</p>
+
+    <h3>Element 3: Column List</h3>
+    <p>This tells <code>ColumnTransformer</code> which column should receive the transformation. Multiple columns can be provided: <code>["gender", "city"]</code>. Both columns will be processed by the same transformer.</p>
+
+    <h2>8. Understanding Every Transformer</h2>
+    
+    <h3>Transformer 1 — Fever Imputation</h3>
+    <pre><code>(
+    "fever_imputer",
+    SimpleImputer(),
+    ["fever"]
+)</code></pre>
+    <div class="tree">Name: fever_imputer
+Transformation: SimpleImputer
+Applied column: fever
+Result: Missing fever values replaced with training mean</div>
+
+    <h3>Transformer 2 — Cough Ordinal Encoding</h3>
+    <pre><code>(
+    "cough_encoder",
+    OrdinalEncoder(categories=[["Mild", "Strong"]]),
+    ["cough"]
+)</code></pre>
+    <div class="tree">Mild   → 0
+Strong → 1</div>
+
+    <h3>Transformer 3 — Gender and City One-Hot Encoding</h3>
+    <pre><code>(
+    "nominal_encoder",
+    OneHotEncoder(drop="first", sparse_output=False),
+    ["gender", "city"]
+)</code></pre>
+    <p>Both columns use the same transformation, so they can be processed together.</p>
+
+    <h2>9. Understanding <code>remainder</code></h2>
+    <p>The <code>remainder</code> parameter decides what should happen to columns that were not included in any transformer.</p>
+
+    <h3><code>remainder="drop"</code></h3>
+    <p>Only the transformed columns remain. All other columns are removed.</p>
+    <div class="tree">age     → Removed
+gender  → Removed
+cough   → Removed
+city    → Removed
+fever   → Kept after transformation</div>
+    <p><code>drop</code> is the default behavior.</p>
+
+    <h3><code>remainder="passthrough"</code></h3>
+    <blockquote>
+        <p>Keep all remaining columns unchanged.</p>
+    </blockquote>
+    <p>In this dataset, no transformer is assigned to <code>age</code>. Therefore, <code>age</code> is included in the final output with no modification. The word <strong>passthrough</strong> means: <em>Pass the column through without changing it.</em></p>
+
+    <h2>10. <code>fit_transform()</code> and <code>transform()</code></h2>
+    <pre><code>X_train_transformed = transformer.fit_transform(X_train)
+X_test_transformed = transformer.transform(X_test)</code></pre>
+    <p>During training, it learns the mean fever, ordinal mapping, and OHE categories. During testing, it uses the same learned parameters.</p>
+    <div class="alert alert-danger">
+        <strong>Incorrect:</strong> <code>transformer.fit_transform(X_test)</code>
+    </div>
+    <div class="alert alert-success">
+        <strong>Correct:</strong> <code>transformer.transform(X_test)</code>
+    </div>
+
+    <h2>11. Complete Code from the Lecture</h2>
+    <pre><code>import pandas as pd
+from sklearn.model_selection import train_test_split
+from sklearn.compose import ColumnTransformer
+from sklearn.impute import SimpleImputer
+from sklearn.preprocessing import OrdinalEncoder, OneHotEncoder, LabelEncoder
+
+# Load the dataset
+df = pd.read_csv("covid_toy.csv")
+
+# Separate features and target
+X = df.drop(columns=["has_covid"])
+y = df["has_covid"]
+
+# Train-test split
+X_train, X_test, y_train, y_test = train_test_split(
+    X, y, test_size=0.2, random_state=42
+)
+
+# Create the transformer
+transformer = ColumnTransformer(
+    transformers=[
+        ("fever_imputer", SimpleImputer(strategy="mean"), ["fever"]),
+        ("cough_encoder", OrdinalEncoder(categories=[["Mild", "Strong"]]), ["cough"]),
+        ("nominal_encoder", OneHotEncoder(drop="first", sparse_output=False), ["gender", "city"])
+    ],
+    remainder="passthrough"
+)
+
+# Transform data
+X_train_transformed = transformer.fit_transform(X_train)
+X_test_transformed = transformer.transform(X_test)
+
+# Check shapes
+print(X_train_transformed.shape) # (80, 7)
+print(X_test_transformed.shape)  # (20, 7)</code></pre>
+
+    <h2>12. Better Production-Ready Version 🚀</h2>
+    <p>For real projects, we should handle unknown categories. Suppose new data contains a city the encoder has never seen (e.g., <code>Guwahati</code>). Without proper handling, it may generate an error.</p>
+    <pre><code>transformer = ColumnTransformer(
+    transformers=[
+        (
+            "fever_imputer",
+            SimpleImputer(strategy="mean"),
+            ["fever"]
+        ),
+        (
+            "cough_encoder",
+            OrdinalEncoder(
+                categories=[["Mild", "Strong"]],
+                handle_unknown="use_encoded_value",
+                unknown_value=-1
+            ),
+            ["cough"]
+        ),
+        (
+            "nominal_encoder",
+            OneHotEncoder(
+                drop="first",
+                handle_unknown="ignore",
+                sparse_output=False
+            ),
+            ["gender", "city"]
+        )
+    ],
+    remainder="passthrough",
+    verbose_feature_names_out=False
+)</code></pre>
+    <div class="alert alert-info">
+        This version is safer for real-world deployment because it utilizes <code>handle_unknown="ignore"</code> for nominal data and specific unknown handling for ordinal data.
+    </div>
+
+    <h2>13. Getting Feature Names</h2>
+    <p>After transformation, the output is usually a NumPy array. To understand the generated features:</p>
+    <pre><code>transformer.get_feature_names_out()</code></pre>
+    <p>Possible output:</p>
+    <div class="tree">[
+    "fever",
+    "cough",
+    "gender_Male",
+    "city_Delhi",
+    "city_Kolkata",
+    "city_Mumbai",
+    "age"
+]</div>
+    <p>Convert the transformed array back into a DataFrame:</p>
+    <pre><code>X_train_transformed_df = pd.DataFrame(
+    X_train_transformed,
+    columns=transformer.get_feature_names_out()
+)
+
+X_train_transformed_df.head()</code></pre>
+    <p>This makes the transformed data easier to inspect and debug.</p>
+
+    <h2>14. Important Column-Order Observation</h2>
+    <p>The output column order may not be the same as the original DataFrame. <code>ColumnTransformer</code> generally places:</p>
+    <ol>
+        <li>Output from the first transformer</li>
+        <li>Output from the second transformer</li>
+        <li>Output from the third transformer</li>
+        <li>Remaining passthrough columns</li>
+    </ol>
+    <p>Therefore, always use <code>transformer.get_feature_names_out()</code> instead of assuming the output column order.</p>
+
+    <h2>15. Why ColumnTransformer Is Important for Data Scientists</h2>
+    <table>
+        <thead>
+            <tr><th>Feature</th><th>Transformation</th></tr>
+        </thead>
+        <tbody>
+            <tr><td>Age</td><td>Median imputation</td></tr>
+            <tr><td>Salary</td><td>Log transformation</td></tr>
+            <tr><td>Experience</td><td>Standard scaling</td></tr>
+            <tr><td>Education level</td><td>Ordinal encoding</td></tr>
+            <tr><td>City</td><td>One-hot encoding</td></tr>
+            <tr><td>Department</td><td>One-hot encoding</td></tr>
+            <tr><td>Joining date</td><td>Date feature extraction</td></tr>
+            <tr><td>Review text</td><td>TF-IDF vectorization</td></tr>
+        </tbody>
+    </table>
+    <p>Without <code>ColumnTransformer</code>, preprocessing becomes scattered. With it, all rules are stored inside one reusable object.</p>
+    <p><strong>Benefits:</strong> Cleaner code, Less repetition, Automatic feature combination, Better reproducibility, Lower chance of data leakage, Easier model deployment, Easier cross-validation, Easier hyperparameter tuning, Compatible with Scikit-Learn pipelines.</p>
+
+    <h2>16. ColumnTransformer vs Pipeline</h2>
+    <table>
+        <thead>
+            <tr><th>ColumnTransformer</th><th>Pipeline</th></tr>
+        </thead>
+        <tbody>
+            <tr><td>Applies different transformations to different columns</td><td>Connects preprocessing and model-training steps sequentially</td></tr>
+            <tr><td>Works column-wise</td><td>Works step-by-step</td></tr>
+            <tr><td>Handles heterogeneous features</td><td>Automates the complete ML workflow</td></tr>
+        </tbody>
+    </table>
+    <p>A Pipeline combines everything:</p>
+    <div class="tree">Raw Data
+    ↓
+ColumnTransformer
+    ↓
+Feature preprocessing
+    ↓
+Machine Learning model
+    ↓
+Prediction</div>
+    <pre><code>from sklearn.pipeline import Pipeline
+from sklearn.linear_model import LogisticRegression
+
+model = Pipeline(
+    steps=[
+        ("preprocessor", transformer),
+        ("classifier", LogisticRegression())
+    ]
+)
+
+# Train
+model.fit(X_train, y_train)
+
+# Predict
+y_pred = model.predict(X_test)</code></pre>
+
+    <h2>17. Important Interview Questions 🎯</h2>
+    
+    <div class="qa-block">
+        <h4>What is ColumnTransformer?</h4>
+        <p><code>ColumnTransformer</code> is a Scikit-Learn class that applies different preprocessing transformations to different subsets of columns and combines their outputs into one feature matrix.</p>
+    </div>
+
+    <div class="qa-block">
+        <h4>Why do we use ColumnTransformer?</h4>
+        <p>We use it because different columns may require different preprocessing operations.</p>
+    </div>
+
+    <div class="qa-block">
+        <h4>What does <code>remainder="passthrough"</code> do?</h4>
+        <p>It keeps unspecified columns unchanged and includes them in the final output.</p>
+    </div>
+
+    <div class="qa-block">
+        <h4>What does <code>remainder="drop"</code> do?</h4>
+        <p>It removes all columns that were not assigned to a transformer.</p>
+    </div>
+
+    <div class="qa-block">
+        <h4>Why use <code>fit_transform()</code> on training data?</h4>
+        <p>Because the transformer must learn preprocessing parameters from the training data and then transform it.</p>
+    </div>
+
+    <div class="qa-block">
+        <h4>Why use only <code>transform()</code> on testing data?</h4>
+        <p>Because preprocessing information should be learned only from training data. Fitting on testing data can cause data leakage.</p>
+    </div>
+
+    <div class="qa-block">
+        <h4>Can multiple columns use the same transformer?</h4>
+        <p>Yes. Example: <code>("nominal_encoder", OneHotEncoder(), ["gender", "city"])</code></p>
+    </div>
+
+    <div class="qa-block">
+        <h4>Can ColumnTransformer be used inside a Pipeline?</h4>
+        <p>Yes. This is one of its most important uses.</p>
+    </div>
+
+    <div class="summary-box">
+        <h2>Final Summary 🧠</h2>
+        <div class="tree">Age     → Numerical → No transformation → Passthrough
+Fever   → Numerical with missing values → SimpleImputer
+Cough   → Ordinal categorical → OrdinalEncoder
+Gender  → Nominal categorical → OneHotEncoder
+City    → Nominal categorical → OneHotEncoder</div>
+        <br>
+        <p><strong>Without <code>ColumnTransformer</code>:</strong> Transform every column separately → Create multiple arrays → Manually concatenate arrays → Long and difficult code.</p>
+        <p><strong>With <code>ColumnTransformer</code>:</strong> Define all transformations once → Call fit_transform() on training data → Call transform() on testing data → Receive one final feature matrix.</p>
+        <br>
+        <p><strong>The most important code from Day 28 is:</strong></p>
+        <pre><code>transformer = ColumnTransformer(
+    transformers=[
+        ("fever_imputer", SimpleImputer(), ["fever"]),
+        ("cough_encoder", OrdinalEncoder(categories=[["Mild", "Strong"]]), ["cough"]),
+        ("nominal_encoder", OneHotEncoder(drop="first", sparse_output=False), ["gender", "city"])
+    ],
+    remainder="passthrough"
+)
+
+X_train_transformed = transformer.fit_transform(X_train)
+X_test_transformed = transformer.transform(X_test)</code></pre>
+        <p style="text-align: center; margin-top: 3em; font-weight: bold; color: var(--secondary-color);">
+            This is the main idea of Day 28: Column Transformer. 📊🚀
+        </p>
+    </div>
+
+</div>
+
+</body>
+</html>
