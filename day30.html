@@ -1,0 +1,846 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Day 30 — Function Transformer: Mathematical Transformations 📘</title>
+    <style>
+        :root {
+            --primary-color: #1a252f;
+            --secondary-color: #2980b9;
+            --bg-color: #ffffff;
+            --text-color: #333333;
+            --code-bg: #1e1e1e;
+            --code-text: #d4d4d4;
+            --warning-bg: #fff8e1;
+            --success-bg: #e8f5e9;
+            --danger-bg: #ffebee;
+            --info-bg: #e3f2fd;
+            --border-color: #e0e0e0;
+            --tree-bg: #f5f7fa;
+        }
+
+        html, body {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            min-height: 100%;
+        }
+
+        body {
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            line-height: 1.75;
+            color: var(--text-color);
+            background-color: var(--bg-color);
+        }
+
+        .container {
+            width: 100%;
+            max-width: 100%;
+            box-sizing: border-box;
+            padding: 50px 10%;
+        }
+
+        h1, h2, h3, h4, h5 {
+            color: var(--primary-color);
+            margin-top: 2.5em;
+            margin-bottom: 1em;
+        }
+
+        h1 {
+            font-size: 2.8em;
+            border-bottom: 4px solid var(--secondary-color);
+            padding-bottom: 20px;
+            margin-top: 0;
+        }
+
+        h2 {
+            font-size: 2em;
+            border-left: 6px solid var(--secondary-color);
+            padding-left: 20px;
+            margin-top: 3.5em;
+        }
+
+        h3 {
+            font-size: 1.4em;
+            color: #34495e;
+            margin-top: 2em;
+        }
+
+        h4 {
+            font-size: 1.15em;
+            color: #2c3e50;
+            margin-bottom: 0.8em;
+        }
+
+        p {
+            margin-bottom: 1.2em;
+            font-size: 1.05em;
+        }
+
+        strong {
+            color: var(--primary-color);
+            font-weight: 600;
+        }
+
+        ul, ol {
+            padding-left: 30px;
+            margin-bottom: 1.2em;
+        }
+
+        li {
+            margin-bottom: 0.6em;
+            font-size: 1.05em;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 2em 0;
+            font-size: 1em;
+            display: block;
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        th, td {
+            padding: 14px 20px;
+            text-align: left;
+            border: 1px solid var(--border-color);
+        }
+
+        th {
+            background-color: var(--primary-color);
+            color: #ffffff;
+            font-weight: 600;
+        }
+
+        tr:nth-child(even) {
+            background-color: #f8f9fa;
+        }
+
+        tr:hover {
+            background-color: #eef2f5;
+        }
+
+        pre {
+            background-color: var(--code-bg);
+            color: var(--code-text);
+            padding: 25px;
+            border-radius: 6px;
+            overflow-x: auto;
+            font-family: 'Fira Code', 'Consolas', 'Courier New', monospace;
+            font-size: 0.95em;
+            line-height: 1.6;
+            margin: 1.5em 0;
+            border: 1px solid #444;
+        }
+
+        code {
+            font-family: 'Fira Code', 'Consolas', 'Courier New', monospace;
+        }
+
+        p code, li code, td code {
+            background-color: #eef2f5;
+            color: #c0392b;
+            padding: 3px 7px;
+            border-radius: 4px;
+            font-size: 0.9em;
+            border: 1px solid #dde4ea;
+        }
+
+        blockquote {
+            border-left: 6px solid var(--secondary-color);
+            margin: 2em 0;
+            padding: 20px 30px;
+            background-color: #f4f8fb;
+            color: #444;
+            font-style: italic;
+            font-size: 1.15em;
+        }
+
+        .alert {
+            padding: 20px 25px;
+            margin: 2em 0;
+            border-radius: 0 6px 6px 0;
+            font-size: 1.05em;
+        }
+
+        .alert-warning { background-color: var(--warning-bg); border-left: 6px solid #f9a825; }
+        .alert-danger { background-color: var(--danger-bg); border-left: 6px solid #e53935; }
+        .alert-success { background-color: var(--success-bg); border-left: 6px solid #43a047; }
+        .alert-info { background-color: var(--info-bg); border-left: 6px solid #2980b9; }
+
+        .tree {
+            font-family: 'Fira Code', 'Consolas', 'Courier New', monospace;
+            background: var(--tree-bg);
+            padding: 20px;
+            border-radius: 6px;
+            border: 1px solid var(--border-color);
+            white-space: pre;
+            line-height: 1.5;
+            margin: 1.5em 0;
+            font-size: 1em;
+            overflow-x: auto;
+        }
+
+        .math {
+            display: block;
+            text-align: center;
+            font-family: 'Times New Roman', Times, serif;
+            font-size: 1.3em;
+            font-style: italic;
+            margin: 1.5em 0;
+            padding: 10px;
+            color: #2c3e50;
+        }
+
+        .summary-box {
+            background-color: #e8f0fe;
+            border: 2px dashed var(--secondary-color);
+            padding: 35px 40px;
+            border-radius: 8px;
+            margin-top: 3em;
+        }
+
+        .summary-box h2 {
+            border-left: none;
+            padding-left: 0;
+            margin-top: 0;
+            color: var(--secondary-color);
+        }
+
+        @media (max-width: 768px) {
+            .container { padding: 20px 5%; }
+            h1 { font-size: 2em; }
+            h2 { font-size: 1.5em; }
+            th, td { padding: 10px 15px; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+
+    <h1>Day 30 — Function Transformer: Mathematical Transformations in Machine Learning</h1>
+
+    <p>These notes cover the complete lecture content in clear English, with corrections, proper explanations, practical guidance, and a few important additions for a Data Science student. Nothing important from the lecture has been skipped.</p>
+
+    <h2>1. Introduction to Mathematical Transformations</h2>
+    <p>Until now, we have studied several Feature Engineering techniques: Handling missing values, Encoding categorical variables, Ordinal Encoding, One-Hot Encoding, Feature Scaling, Standardization, Normalization, and using <code>ColumnTransformer</code>.</p>
+    <p>Now we will study another important Feature Engineering technique:</p>
+    <blockquote>
+        <strong>Mathematical Transformation</strong>
+    </blockquote>
+    <p>A mathematical transformation means applying a mathematical function to the values of a numerical feature to change its distribution or scale.</p>
+    <p>Suppose we have a numerical feature <code>X = [x₁, x₂, x₃, ..., xₙ]</code>. We apply a mathematical function:</p>
+    <div class="math">X_transformed = f(X)</div>
+    <p>For example:</p>
+    <div class="math">X_new = log(X) &nbsp;&nbsp;or&nbsp;&nbsp; X_new = √X &nbsp;&nbsp;or&nbsp;&nbsp; X_new = X²</div>
+    <p>The original values are changed, but the purpose is generally to preserve useful information while making the feature more suitable for a Machine Learning model.</p>
+
+    <h2>2. Why Do We Apply Mathematical Transformations?</h2>
+    <p>Real-world numerical data is often: Skewed, Unevenly distributed, Spread across a very large range, Affected by extreme values, Non-linear, Far from a normal distribution.</p>
+    <p>Mathematical transformations can help:</p>
+    <ol>
+        <li>Reduce skewness</li>
+        <li>Make a distribution more symmetric</li>
+        <li>Bring the data closer to a normal distribution</li>
+        <li>Reduce the influence of extremely large values</li>
+        <li>Stabilize variance</li>
+        <li>Make relationships more linear</li>
+        <li>Improve the performance of some Machine Learning algorithms</li>
+    </ol>
+    <p>The general objective is often:</p>
+    <div class="tree">Non-normal data → Transformation → More normally distributed data</div>
+    <p>However, a transformation does <strong>not guarantee</strong> that the resulting data will become perfectly normally distributed. The goal is often simply to make the distribution <strong>closer to normal</strong>.</p>
+
+    <h2>3. What Is a Normal Distribution?</h2>
+    <p>A normal distribution is a continuous probability distribution having a symmetric, bell-shaped curve.</p>
+    <div class="tree">                   │
+                 █████
+               █████████
+             █████████████
+          ███████████████████
+────────────── Mean ──────────────</div>
+    <p>Important properties:</p>
+    <ul>
+        <li>It is symmetric around the mean.</li>
+        <li>Most observations occur near the center.</li>
+        <li>Very small and very large observations occur less frequently.</li>
+        <li>Mean, median, and mode are approximately equal.</li>
+    </ul>
+    <p>For a perfectly normal distribution: <code>Mean = Median = Mode</code></p>
+    <p>Approximately <code>68%</code> of observations are within one standard deviation of the mean, <code>95%</code> are within two standard deviations, and <code>99.7%</code> are within three standard deviations. This is known as the <strong>68–95–99.7 Rule</strong>.</p>
+
+    <h2>4. Why Is Normal Distribution Important?</h2>
+    <p>Normal distribution is extremely important in Statistics because many statistical techniques are mathematically easier to understand and apply when the data or model errors follow a normal distribution.</p>
+    <p>Some Machine Learning algorithms may perform better when numerical features are reasonably symmetric or when certain statistical assumptions are satisfied. Examples include: Linear Regression, Logistic Regression, Linear Discriminant Analysis, Gaussian Naive Bayes, Some statistical hypothesis tests.</p>
+    <div class="alert alert-warning">
+        <strong>Important correction:</strong> Linear Regression does not require every input feature to be normally distributed. The normality assumption in classical Linear Regression mainly applies to the <strong>residuals or errors</strong>, especially when performing statistical inference. Transforming skewed features may still improve Linearity, Variance stability, Numerical behavior, and Model performance.
+    </div>
+
+    <h2>5. Do All Machine Learning Algorithms Need Normally Distributed Data?</h2>
+    <p><strong>No.</strong></p>
+    <p>Tree-based algorithms generally do not care whether the input features are normally distributed. Examples: Decision Tree, Random Forest, Extra Trees, Gradient Boosting Trees, XGBoost, LightGBM.</p>
+    <p>These models divide the feature space using conditions such as <code>Fare <= 25</code>. Therefore, changing the shape of a feature distribution usually does not provide the same benefit that it may provide to some linear or statistical models.</p>
+    <p>A monotonic transformation usually preserves the order of values. Example: Original: <code>10 < 100 < 1000</code>. After log transformation: <code>2.30 < 4.61 < 6.91</code>. The order remains unchanged. Therefore, tree splits may remain very similar.</p>
+
+    <h2>6. Types of Mathematical Transformations</h2>
+    <table>
+        <thead>
+            <tr><th>Transformation</th><th>Mathematical Formula</th></tr>
+        </thead>
+        <tbody>
+            <tr><td>Log Transformation</td><td><code>log(X)</code></td></tr>
+            <tr><td>Reciprocal Transformation</td><td><code>1 / X</code></td></tr>
+            <tr><td>Square Transformation</td><td><code>X²</code></td></tr>
+            <tr><td>Square-Root Transformation</td><td><code>√X</code></td></tr>
+            <tr><td>Custom Transformation</td><td><code>f(X)</code></td></tr>
+        </tbody>
+    </table>
+    <p>The following transformations are covered separately using <code>PowerTransformer</code>: Box–Cox Transformation and Yeo–Johnson Transformation.</p>
+
+    <h2>7. Mathematical Transformer Classes in Scikit-Learn</h2>
+    
+    <h3>7.1 FunctionTransformer</h3>
+    <p>Used for applying: Log, Reciprocal, Square, Square-root, and Custom mathematical functions.</p>
+    <pre><code>from sklearn.preprocessing import FunctionTransformer</code></pre>
+
+    <h3>7.2 PowerTransformer</h3>
+    <p>Used for: Box–Cox and Yeo–Johnson Transformations (covered in Day 31).</p>
+    <pre><code>from sklearn.preprocessing import PowerTransformer</code></pre>
+
+    <h3>7.3 QuantileTransformer</h3>
+    <p>Converts the distribution into a uniform distribution or a normal distribution.</p>
+    <pre><code>from sklearn.preprocessing import QuantileTransformer</code></pre>
+
+    <h2>8. FunctionTransformer</h2>
+    <p><code>FunctionTransformer</code> allows us to apply a mathematical function to a feature.</p>
+    <pre><code>from sklearn.preprocessing import FunctionTransformer
+import numpy as np
+
+transformer = FunctionTransformer(func=np.log1p)</code></pre>
+    <p>The transformation becomes: <code>X_new = log(1 + X)</code></p>
+    
+    <h3>Why Is FunctionTransformer Useful?</h3>
+    <p>It allows us to use NumPy mathematical functions, Built-in Python functions, User-defined functions, and Lambda functions.</p>
+    <pre><code>FunctionTransformer(np.log1p)
+FunctionTransformer(np.sqrt)
+FunctionTransformer(np.square)
+
+# Custom transformation
+FunctionTransformer(lambda x: x**2 + 2*x)</code></pre>
+    <p>Therefore, almost any mathematical transformation can be applied.</p>
+
+    <h2>9. How Can We Check Whether Data Is Normally Distributed?</h2>
+    
+    <h3>Method 1: Distribution Plot</h3>
+    <pre><code>import seaborn as sns
+
+sns.histplot(df["Age"], kde=True)</code></pre>
+    <p>If the graph is approximately Bell-shaped, Symmetric, and Centered, the feature may be close to normally distributed. However, visual inspection alone is not always reliable.</p>
+
+    <h3>Method 2: Calculate Skewness</h3>
+    <p>Skewness measures the asymmetry of a distribution.</p>
+    <pre><code>df["Fare"].skew()</code></pre>
+    <table>
+        <thead>
+            <tr><th>Skewness</th><th>Meaning</th></tr>
+        </thead>
+        <tbody>
+            <tr><td>Approximately <code>0</code></td><td>Symmetric</td></tr>
+            <tr><td>Greater than <code>0</code></td><td>Right-skewed</td></tr>
+            <tr><td>Less than <code>0</code></td><td>Left-skewed</td></tr>
+        </tbody>
+    </table>
+    <table>
+        <thead>
+            <tr><th>Absolute Skewness</th><th>Interpretation</th></tr>
+        </thead>
+        <tbody>
+            <tr><td><code>0–0.5</code></td><td>Approximately symmetric</td></tr>
+            <tr><td><code>0.5–1</code></td><td>Moderately skewed</td></tr>
+            <tr><td>Greater than <code>1</code></td><td>Highly skewed</td></tr>
+        </tbody>
+    </table>
+
+    <h3>Right-Skewed Distribution</h3>
+    <div class="tree">███████
+█████
+███
+██
+█
+───────────────►
+      Long right tail</div>
+    <p>Characteristics: <code>Mean > Median</code>. Examples: Income, House prices, Hospital expenses, Product sales, Titanic ticket fare. A Log Transformation is commonly useful for right-skewed data.</p>
+
+    <h3>Left-Skewed Distribution</h3>
+    <div class="tree">              ███████
+                █████
+                  ███
+                   ██
+                    █
+◄────────────────────
+Long left tail</div>
+    <p>Characteristics: <code>Mean < Median</code>. A Square Transformation may sometimes help left-skewed data.</p>
+
+    <h2>10. Q–Q Plot</h2>
+    <p>Q–Q means <strong>Quantile–Quantile Plot</strong>. A Q–Q plot is one of the most useful visual techniques for checking whether data follows a normal distribution. It compares Observed data quantiles with Theoretical normal-distribution quantiles.</p>
+    
+    <h3>How to Read a Q–Q Plot</h3>
+    <p><strong>Case 1: Normally Distributed Data</strong><br>If most points lie close to the diagonal line, the data is approximately normally distributed.</p>
+    <div class="tree">             •
+          •
+       •
+    •
+ •
+────────────────</div>
+    <p><strong>Case 2: Right-Skewed Data</strong><br>The points move away from the reference line, especially toward the upper end (indicates a long right tail).</p>
+    <p><strong>Case 3: Left-Skewed Data</strong><br>The points deviate from the line in the opposite direction (indicates a long left tail).</p>
+    <p><strong>Case 4: Heavy or Fat Tails</strong><br>If points deviate strongly at both ends, the data may have heavier tails than a normal distribution.</p>
+    
+    <div class="alert alert-info">
+        <strong>Main Rule:</strong> The closer the points are to the reference line, the closer the distribution is to a normal distribution. The farther the points move away from the line, the greater the deviation from normality.
+    </div>
+
+    <h2>11. Creating a Q–Q Plot in Python</h2>
+    <pre><code>import scipy.stats as stats
+import matplotlib.pyplot as plt
+
+stats.probplot(df["Age"], dist="norm", plot=plt)
+plt.show()</code></pre>
+    <p><code>dist="norm"</code> compares the feature with a theoretical normal distribution.</p>
+
+    <h2>12. Log Transformation</h2>
+    <p>The Log Transformation is one of the most commonly used mathematical transformations.</p>
+    <div class="math">X_new = log(X)</div>
+    <pre><code>import numpy as np
+np.log(X)</code></pre>
+    <p>In Machine Learning, the exact base (e.g., base 10 vs natural log) often matters less than the overall compression effect because logarithms with different bases differ only by a constant scale factor.</p>
+
+    <h2>13. When Should We Use Log Transformation?</h2>
+    <p>Log Transformation is generally useful for <strong>Positively Skewed or Right-Skewed Data</strong>. Examples: Income, Population, House prices, Company revenue, Product sales, Insurance claims, Titanic ticket fares.</p>
+    <div class="tree">Before transformation:
+████████
+█████
+███
+██
+█
+────────────────►
+
+After Log Transformation:
+       █
+     █████
+   █████████
+ █████████████</div>
+
+    <h2>14. Why Does Log Transformation Work?</h2>
+    <p>Suppose the original values are 1, 10, 100, 1000. The values are far apart.</p>
+    <p>Using base-10 logarithm: <code>log₁₀(1) = 0</code>, <code>log₁₀(10) = 1</code>, <code>log₁₀(100) = 2</code>, <code>log₁₀(1000) = 3</code>.</p>
+    <p>The transformed values become 0, 1, 2, 3. Therefore, the large values are compressed. This can reduce right skewness, reduce the influence of extreme values, make patterns easier for some models to learn, and improve linear relationships.</p>
+
+    <h2>15. Log Transformation and Multiplicative Relationships</h2>
+    <p>Log Transformation can convert multiplicative relationships into additive relationships.</p>
+    <p>Suppose <code>Y = A × B</code>. Taking logarithms: <code>log(Y) = log(A) + log(B)</code>.</p>
+    <div class="tree">Multiplication in the original scale
+↓
+Addition in the logarithmic scale</div>
+    <p>This is useful when data grows proportionally or exponentially.</p>
+
+    <h2>16. Problems with Normal Log Transformation</h2>
+    <p>The logarithm of zero is undefined: <code>log(0) = -∞</code>.<br>
+    The logarithm of a negative number is not defined in the real-number system: <code>log(-5)</code>.</p>
+    <p>Therefore, <code>np.log(X)</code> should normally be used only when <code>X > 0</code>.</p>
+
+    <h2>17. Difference Between <code>np.log()</code> and <code>np.log1p()</code></h2>
+    <h3><code>np.log()</code></h3>
+    <p>Calculates <code>log(X)</code>. Problem: <code>np.log(0)</code> produces <code>-inf</code>.</p>
+    
+    <h3><code>np.log1p()</code></h3>
+    <p>Calculates <code>log(1 + X)</code>. If <code>X = 0</code>, then <code>log(1 + 0) = log(1) = 0</code>. Therefore, zero values can be handled safely.</p>
+    <pre><code>transformer = FunctionTransformer(np.log1p)</code></pre>
+    <div class="alert alert-warning">
+        <code>np.log1p()</code> is usually preferred when a non-negative feature contains zeros. <strong>Important:</strong> <code>np.log1p()</code> does not automatically solve the problem of values less than <code>-1</code>.
+    </div>
+
+    <h2>18. Reciprocal Transformation</h2>
+    <div class="math">X_new = 1 / X</div>
+    <pre><code>transformer = FunctionTransformer(lambda x: 1/x)</code></pre>
+    <table>
+        <thead><tr><th>Original Value</th><th style="text-align:center;">Reciprocal</th></tr></thead>
+        <tbody>
+            <tr><td>1</td><td style="text-align:center;">1</td></tr>
+            <tr><td>2</td><td style="text-align:center;">0.5</td></tr>
+            <tr><td>10</td><td style="text-align:center;">0.1</td></tr>
+            <tr><td>100</td><td style="text-align:center;">0.01</td></tr>
+        </tbody>
+    </table>
+    <p>Large values become small. Small positive values become relatively large. Therefore, it strongly changes the scale and shape of the distribution.</p>
+    <div class="alert alert-danger">
+        <strong>Problem:</strong> If <code>X = 0</code>, then <code>1/0</code> is undefined. One possible approach is <code>lambda x: 1/(x + 0.0001)</code>, but the small constant should be selected carefully.
+    </div>
+
+    <h2>19. Square Transformation</h2>
+    <div class="math">X_new = X²</div>
+    <pre><code>transformer = FunctionTransformer(np.square)
+# or
+transformer = FunctionTransformer(lambda x: x**2)</code></pre>
+    <table>
+        <thead><tr><th>Original</th><th style="text-align:center;">Squared</th></tr></thead>
+        <tbody>
+            <tr><td>1</td><td style="text-align:center;">1</td></tr>
+            <tr><td>2</td><td style="text-align:center;">4</td></tr>
+            <tr><td>5</td><td style="text-align:center;">25</td></tr>
+            <tr><td>10</td><td style="text-align:center;">100</td></tr>
+        </tbody>
+    </table>
+    <p>Square Transformation expands larger values more strongly. It may sometimes be useful for negatively skewed or left-skewed data.</p>
+    <div class="alert alert-danger">
+        <strong>Important Limitation:</strong> If negative values exist, the sign information is lost. Both <code>-2</code> and <code>2</code> become <code>4</code>. Therefore, use this transformation carefully.
+    </div>
+
+    <h2>20. Square-Root Transformation</h2>
+    <div class="math">X_new = √X</div>
+    <pre><code>transformer = FunctionTransformer(np.sqrt)</code></pre>
+    <table>
+        <thead><tr><th>Original</th><th style="text-align:center;">Square Root</th></tr></thead>
+        <tbody>
+            <tr><td>1</td><td style="text-align:center;">1</td></tr>
+            <tr><td>4</td><td style="text-align:center;">2</td></tr>
+            <tr><td>25</td><td style="text-align:center;">5</td></tr>
+            <tr><td>100</td><td style="text-align:center;">10</td></tr>
+        </tbody>
+    </table>
+    <p>The Square-Root Transformation compresses large values, but less strongly than the Log Transformation. It may help with moderately right-skewed data.</p>
+    <div class="alert alert-danger">
+        <strong>Limitation:</strong> Standard square root cannot be applied directly to negative values in real-number calculations. Therefore, <code>X ≥ 0</code> is normally required.
+    </div>
+
+    <h2>21. Comparison of the Transformations</h2>
+    <table>
+        <thead>
+            <tr><th>Transformation</th><th>Formula</th><th>Common Use</th></tr>
+        </thead>
+        <tbody>
+            <tr><td>Log</td><td><code>log(1+X)</code></td><td>Strong right skew</td></tr>
+            <tr><td>Square Root</td><td><code>√X</code></td><td>Mild or moderate right skew</td></tr>
+            <tr><td>Reciprocal</td><td><code>1/X</code></td><td>Strong nonlinear compression</td></tr>
+            <tr><td>Square</td><td><code>X²</code></td><td>Sometimes left-skewed data</td></tr>
+            <tr><td>Custom</td><td><code>f(X)</code></td><td>Problem-specific transformations</td></tr>
+        </tbody>
+    </table>
+    <p>These are guidelines, not fixed laws. Always compare the results experimentally.</p>
+
+    <h2>22. Titanic Dataset Example</h2>
+    <p>The lecture uses the Titanic dataset. Only three columns are selected:</p>
+    <pre><code>df = pd.read_csv("train.csv", usecols=["Age", "Fare", "Survived"])</code></pre>
+    <p>Features: <code>Age</code>, <code>Fare</code>. Target: <code>Survived</code> (<code>0</code> = Did not survive, <code>1</code> = Survived).</p>
+
+    <h2>23. Importing the Required Libraries</h2>
+    <pre><code>import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+import seaborn as sns
+import scipy.stats as stats
+
+from sklearn.model_selection import train_test_split, cross_val_score
+from sklearn.linear_model import LogisticRegression
+from sklearn.tree import DecisionTreeClassifier
+from sklearn.preprocessing import FunctionTransformer
+from sklearn.compose import ColumnTransformer
+from sklearn.metrics import accuracy_score</code></pre>
+
+    <h2>24. Checking Missing Values</h2>
+    <pre><code>df.isnull().sum()</code></pre>
+    <p>The <code>Age</code> column contains missing values. The lecture fills missing ages using the mean:</p>
+    <pre><code>df["Age"] = df["Age"].fillna(df["Age"].mean())</code></pre>
+    <div class="alert alert-info">
+        <strong>Important additional note:</strong> For skewed numerical data, the median is often more robust than the mean. In a proper Machine Learning workflow, imputation should preferably be included inside a Pipeline to prevent data leakage.
+    </div>
+
+    <h2>25 & 26. Separating Features and Target & Train-Test Split</h2>
+    <pre><code>X = df.iloc[:, 1:3] # Conceptually: X = df[["Age", "Fare"]]
+y = df.iloc[:, 0]    # Conceptually: y = df["Survived"]
+
+X_train, X_test, y_train, y_test = train_test_split(
+    X, y, test_size=0.2, random_state=42
+)</code></pre>
+
+    <h2>27. Distribution of the Age Column</h2>
+    <pre><code>sns.histplot(X_train["Age"], kde=True)
+plt.show()</code></pre>
+    <p>Observation: <code>Age</code> is not perfectly normal, but it is reasonably close to a normal distribution. Its Q–Q plot mostly follows the reference line.</p>
+    <pre><code>stats.probplot(X_train["Age"], dist="norm", plot=plt)
+plt.show()</code></pre>
+    <blockquote>
+        <strong>Conclusion:</strong> Age is approximately normally distributed and may not require Log Transformation.
+    </blockquote>
+
+    <h2>28. Distribution of the Fare Column</h2>
+    <pre><code>sns.histplot(X_train["Fare"], kde=True)
+plt.show()</code></pre>
+    <p>The Titanic <code>Fare</code> feature is strongly right-skewed (Many passengers purchased inexpensive tickets, but a small number purchased extremely expensive tickets creating a long right tail).</p>
+    <p>The Q–Q plot points strongly move away from the reference line.</p>
+    <blockquote>
+        <strong>Conclusion:</strong> Fare is not normally distributed and is a suitable candidate for Log Transformation.
+    </blockquote>
+
+    <h2>29. Model Performance Before Transformation</h2>
+    <pre><code>lr = LogisticRegression()
+dt = DecisionTreeClassifier()
+
+lr.fit(X_train, y_train)
+dt.fit(X_train, y_train)
+
+y_pred_lr = lr.predict(X_test)
+y_pred_dt = dt.predict(X_test)
+
+print(accuracy_score(y_test, y_pred_lr)) # Around 64%
+print(accuracy_score(y_test, y_pred_dt)) # Around 68.7%</code></pre>
+    <p>Exact results may change because of Dataset version, Random split, <code>random_state</code>, Scikit-learn version, and Decision Tree randomness.</p>
+
+    <h2>30. Applying Log Transformation</h2>
+    <pre><code>trf = FunctionTransformer(func=np.log1p)
+
+X_train_transformed = trf.fit_transform(X_train)
+X_test_transformed = trf.transform(X_test)</code></pre>
+    <div class="alert alert-danger">
+        <strong>Important:</strong> Fit the transformer using the training data. Then use the same transformer to transform the test data. Do not independently fit preprocessing steps on the test data.
+    </div>
+
+    <h2>31. Training Models After Transformation</h2>
+    <pre><code>lr = LogisticRegression()
+dt = DecisionTreeClassifier()
+
+lr.fit(X_train_transformed, y_train)
+dt.fit(X_train_transformed, y_train)
+
+y_pred_lr = lr.predict(X_test_transformed)
+y_pred_dt = dt.predict(X_test_transformed)
+
+print(accuracy_score(y_test, y_pred_lr)) # Improved
+print(accuracy_score(y_test, y_pred_dt)) # Remained almost unchanged</code></pre>
+
+    <h2>32. Why Did Logistic Regression Improve?</h2>
+    <p>The distribution became more symmetric. Large values were compressed. This may create a more useful relationship between the feature and the log-odds modeled by Logistic Regression. Therefore, Logistic Regression may perform better.</p>
+
+    <h2>33. Why Did Decision Tree Accuracy Remain Similar?</h2>
+    <p>Decision Trees use threshold-based splits (e.g., <code>Fare <= 20</code>). Log Transformation is monotonic: if <code>x₁ < x₂</code>, then <code>log(x₁) < log(x₂)</code>. Therefore, the ordering of observations remains unchanged. The tree can often construct an equivalent split after transformation.</p>
+
+    <h2>34. Why Should We Use Cross-Validation?</h2>
+    <p>A single Train–Test Split may produce unreliable results. Cross-validation evaluates the model on multiple train-validation splits.</p>
+    <pre><code>scores = cross_val_score(lr, X, y, cv=10, scoring="accuracy")
+scores.mean()</code></pre>
+    <p>This is usually more reliable than one Train–Test Split.</p>
+
+    <h2>35. Important Improvement: Use a Pipeline During Cross-Validation</h2>
+    <pre><code>from sklearn.pipeline import Pipeline
+
+pipe = Pipeline(steps=[
+    ("log_transform", FunctionTransformer(np.log1p)),
+    ("model", LogisticRegression())
+])
+
+scores = cross_val_score(pipe, X, y, cv=10, scoring="accuracy")
+print(scores.mean())</code></pre>
+    <div class="alert alert-success">
+        This prevents information from the validation fold from leaking into preprocessing.
+    </div>
+
+    <h2>36 & 37. Comparing Fare Before and After Log Transformation</h2>
+    <p><strong>Before:</strong> Strongly right-skewed, Long right tail, Far from normal.<br>
+    <strong>After:</strong> Large values are compressed, Skewness is reduced, Distribution becomes closer to normal. After Log Transformation, the points in the Q–Q plot move closer to the diagonal reference line.</p>
+
+    <h2>38. Why Should We Not Transform Age Unnecessarily?</h2>
+    <p>The <code>Age</code> feature was already approximately normal. Applying Log Transformation may make its distribution worse (e.g., may become unnecessarily skewed).</p>
+    <blockquote>
+        <strong>Important lesson:</strong> Do not transform every numerical feature automatically. Analyze every feature separately.
+    </blockquote>
+
+    <h2>39 & 40. Applying Log Transformation Only to Fare</h2>
+    <p>We can use <code>ColumnTransformer</code>.</p>
+    <pre><code>trf = ColumnTransformer(
+    transformers=[
+        ("log", FunctionTransformer(np.log1p), ["Fare"])
+    ],
+    remainder="passthrough"
+)
+
+X_train_transformed = trf.fit_transform(X_train)
+X_test_transformed = trf.transform(X_test)
+
+lr.fit(X_train_transformed, y_train)
+y_pred = lr.predict(X_test_transformed)
+accuracy_score(y_test, y_pred)</code></pre>
+    <p>This is better than applying Log Transformation unnecessarily to both <code>Age</code> and <code>Fare</code>.</p>
+
+    <h2>41. Testing Different Transformations</h2>
+    <p>The lecture creates a reusable function to test different mathematical transformations:</p>
+    <pre><code>def apply_transform(func):
+    transformer = FunctionTransformer(func)
+    X_transformed = transformer.fit_transform(X)
+    model = LogisticRegression()
+    scores = cross_val_score(model, X_transformed, y, cv=10, scoring="accuracy")
+    print(scores.mean())</code></pre>
+    
+    <h4>No Transformation (Identity Transformation: f(X) = X)</h4>
+    <pre><code>apply_transform(lambda x: x)</code></pre>
+
+    <h4>Log Transformation</h4>
+    <pre><code>apply_transform(np.log1p)</code></pre>
+    <p>For the Titanic Fare feature, this produced the best result among the transformations tested in the lecture.</p>
+
+    <h4>Reciprocal Transformation</h4>
+    <pre><code>apply_transform(lambda x: 1/(x+0.0001))</code></pre>
+    <p>The result became worse because Reciprocal Transformation was not appropriate for this distribution.</p>
+
+    <h4>Square Transformation</h4>
+    <pre><code>apply_transform(np.square)</code></pre>
+    <p>Performance decreased because Fare was right-skewed, while squaring expands large values and may increase the right skew.</p>
+
+    <h4>Square-Root Transformation</h4>
+    <pre><code>apply_transform(np.sqrt)</code></pre>
+    <p>The result was close to the original result. It did not improve the distribution as much as Log Transformation.</p>
+
+    <h2>42. Custom Mathematical Functions</h2>
+    <pre><code>def custom_transform(x):
+    return x**2 + 2*x
+
+transformer = FunctionTransformer(custom_transform)
+
+# Another example
+transformer = FunctionTransformer(lambda x: x**3)</code></pre>
+    <p>You may also use NumPy functions such as <code>np.sin</code>, <code>np.cos</code>, <code>np.exp</code>. However, a function should not be used only because it is mathematically possible. The transformation should make sense for: The feature, The distribution, The model, The business problem.</p>
+
+    <h2>43. How Should We Select the Best Transformation?</h2>
+    <div class="tree">Inspect the feature
+↓
+Check histogram and KDE
+↓
+Calculate skewness
+↓
+Check the Q–Q plot
+↓
+Select possible transformations
+↓
+Transform only the training data correctly
+↓
+Compare before and after distributions
+↓
+Train the model
+↓
+Evaluate using cross-validation
+↓
+Select the transformation that improves validation performance</div>
+    <p>Do not select a transformation only because the graph looks more normal. The final decision should consider: Validation performance, Model stability, Interpretability, Domain knowledge.</p>
+
+    <h2>44. Important Mistakes to Avoid</h2>
+    <ol>
+        <li><strong>Transforming Every Numerical Column:</strong> Do not apply Log Transformation to every feature automatically. Analyze each feature separately.</li>
+        <li><strong>Applying Log to Negative Values:</strong> <code>np.log(negative_values)</code> produces invalid results in real-number calculations.</li>
+        <li><strong>Ignoring Zero Values:</strong> <code>np.log(0)</code> is invalid. Use <code>np.log1p(X)</code> when the feature is non-negative and contains zero.</li>
+        <li><strong>Using Reciprocal Transformation with Zero:</strong> <code>1/0</code> is undefined.</li>
+        <li><strong>Using Square Root with Negative Values:</strong> <code>np.sqrt(-10)</code> produces invalid real-valued output.</li>
+        <li><strong>Expecting Perfect Normality:</strong> Transformations may improve normality but do not guarantee a perfectly normal distribution.</li>
+        <li><strong>Assuming Every Model Requires Normal Data:</strong> Tree-based models generally do not require normally distributed features.</li>
+        <li><strong>Evaluating Only One Train–Test Split:</strong> Use cross-validation for more reliable model comparison.</li>
+        <li><strong>Transforming Before Splitting Carelessly:</strong> Use a Pipeline so preprocessing is learned only from training folds.</li>
+    </ol>
+
+    <h2>45. Complete Recommended Pipeline</h2>
+    <pre><code>import numpy as np
+from sklearn.pipeline import Pipeline
+from sklearn.compose import ColumnTransformer
+from sklearn.preprocessing import FunctionTransformer
+from sklearn.impute import SimpleImputer
+from sklearn.linear_model import LogisticRegression
+from sklearn.model_selection import cross_val_score
+
+# Create preprocessing
+preprocessor = ColumnTransformer(
+    transformers=[
+        ("fare_log", 
+         Pipeline(steps=[
+             ("imputer", SimpleImputer(strategy="median")),
+             ("log", FunctionTransformer(np.log1p))
+         ]), 
+         ["Fare"]),
+        ("age", SimpleImputer(strategy="median"), ["Age"])
+    ]
+)
+
+# Create the complete Pipeline
+model = Pipeline(steps=[
+    ("preprocessing", preprocessor),
+    ("classifier", LogisticRegression())
+])
+
+# Cross-validation
+scores = cross_val_score(model, X, y, cv=10, scoring="accuracy")
+print("Mean Accuracy:", scores.mean())</code></pre>
+    <div class="alert alert-success">
+        This workflow handles missing values, applies Log Transformation only to Fare, leaves Age without unnecessary transformation, prevents data leakage, and performs reliable cross-validation.
+    </div>
+
+    <div class="summary-box">
+        <h2>46. Final Summary</h2>
+        <table>
+            <thead>
+                <tr><th>Concept</th><th>Main Point</th></tr>
+            </thead>
+            <tbody>
+                <tr><td>Mathematical Transformation</td><td>Applies a mathematical function to numerical data</td></tr>
+                <tr><td>Main Goal</td><td>Improve distribution, reduce skewness, and help some models</td></tr>
+                <tr><td>FunctionTransformer</td><td>Applies built-in or custom mathematical functions</td></tr>
+                <tr><td>Log Transformation</td><td>Usually useful for strongly right-skewed data</td></tr>
+                <tr><td><code>np.log1p()</code></td><td>Calculates log(1+X) and safely handles zero</td></tr>
+                <tr><td>Reciprocal</td><td>Calculates 1/X</td></tr>
+                <tr><td>Square</td><td>Calculates X², sometimes useful for left skew</td></tr>
+                <tr><td>Square Root</td><td>Calculates √X, useful for mild right skew</td></tr>
+                <tr><td>Histogram</td><td>Visually shows the feature distribution</td></tr>
+                <tr><td>Skewness</td><td>Measures distribution asymmetry</td></tr>
+                <tr><td>Q–Q Plot</td><td>Compares data quantiles with normal-distribution quantiles</td></tr>
+                <tr><td>Logistic Regression</td><td>May benefit from suitable transformations</td></tr>
+                <tr><td>Decision Tree</td><td>Usually less affected by monotonic transformations</td></tr>
+                <tr><td>ColumnTransformer</td><td>Applies transformations only to selected columns</td></tr>
+                <tr><td>Cross-Validation</td><td>Gives more reliable model evaluation</td></tr>
+                <tr><td>Pipeline</td><td>Prevents leakage and organizes preprocessing</td></tr>
+            </tbody>
+        </table>
+        <br>
+        <h2>Day 30 Final Conclusion 🎯</h2>
+        <p>Mathematical transformations are Feature Engineering techniques used to modify numerical features.</p>
+        <blockquote>
+            Do not apply transformations blindly. First inspect the distribution, understand its skewness, choose a suitable transformation, compare the distribution before and after transformation, and finally verify the effect using cross-validation.
+        </blockquote>
+        <div class="tree">Age
+↓
+Already approximately normal
+↓
+No Log Transformation required
+
+Fare
+↓
+Strongly right-skewed
+↓
+Apply Log Transformation
+↓
+Distribution becomes more symmetric
+↓
+Logistic Regression may improve
+
+Decision Tree
+↓
+Usually remains almost unchanged
+because monotonic transformations preserve value ordering</div>
+        <br>
+        <p style="text-align: center; font-weight: bold; color: var(--secondary-color);">
+            Next Topic: Day 31 — Power Transformer (Box–Cox Transformation & Yeo–Johnson Transformation)
+        </p>
+    </div>
+
+</div>
+
+</body>
+</html>
