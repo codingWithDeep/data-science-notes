@@ -1,0 +1,1116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Day 27 — One-Hot Encoding (OHE) Complete Notes 📘</title>
+    <style>
+        :root {
+            --primary-color: #1a252f;
+            --secondary-color: #2980b9;
+            --bg-color: #ffffff;
+            --text-color: #333333;
+            --code-bg: #1e1e1e;
+            --code-text: #d4d4d4;
+            --warning-bg: #fff8e1;
+            --warning-border: #ffe082;
+            --success-bg: #e8f5e9;
+            --danger-bg: #ffebee;
+            --info-bg: #e3f2fd;
+            --border-color: #e0e0e0;
+            --tree-bg: #f5f7fa;
+        }
+
+        html, body {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            min-height: 100%;
+        }
+
+        body {
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            line-height: 1.75;
+            color: var(--text-color);
+            background-color: var(--bg-color);
+        }
+
+        /* Full Page Container */
+        .container {
+            width: 100%;
+            max-width: 100%;
+            box-sizing: border-box;
+            padding: 50px 10%;
+        }
+
+        h1, h2, h3, h4, h5 {
+            color: var(--primary-color);
+            margin-top: 2.5em;
+            margin-bottom: 1em;
+        }
+
+        h1 {
+            font-size: 2.8em;
+            border-bottom: 4px solid var(--secondary-color);
+            padding-bottom: 20px;
+            margin-top: 0;
+        }
+
+        h2 {
+            font-size: 2em;
+            border-left: 6px solid var(--secondary-color);
+            padding-left: 20px;
+            margin-top: 3.5em;
+        }
+
+        h3 {
+            font-size: 1.4em;
+            color: #34495e;
+            margin-top: 2em;
+        }
+
+        h4 {
+            font-size: 1.15em;
+            color: #2c3e50;
+            margin-bottom: 0.8em;
+        }
+
+        p {
+            margin-bottom: 1.2em;
+            font-size: 1.05em;
+        }
+
+        strong {
+            color: var(--primary-color);
+            font-weight: 600;
+        }
+
+        ul, ol {
+            padding-left: 30px;
+            margin-bottom: 1.2em;
+        }
+
+        li {
+            margin-bottom: 0.6em;
+            font-size: 1.05em;
+        }
+
+        /* Tables */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 2em 0;
+            font-size: 1em;
+            display: block;
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        th, td {
+            padding: 14px 20px;
+            text-align: left;
+            border: 1px solid var(--border-color);
+        }
+
+        th {
+            background-color: var(--primary-color);
+            color: #ffffff;
+            font-weight: 600;
+        }
+
+        tr:nth-child(even) {
+            background-color: #f8f9fa;
+        }
+
+        tr:hover {
+            background-color: #eef2f5;
+        }
+
+        /* Code Blocks */
+        pre {
+            background-color: var(--code-bg);
+            color: var(--code-text);
+            padding: 25px;
+            border-radius: 6px;
+            overflow-x: auto;
+            font-family: 'Fira Code', 'Consolas', 'Courier New', monospace;
+            font-size: 0.95em;
+            line-height: 1.6;
+            margin: 1.5em 0;
+            border: 1px solid #444;
+        }
+
+        code {
+            font-family: 'Fira Code', 'Consolas', 'Courier New', monospace;
+        }
+
+        /* Inline Code */
+        p code, li code, td code {
+            background-color: #eef2f5;
+            color: #c0392b;
+            padding: 3px 7px;
+            border-radius: 4px;
+            font-size: 0.9em;
+            border: 1px solid #dde4ea;
+        }
+
+        /* Blockquotes */
+        blockquote {
+            border-left: 6px solid var(--secondary-color);
+            margin: 2em 0;
+            padding: 20px 30px;
+            background-color: #f4f8fb;
+            color: #444;
+            font-style: italic;
+            font-size: 1.15em;
+        }
+
+        blockquote p {
+            margin-bottom: 0;
+        }
+
+        /* Alerts / Boxes */
+        .alert {
+            padding: 20px 25px;
+            margin: 2em 0;
+            border-radius: 0 6px 6px 0;
+            font-size: 1.05em;
+        }
+
+        .alert-warning {
+            background-color: var(--warning-bg);
+            border-left: 6px solid #f9a825;
+        }
+
+        .alert-danger {
+            background-color: var(--danger-bg);
+            border-left: 6px solid #e53935;
+        }
+
+        .alert-success {
+            background-color: var(--success-bg);
+            border-left: 6px solid #43a047;
+        }
+
+        .alert-info {
+            background-color: var(--info-bg);
+            border-left: 6px solid #2980b9;
+        }
+
+        /* Tree structure styling */
+        .tree {
+            font-family: 'Fira Code', 'Consolas', 'Courier New', monospace;
+            background: var(--tree-bg);
+            padding: 20px;
+            border-radius: 6px;
+            border: 1px solid var(--border-color);
+            white-space: pre;
+            line-height: 1.5;
+            margin: 1.5em 0;
+            font-size: 1em;
+            overflow-x: auto;
+        }
+
+        /* Footer / Summary Box */
+        .summary-box {
+            background-color: #e8f0fe;
+            border: 2px dashed var(--secondary-color);
+            padding: 35px 40px;
+            border-radius: 8px;
+            margin-top: 3em;
+        }
+
+        .summary-box h2 {
+            border-left: none;
+            padding-left: 0;
+            margin-top: 0;
+            color: var(--secondary-color);
+        }
+
+        /* Interview Q&A Styling */
+        .qa-block {
+            margin-bottom: 2em;
+            padding-bottom: 1.5em;
+            border-bottom: 1px solid #eee;
+        }
+        .qa-block:last-child {
+            border-bottom: none;
+        }
+
+        /* Responsive adjustments */
+        @media (max-width: 768px) {
+            .container {
+                padding: 20px 5%;
+            }
+            h1 { font-size: 2em; }
+            h2 { font-size: 1.5em; }
+            th, td { padding: 10px 15px; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+
+    <h1>Day 27 — One-Hot Encoding (OHE) Complete Notes 📘</h1>
+
+    <h2>1. Introduction</h2>
+    <p>In previous lessons, we learned how to handle <strong>categorical data</strong>.</p>
+    <p>Categorical data is mainly divided into two types:</p>
+    <table>
+        <thead>
+            <tr><th>Type</th><th>Meaning</th><th>Examples</th><th>Suitable Encoding</th></tr>
+        </thead>
+        <tbody>
+            <tr><td><strong>Ordinal Data</strong></td><td>Categories have a meaningful order or ranking</td><td>Poor → Average → Good → Excellent</td><td>Ordinal Encoding</td></tr>
+            <tr><td><strong>Nominal Data</strong></td><td>Categories have no natural order or ranking</td><td>Male/Female, Red/Blue/Green, City names</td><td>One-Hot Encoding</td></tr>
+        </tbody>
+    </table>
+    <p>In this lesson, we will learn how to convert <strong>nominal categorical data</strong> into numerical data using <strong>One-Hot Encoding</strong>.</p>
+    <p>We will cover:</p>
+    <ol>
+        <li>What is One-Hot Encoding?</li>
+        <li>Why is One-Hot Encoding required?</li>
+        <li>How does One-Hot Encoding work?</li>
+        <li>Why should we not use Ordinal Encoding for nominal data?</li>
+        <li>What are dummy variables?</li>
+        <li>What is the Dummy Variable Trap?</li>
+        <li>What is multicollinearity?</li>
+        <li>Why do we sometimes remove one dummy column?</li>
+        <li>One-Hot Encoding using Pandas</li>
+        <li>One-Hot Encoding using Scikit-learn</li>
+        <li>Important parameters of <code>OneHotEncoder</code></li>
+        <li>How to handle a column containing many categories</li>
+        <li>How to handle unknown categories</li>
+        <li>Advantages and disadvantages</li>
+        <li>Important interview questions</li>
+    </ol>
+
+    <h2>2. Revision: Why Do We Encode Categorical Data?</h2>
+    <p>Real-world datasets frequently contain categorical values in the form of strings.</p>
+    <p>Example:</p>
+    <table>
+        <thead>
+            <tr><th>Name</th><th>Gender</th><th>City</th></tr>
+        </thead>
+        <tbody>
+            <tr><td>Rahul</td><td>Male</td><td>Delhi</td></tr>
+            <tr><td>Priya</td><td>Female</td><td>Mumbai</td></tr>
+            <tr><td>Aman</td><td>Male</td><td>Kolkata</td></tr>
+        </tbody>
+    </table>
+    <p>The values: <code>Male</code>, <code>Female</code>, <code>Delhi</code>, <code>Mumbai</code>, <code>Kolkata</code> are strings.</p>
+    <p>Most machine-learning algorithms cannot directly perform mathematical calculations on strings. They expect numerical input.</p>
+    <p>Therefore, it is the responsibility of a data scientist to convert categorical values into a numerical representation.</p>
+    <p>The process of converting categorical data into numbers is called:</p>
+    <blockquote>
+        <strong>Categorical Encoding</strong>
+    </blockquote>
+    <p>However, we should not assign numbers randomly. The encoding method must preserve the actual meaning of the data.</p>
+
+    <h2>3. Types of Categorical Data</h2>
+    
+    <h3>3.1 Ordinal Categorical Data</h3>
+    <p>Ordinal data contains categories with a meaningful order or ranking.</p>
+    <p>Example:</p>
+    <div class="tree">Poor < Average < Good < Excellent</div>
+    <p>We can assign:</p>
+    <div class="tree">Poor      → 0
+Average   → 1
+Good      → 2
+Excellent → 3</div>
+    <p>This numerical order correctly represents the actual relationship between the categories.</p>
+    <p>Therefore, we generally use:</p>
+    <pre><code>OrdinalEncoder</code></pre>
+    <p>for ordinal input features.</p>
+
+    <h3>3.2 Nominal Categorical Data</h3>
+    <p>Nominal data contains categories with <strong>no natural order</strong>.</p>
+    <p>Examples:</p>
+    <div class="tree">Male
+Female
+
+Red
+Green
+Blue
+
+Delhi
+Mumbai
+Guwahati
+
+Petrol
+Diesel
+CNG
+LPG</div>
+    <p>For example: <code>Red = Blue = Green</code>. No colour is naturally greater or smaller than another colour.</p>
+    <p>Similarly: <code>Male = Female</code>. Neither category has a higher rank.</p>
+    <p>Therefore, we should generally use:</p>
+    <blockquote>
+        <strong>One-Hot Encoding</strong>
+    </blockquote>
+
+    <h2>4. Why Should We Not Use Ordinal Encoding for Nominal Data?</h2>
+    <p>Suppose we have three colours:</p>
+    <div class="tree">Yellow
+Blue
+Red</div>
+    <p>If we use Ordinal Encoding:</p>
+    <div class="tree">Yellow → 0
+Blue   → 1
+Red    → 2</div>
+    <p>The machine-learning model may interpret these values mathematically.</p>
+    <p>It may assume:</p>
+    <div class="tree">Red > Blue > Yellow</div>
+    <p>It may also assume:</p>
+    <div class="tree">Distance between Red and Blue = 1
+Distance between Blue and Yellow = 1</div>
+    <p>Some models may even interpret:</p>
+    <div class="tree">Red = 2 × Blue</div>
+    <p>However, these relationships do not exist. Colours are simply different categories. They do not have rankings or meaningful numerical distances.</p>
+    <div class="alert alert-danger">
+        <strong>Conclusion:</strong> Assigning ordinary integer values to nominal categories may create a <strong>false order</strong>. One-Hot Encoding solves this problem.
+    </div>
+
+    <h2>5. What Is One-Hot Encoding?</h2>
+    <p>One-Hot Encoding is a technique used to convert nominal categorical values into numerical vectors.</p>
+    <p>It creates a separate binary column for every category.</p>
+    <p>Binary means that the columns contain:</p>
+    <div class="tree">0 or 1</div>
+    <p>Suppose the original data is:</p>
+    <table>
+        <thead><tr><th>Colour</th></tr></thead>
+        <tbody>
+            <tr><td>Yellow</td></tr>
+            <tr><td>Blue</td></tr>
+            <tr><td>Red</td></tr>
+            <tr><td>Blue</td></tr>
+        </tbody>
+    </table>
+    <p>There are three unique categories: <code>Yellow</code>, <code>Blue</code>, <code>Red</code>.</p>
+    <p>Therefore, One-Hot Encoding creates three new columns: <code>Colour_Yellow</code>, <code>Colour_Blue</code>, <code>Colour_Red</code>.</p>
+    <p>The transformed dataset becomes:</p>
+    <table>
+        <thead><tr><th>Original Colour</th><th style="text-align:center;">Colour_Yellow</th><th style="text-align:center;">Colour_Blue</th><th style="text-align:center;">Colour_Red</th></tr></thead>
+        <tbody>
+            <tr><td>Yellow</td><td style="text-align:center;">1</td><td style="text-align:center;">0</td><td style="text-align:center;">0</td></tr>
+            <tr><td>Blue</td><td style="text-align:center;">0</td><td style="text-align:center;">1</td><td style="text-align:center;">0</td></tr>
+            <tr><td>Red</td><td style="text-align:center;">0</td><td style="text-align:center;">0</td><td style="text-align:center;">1</td></tr>
+            <tr><td>Blue</td><td style="text-align:center;">0</td><td style="text-align:center;">1</td><td style="text-align:center;">0</td></tr>
+        </tbody>
+    </table>
+    <p>Each row contains <code>1</code> in the column representing the category and <code>0</code> in all other category columns.</p>
+
+    <h2>6. Vector Representation</h2>
+    <p>One-Hot Encoding converts every category into a binary vector.</p>
+    <p>For example:</p>
+    <div class="tree">Yellow → [1, 0, 0]
+Blue    → [0, 1, 0]
+Red     → [0, 0, 1]</div>
+    <p>Each vector uniquely identifies a category. No artificial ranking is introduced.</p>
+    <p>The model does not assume <code>Red > Blue</code> or <code>Blue > Yellow</code>. All categories are treated independently.</p>
+
+    <h2>7. Why Is It Called “One-Hot”?</h2>
+    <p>Consider: <code>Yellow → [1, 0, 0]</code></p>
+    <p>Only one position is active or <strong>hot</strong>. The active position contains <code>1</code>. All other positions contain <code>0</code>.</p>
+    <blockquote>
+        Therefore, it is called: <strong>One-Hot Encoding</strong>
+    </blockquote>
+
+    <h2>8. Number of Columns Created</h2>
+    <p>Suppose a categorical feature contains <code>n categories</code>. Normal One-Hot Encoding creates <code>n new columns</code>.</p>
+    <table>
+        <thead><tr><th style="text-align:center;">Number of categories</th><th style="text-align:center;">Number of OHE columns</th></tr></thead>
+        <tbody>
+            <tr><td style="text-align:center;">2</td><td style="text-align:center;">2</td></tr>
+            <tr><td style="text-align:center;">3</td><td style="text-align:center;">3</td></tr>
+            <tr><td style="text-align:center;">10</td><td style="text-align:center;">10</td></tr>
+            <tr><td style="text-align:center;">50</td><td style="text-align:center;">50</td></tr>
+            <tr><td style="text-align:center;">500</td><td style="text-align:center;">500</td></tr>
+        </tbody>
+    </table>
+    <p><strong>Therefore:</strong> <code>Number of OHE columns = Number of unique categories</code></p>
+    <div class="alert alert-warning">
+        If a feature contains 500 unique categories, normal One-Hot Encoding may create 500 columns. This can significantly increase the dimensionality of the dataset.
+    </div>
+
+    <h2>9. Dummy Variables</h2>
+    <p>The new binary columns created by One-Hot Encoding are called:</p>
+    <blockquote>
+        <strong>Dummy Variables</strong>
+    </blockquote>
+    <p>For example: <code>Colour_Yellow</code>, <code>Colour_Blue</code>, <code>Colour_Red</code> are dummy variables. They contain binary values: <code>0</code> and <code>1</code>.</p>
+
+    <h2>10. Dummy Variable Trap</h2>
+    <p>Suppose One-Hot Encoding creates:</p>
+    <table>
+        <thead><tr><th style="text-align:center;">Colour_Yellow</th><th style="text-align:center;">Colour_Blue</th><th style="text-align:center;">Colour_Red</th></tr></thead>
+        <tbody>
+            <tr><td style="text-align:center;">1</td><td style="text-align:center;">0</td><td style="text-align:center;">0</td></tr>
+            <tr><td style="text-align:center;">0</td><td style="text-align:center;">1</td><td style="text-align:center;">0</td></tr>
+            <tr><td style="text-align:center;">0</td><td style="text-align:center;">0</td><td style="text-align:center;">1</td></tr>
+        </tbody>
+    </table>
+    <p>Notice: <code>Colour_Yellow + Colour_Blue + Colour_Red = 1</code></p>
+    <p>This relationship is true for every row. Therefore, one column can be perfectly calculated using the other columns.</p>
+    <p>For example: <code>Colour_Yellow = 1 − Colour_Blue − Colour_Red</code></p>
+    <p>Therefore, the columns are not completely independent. This perfect dependency may cause a problem called:</p>
+    <blockquote>
+        <strong>Perfect Multicollinearity</strong>
+    </blockquote>
+    <p>The problem caused by keeping all dummy columns is commonly called:</p>
+    <blockquote>
+        <strong>Dummy Variable Trap</strong>
+    </blockquote>
+
+    <h2>11. What Is Multicollinearity?</h2>
+    <p>Multicollinearity occurs when two or more input features have a strong mathematical relationship.</p>
+    <p>For example: <code>X₃ = X₁ + X₂</code></p>
+    <p>In this situation, one input feature can be predicted using other input features.</p>
+    <p>Ideally, input features should not be perfectly dependent on each other.</p>
+    <p>Suppose: <code>Yellow + Blue + Red = 1</code>. Then: <code>Yellow = 1 − Blue − Red</code></p>
+    <p>Therefore, the <code>Yellow</code> column does not provide completely independent information.</p>
+
+    <h2>12. Solution to the Dummy Variable Trap</h2>
+    <p>If there are <code>n categories</code>, we can keep <code>n − 1 columns</code>.</p>
+    <p>Suppose there are three categories: <code>Yellow</code>, <code>Blue</code>, <code>Red</code>. Instead of keeping all three columns, we can remove one column (e.g., <code>Yellow</code>).</p>
+    <p>The remaining data becomes:</p>
+    <table>
+        <thead><tr><th style="text-align:center;">Colour_Blue</th><th style="text-align:center;">Colour_Red</th><th>Meaning</th></tr></thead>
+        <tbody>
+            <tr><td style="text-align:center;">0</td><td style="text-align:center;">0</td><td>Yellow</td></tr>
+            <tr><td style="text-align:center;">1</td><td style="text-align:center;">0</td><td>Blue</td></tr>
+            <tr><td style="text-align:center;">0</td><td style="text-align:center;">1</td><td>Red</td></tr>
+        </tbody>
+    </table>
+    <p>We can still identify all three categories. How?</p>
+    <div class="tree">Blue   = [1, 0]
+Red    = [0, 1]
+Yellow = [0, 0]</div>
+    <blockquote>
+        <code>n − 1</code> dummy columns are sufficient to represent <code>n</code> categories.
+    </blockquote>
+
+    <h2>13. Important Modern Clarification ⭐</h2>
+    <div class="alert alert-info">
+        <p>Dropping one dummy column is particularly important for models such as:</p>
+        <ul>
+            <li>Linear Regression</li>
+            <li>Logistic Regression</li>
+            <li>Generalized Linear Models</li>
+            <li>Statistical regression models</li>
+        </ul>
+        <p>These models may be affected by perfect multicollinearity.</p>
+        <p>However, dropping a category is often unnecessary for many tree-based algorithms, such as:</p>
+        <ul>
+            <li>Decision Tree, Random Forest, Extra Trees</li>
+            <li>Gradient Boosting, XGBoost, LightGBM</li>
+        </ul>
+        <p>Tree-based models generally do not suffer from the dummy variable trap in the same way as linear models.</p>
+        <p><strong>Therefore:</strong></p>
+        <div class="tree">Linear models → usually consider drop='first'
+Tree models   → keeping all categories is often acceptable</div>
+        <p>Do not automatically use <code>drop='first'</code> in every project. The choice depends on the model.</p>
+    </div>
+
+    <h2>14. One-Hot Encoding Using Pandas</h2>
+    <p>Pandas provides: <code>pd.get_dummies()</code></p>
+    <pre><code>import pandas as pd
+
+df = pd.DataFrame({
+    'Fuel': ['Petrol', 'Diesel', 'CNG', 'Petrol'],
+    'Owner': ['First Owner', 'Second Owner', 
+              'First Owner', 'Third Owner']
+})
+
+df</code></pre>
+    <p>Output:</p>
+    <table>
+        <thead><tr><th>Fuel</th><th>Owner</th></tr></thead>
+        <tbody>
+            <tr><td>Petrol</td><td>First Owner</td></tr>
+            <tr><td>Diesel</td><td>Second Owner</td></tr>
+            <tr><td>CNG</td><td>First Owner</td></tr>
+            <tr><td>Petrol</td><td>Third Owner</td></tr>
+        </tbody>
+    </table>
+    <p>Apply One-Hot Encoding:</p>
+    <pre><code>pd.get_dummies(
+    df,
+    columns=['Fuel', 'Owner']
+)</code></pre>
+
+    <h2>15. Removing the First Dummy Column Using Pandas</h2>
+    <p>Use:</p>
+    <pre><code>pd.get_dummies(
+    df,
+    columns=['Fuel', 'Owner'],
+    drop_first=True
+)</code></pre>
+    <p><code>drop_first=True</code> removes the first category from every encoded feature.</p>
+    <p>If Fuel categories are <code>CNG</code>, <code>Diesel</code>, <code>Petrol</code>, then Pandas may remove <code>Fuel_CNG</code>.</p>
+    <p>If both remaining values are zero (<code>Fuel_Diesel = 0</code>, <code>Fuel_Petrol = 0</code>), the category is <code>CNG</code>.</p>
+
+    <h2>16. Pandas <code>get_dummies()</code> Syntax</h2>
+    <pre><code>pd.get_dummies(
+    data,
+    columns=None,
+    drop_first=False,
+    dtype=None
+)</code></pre>
+    <p>Important parameters:</p>
+    <table>
+        <thead><tr><th>Parameter</th><th>Meaning</th></tr></thead>
+        <tbody>
+            <tr><td><code>data</code></td><td>Input DataFrame</td></tr>
+            <tr><td><code>columns</code></td><td>Columns to encode</td></tr>
+            <tr><td><code>drop_first</code></td><td>Removes the first category</td></tr>
+            <tr><td><code>dtype</code></td><td>Controls the data type of encoded values</td></tr>
+        </tbody>
+    </table>
+    <p>Example:</p>
+    <pre><code>encoded_df = pd.get_dummies(
+    df,
+    columns=['Fuel', 'Owner'],
+    drop_first=True,
+    dtype=int
+)</code></pre>
+    <p>Using <code>dtype=int</code> creates <code>0 and 1</code> instead of <code>False and True</code>.</p>
+
+    <h2>17. Why Is <code>pd.get_dummies()</code> Usually Not Preferred in Production Pipelines?</h2>
+    <p><code>pd.get_dummies()</code> is useful for: Exploratory Data Analysis, Quick experiments, Learning, Small projects.</p>
+    <p>However, in machine-learning projects, we usually need the encoder to:</p>
+    <ol>
+        <li>Learn categories only from training data</li>
+        <li>Remember the learned categories</li>
+        <li>Apply exactly the same transformation to test data</li>
+        <li>Maintain the same column order</li>
+        <li>Handle unseen categories</li>
+        <li>Work inside a pipeline</li>
+    </ol>
+    <p>Scikit-learn's <code>OneHotEncoder</code> is designed for these tasks.</p>
+    <div class="tree">Quick analysis → pd.get_dummies()
+ML pipeline    → sklearn OneHotEncoder</div>
+
+    <h2>18. One-Hot Encoding Using Scikit-Learn</h2>
+    <pre><code>from sklearn.preprocessing import OneHotEncoder
+
+ohe = OneHotEncoder()</code></pre>
+    <p>Suppose <code>X_train</code> contains: <code>Brand</code>, <code>Kilometers_Driven</code>, <code>Fuel</code>, <code>Owner</code>. We only want to encode <code>Fuel</code> and <code>Owner</code>.</p>
+    <pre><code># Fit and transform training data
+X_train_encoded = ohe.fit_transform(
+    X_train[['Fuel', 'Owner']]
+)
+
+# Transform test data
+X_test_encoded = ohe.transform(
+    X_test[['Fuel', 'Owner']]
+)</code></pre>
+    <p>Notice: <code>fit_transform()</code> is used on training data. Only <code>transform()</code> is used on test data.</p>
+
+    <h2>19. Why Do We Use <code>fit_transform()</code> on Training Data?</h2>
+    <p>During <code>fit()</code>, the encoder learns: Unique categories, Category order, Number of output columns.</p>
+    <p>During <code>transform()</code>, it converts the values into numerical vectors using the learned information.</p>
+    <p>Therefore, <code>fit_transform()</code> performs: <strong>Learn + Transform</strong></p>
+
+    <h2>20. Why Do We Use Only <code>transform()</code> on Test Data?</h2>
+    <p>The test dataset should not teach the preprocessing model anything.</p>
+    <div class="alert alert-danger">
+        <strong>Incorrect:</strong> <code>ohe.fit_transform(X_test)</code> because the encoder would learn information from the test data. This can create <strong>Data Leakage</strong>.
+    </div>
+    <div class="alert alert-success">
+        <strong>Correct pattern:</strong><br>
+        <code>ohe.fit_transform(X_train)</code><br>
+        <code>ohe.transform(X_test)</code>
+    </div>
+
+    <h2>21. Train-Test Split Example</h2>
+    <pre><code>from sklearn.model_selection import train_test_split
+
+X = df.iloc[:, :-1]
+y = df.iloc[:, -1]
+
+X_train, X_test, y_train, y_test = train_test_split(
+    X,
+    y,
+    test_size=0.2,
+    random_state=42
+)</code></pre>
+
+    <h2>22. Creating <code>OneHotEncoder</code></h2>
+    <p>Basic:</p>
+    <pre><code>from sklearn.preprocessing import OneHotEncoder
+ohe = OneHotEncoder()</code></pre>
+    <p>Remove the first category:</p>
+    <pre><code>ohe = OneHotEncoder(drop='first')</code></pre>
+    <p>Return a normal NumPy array:</p>
+    <pre><code>ohe = OneHotEncoder(drop='first', sparse_output=False)</code></pre>
+    <p>Return integer values:</p>
+    <pre><code>import numpy as np
+ohe = OneHotEncoder(drop='first', sparse_output=False, dtype=np.int32)</code></pre>
+
+    <h2>23. Important Parameters of <code>OneHotEncoder</code></h2>
+    
+    <h3>23.1 <code>drop</code></h3>
+    <pre><code>OneHotEncoder(drop='first')</code></pre>
+    <p>It removes the first category from every encoded feature.</p>
+    <p>Example: If Fuel has <code>CNG, Diesel, Petrol, LPG</code>, after <code>drop='first'</code> one category is removed. Possible output: <code>Fuel_Diesel</code>, <code>Fuel_LPG</code>, <code>Fuel_Petrol</code>. <code>Fuel_CNG</code> becomes the reference category.</p>
+
+    <h3>23.2 <code>sparse_output</code></h3>
+    <p>By default, <code>OneHotEncoder</code> may return a sparse matrix. A sparse matrix stores mostly non-zero values efficiently. One-Hot Encoded datasets contain many zeros.</p>
+    <p>To get a normal NumPy array:</p>
+    <pre><code>ohe = OneHotEncoder(sparse_output=False)</code></pre>
+    <p><em>Older Scikit-learn versions used <code>sparse=False</code>. Modern versions use <code>sparse_output=False</code>.</em></p>
+
+    <h3>23.3 <code>dtype</code></h3>
+    <p>By default, encoded values may be floating-point numbers (<code>0.0, 1.0</code>). To get integers:</p>
+    <pre><code>import numpy as np
+ohe = OneHotEncoder(sparse_output=False, dtype=np.int32)</code></pre>
+
+    <h3>23.4 <code>handle_unknown</code></h3>
+    <p>Suppose training data contains <code>Petrol, Diesel, CNG</code>, but test data contains <code>Electric</code>. The encoder has never seen <code>Electric</code>. By default, this may produce an error.</p>
+    <p>Use:</p>
+    <pre><code>ohe = OneHotEncoder(handle_unknown='ignore')</code></pre>
+    <p>Now unseen categories will not cause an error (represented using zeros). This parameter is highly useful in real-world applications.</p>
+    <div class="alert alert-success">
+        <strong>Recommended:</strong><br>
+        <code>ohe = OneHotEncoder(handle_unknown='ignore', sparse_output=False)</code>
+    </div>
+
+    <h2>24. Complete Scikit-Learn Example</h2>
+    <pre><code>import numpy as np
+from sklearn.preprocessing import OneHotEncoder
+
+ohe = OneHotEncoder(
+    drop='first',
+    handle_unknown='ignore',
+    sparse_output=False,
+    dtype=np.int32
+)
+
+X_train_encoded = ohe.fit_transform(X_train[['Fuel', 'Owner']])
+X_test_encoded = ohe.transform(X_test[['Fuel', 'Owner']])</code></pre>
+
+    <h2>25. Checking Learned Categories</h2>
+    <pre><code>ohe.categories_</code></pre>
+    <p>Possible output:</p>
+    <pre><code>[
+    array(['CNG', 'Diesel', 'LPG', 'Petrol']),
+    array(['First Owner', 'Fourth & Above Owner', 'Second Owner', 
+           'Test Drive Car', 'Third Owner'])
+]</code></pre>
+    <p>The encoder remembers these categories.</p>
+
+    <h2>26. Getting Output Feature Names</h2>
+    <pre><code>ohe.get_feature_names_out(['Fuel', 'Owner'])</code></pre>
+    <p>Possible output:</p>
+    <div class="tree">Fuel_Diesel
+Fuel_LPG
+Fuel_Petrol
+Owner_Fourth & Above Owner
+Owner_Second Owner
+Owner_Test Drive Car
+Owner_Third Owner</div>
+    <p>This is very useful when converting the encoded array back into a DataFrame.</p>
+
+    <h2>27. Converting Encoded Output into a DataFrame</h2>
+    <pre><code>encoded_df = pd.DataFrame(
+    X_train_encoded,
+    columns=ohe.get_feature_names_out(['Fuel', 'Owner'])
+)</code></pre>
+    <p>Now the output has meaningful column names.</p>
+
+    <h2>28. Manually Combining Encoded and Unencoded Columns</h2>
+    <p>Suppose columns are: <code>Brand</code>, <code>Kilometers_Driven</code>, <code>Fuel</code>, <code>Owner</code>. Only <code>Fuel</code> and <code>Owner</code> are encoded. The remaining columns must be joined manually.</p>
+    <pre><code>import numpy as np
+
+X_train_final = np.hstack(
+    (
+        X_train[['Brand', 'Kilometers_Driven']].values,
+        X_train_encoded
+    )
+)</code></pre>
+    <p>However, this manual method is inconvenient (Select, encode, convert to arrays, join, maintain order).</p>
+    <div class="alert alert-info">
+        <strong>A better solution is:</strong> <code>ColumnTransformer</code> (covered in the next lesson).
+    </div>
+
+    <h2>29. High Cardinality</h2>
+    <p>Suppose a car dataset contains a <code>Brand</code> column with 32 unique brands (Maruti, Hyundai, Mahindra, Tata, etc.). Normal One-Hot Encoding creates approximately 32 new columns.</p>
+    <p>This is called:</p>
+    <blockquote>
+        <strong>High Cardinality</strong>
+    </blockquote>
+    <p>Cardinality means the number of unique categories in a categorical feature.</p>
+    <table>
+        <thead><tr><th>Feature</th><th style="text-align:center;">Unique values</th><th>Cardinality</th></tr></thead>
+        <tbody>
+            <tr><td>Gender</td><td style="text-align:center;">2</td><td>Low</td></tr>
+            <tr><td>Fuel</td><td style="text-align:center;">4</td><td>Low</td></tr>
+            <tr><td>State</td><td style="text-align:center;">28</td><td>Medium</td></tr>
+            <tr><td>Brand</td><td style="text-align:center;">100</td><td>High</td></tr>
+            <tr><td>Customer ID</td><td style="text-align:center;">1,000,000</td><td>Extremely high</td></tr>
+        </tbody>
+    </table>
+
+    <h2>30. Problems Caused by High Cardinality</h2>
+    <p>High-cardinality One-Hot Encoding may cause:</p>
+    <ol>
+        <li>Too many columns</li>
+        <li>Increased memory usage</li>
+        <li>Increased training time</li>
+        <li>Slower predictions</li>
+        <li>Sparse datasets</li>
+        <li>Increased model complexity</li>
+        <li>Possible overfitting</li>
+        <li>Poor generalization for very rare categories</li>
+    </ol>
+    <p>This increase in the number of dimensions is sometimes called: <strong>Dimensionality Explosion</strong></p>
+
+    <h2>31. Handling Rare Categories</h2>
+    <p>Suppose: Maruti (2500 cars), Hyundai (1800), Mahindra (900), Jaguar (8), Volvo (5), Datsun (3).</p>
+    <p>Instead of creating separate columns for every rare brand, combine rare categories into:</p>
+    <blockquote>
+        <strong>Other</strong>
+    </blockquote>
+    <p>The transformed values become: <code>Maruti</code>, <code>Hyundai</code>, <code>Mahindra</code>, <code>Other</code>. This reduces dimensionality.</p>
+
+    <h2>32. Most-Frequent Category Strategy</h2>
+    <p>One common approach:</p>
+    <ol>
+        <li>Calculate category frequencies</li>
+        <li>Keep the most frequent categories</li>
+        <li>Replace rare categories with <code>Other</code></li>
+        <li>Apply One-Hot Encoding</li>
+    </ol>
+    <pre><code>brand_counts = df['Brand'].value_counts()
+
+# Select categories containing at least 100 observations
+frequent_brands = brand_counts[brand_counts >= 100].index
+
+# Replace rare categories
+df['Brand'] = df['Brand'].where(
+    df['Brand'].isin(frequent_brands),
+    'Other'
+)
+
+# Apply One-Hot Encoding
+df = pd.get_dummies(df, columns=['Brand'], drop_first=True, dtype=int)</code></pre>
+
+    <h2>33. Complete Rare-Category Example</h2>
+    <pre><code>import pandas as pd
+
+brand_counts = df['Brand'].value_counts()
+rare_brands = brand_counts[brand_counts < 100].index
+
+df['Brand'] = df['Brand'].replace(rare_brands, 'Other')
+
+encoded_df = pd.get_dummies(df, columns=['Brand'], dtype=int)</code></pre>
+    <p>Now all brands containing fewer than 100 observations are represented by <code>Brand_Other</code>.</p>
+
+    <h2>34. Modern Scikit-Learn Method for Rare Categories ⭐</h2>
+    <div class="alert alert-info">
+        <p>Modern versions of Scikit-learn can automatically group infrequent categories.</p>
+        <pre><code>ohe = OneHotEncoder(
+    min_frequency=100,
+    handle_unknown='infrequent_if_exist',
+    sparse_output=False
+)</code></pre>
+        <p><code>min_frequency=100</code> means categories appearing fewer than 100 times may be grouped as infrequent.</p>
+        <p>You can also use:</p>
+        <pre><code>ohe = OneHotEncoder(
+    max_categories=10,
+    handle_unknown='infrequent_if_exist',
+    sparse_output=False
+)</code></pre>
+        <p>This limits the number of output categories. This is cleaner than manually replacing rare categories.</p>
+    </div>
+
+    <h2>35. Important Warning About Rare-Category Grouping</h2>
+    <div class="alert alert-danger">
+        <p><strong>The frequency threshold should be learned only from training data.</strong></p>
+        <p>Do not calculate rare categories using the complete dataset before train-test splitting.</p>
+        <p><strong>Incorrect:</strong></p>
+        <pre><code># Complete dataset used before splitting
+counts = df['Brand'].value_counts()</code></pre>
+        <p>This may allow information from the test dataset to influence preprocessing.</p>
+        <p><strong>Better:</strong></p>
+        <ol>
+            <li>Split the data</li>
+            <li>Learn category frequencies from training data</li>
+            <li>Apply the same rule to test data</li>
+        </ol>
+        <p>Using a pipeline is the safest approach.</p>
+    </div>
+
+    <h2>36. Advantages of One-Hot Encoding</h2>
+    <ul>
+        <li>✅ No false ranking is introduced</li>
+        <li>✅ Easy to understand</li>
+        <li>✅ Easy to implement</li>
+        <li>✅ Works well with nominal data</li>
+        <li>✅ Compatible with many machine-learning algorithms</li>
+        <li>✅ Every category receives an independent representation</li>
+        <li>✅ Useful for linear models</li>
+    </ul>
+
+    <h2>37. Disadvantages of One-Hot Encoding</h2>
+    <ul>
+        <li>❌ Creates many new columns</li>
+        <li>❌ Can increase memory consumption</li>
+        <li>❌ Can slow model training</li>
+        <li>❌ Can cause high dimensionality</li>
+        <li>❌ May cause the Dummy Variable Trap in some models</li>
+        <li>❌ Not ideal for extremely high-cardinality features</li>
+        <li>❌ Unknown categories require proper handling</li>
+    </ul>
+
+    <h2>38. When Should We Use One-Hot Encoding?</h2>
+    <p>Use One-Hot Encoding when:</p>
+    <ul>
+        <li>Data is nominal</li>
+        <li>Categories have no natural order</li>
+        <li>The number of categories is low or moderate</li>
+        <li>You do not want to introduce an artificial ranking</li>
+    </ul>
+    <p>Examples: <code>Gender</code>, <code>Colour</code>, <code>Fuel Type</code>, <code>City</code>, <code>Country</code>, <code>Department</code>, <code>Payment Method</code>, <code>Product Category</code>.</p>
+
+    <h2>39. When Should We Avoid One-Hot Encoding?</h2>
+    <p>Avoid or reconsider normal OHE when:</p>
+    <ul>
+        <li>A feature contains thousands of categories</li>
+        <li>The feature is almost unique for every row</li>
+        <li>The feature is an ID</li>
+    </ul>
+    <p>Examples: <code>Customer ID</code>, <code>Transaction ID</code>, <code>Email Address</code>, <code>Phone Number</code>, <code>Product ID</code>. One-Hot Encoding IDs usually creates a huge number of meaningless columns.</p>
+
+    <h2>40. Alternatives for High-Cardinality Features</h2>
+    <p>Possible alternatives include:</p>
+    <ol>
+        <li>Rare-category grouping</li>
+        <li>Frequency Encoding</li>
+        <li>Count Encoding</li>
+        <li>Target Encoding</li>
+        <li>Binary Encoding</li>
+        <li>Hash Encoding</li>
+        <li>Feature Hashing</li>
+        <li>Learned embeddings</li>
+    </ol>
+    <p>These methods will be useful in advanced machine-learning projects.</p>
+
+    <h2>41. One-Hot Encoding vs Ordinal Encoding</h2>
+    <table>
+        <thead>
+            <tr><th>Feature</th><th>One-Hot Encoding</th><th>Ordinal Encoding</th></tr>
+        </thead>
+        <tbody>
+            <tr><td>Suitable data</td><td>Nominal</td><td>Ordinal</td></tr>
+            <tr><td>Creates multiple columns</td><td>Yes</td><td>No</td></tr>
+            <tr><td>Introduces ranking</td><td>No</td><td>Yes</td></tr>
+            <tr><td>Output</td><td>Binary vectors</td><td>Integer values</td></tr>
+            <tr><td>Example</td><td>Red, Blue, Green</td><td>Poor, Good, Excellent</td></tr>
+            <tr><td>Dimensionality</td><td>Increases</td><td>Usually unchanged</td></tr>
+        </tbody>
+    </table>
+
+    <h2>42. One-Hot Encoding vs Label Encoding</h2>
+    <table>
+        <thead>
+            <tr><th>One-Hot Encoding</th><th>Label Encoding</th></tr>
+        </thead>
+        <tbody>
+            <tr><td>Creates binary columns</td><td>Assigns integer labels</td></tr>
+            <tr><td>Suitable for nominal input features</td><td>Mainly used for target labels</td></tr>
+            <tr><td>Does not create artificial order</td><td>May create artificial order</td></tr>
+            <tr><td>May increase dimensionality</td><td>Does not significantly increase dimensions</td></tr>
+        </tbody>
+    </table>
+    <p><strong>Example:</strong></p>
+    <p>Label Encoding: <code>Red → 0</code>, <code>Blue → 1</code>, <code>Green → 2</code></p>
+    <p>One-Hot Encoding: <code>Red → [1, 0, 0]</code>, <code>Blue → [0, 1, 0]</code>, <code>Green → [0, 0, 1]</code></p>
+
+    <h2>43. Common Mistakes ⚠️</h2>
+    
+    <div class="qa-block">
+        <h4>Mistake 1: Using Ordinal Encoding for nominal data</h4>
+        <div class="alert alert-danger">
+            <strong>Wrong:</strong> <code>Red → 0</code>, <code>Blue → 1</code>, <code>Green → 2</code>. This creates a false ranking.
+        </div>
+    </div>
+
+    <div class="qa-block">
+        <h4>Mistake 2: Fitting the encoder on test data</h4>
+        <div class="alert alert-danger">
+            <strong>Wrong:</strong> <code>ohe.fit_transform(X_test)</code>
+        </div>
+        <div class="alert alert-success">
+            <strong>Correct:</strong><br>
+            <code>ohe.fit_transform(X_train)</code><br>
+            <code>ohe.transform(X_test)</code>
+        </div>
+    </div>
+
+    <div class="qa-block">
+        <h4>Mistake 3: Fitting before train-test splitting</h4>
+        <div class="alert alert-danger">
+            <strong>Wrong:</strong><br>
+            <code>ohe.fit_transform(X)</code><br>
+            <code>train_test_split(...)</code>
+        </div>
+        <div class="alert alert-success">
+            <strong>Correct:</strong><br>
+            <code>train_test_split(...)</code><br>
+            <code>ohe.fit_transform(X_train)</code><br>
+            <code>ohe.transform(X_test)</code>
+        </div>
+    </div>
+
+    <div class="qa-block">
+        <h4>Mistake 4: Not handling unseen categories</h4>
+        <div class="alert alert-success">
+            <strong>Use:</strong> <code>handle_unknown='ignore'</code>
+        </div>
+    </div>
+
+    <div class="qa-block">
+        <h4>Mistake 5: One-Hot Encoding unique IDs</h4>
+        <div class="alert alert-danger">
+            <strong>Avoid encoding:</strong> <code>Customer_ID</code>, <code>Transaction_ID</code>, <code>Phone_Number</code>
+        </div>
+    </div>
+
+    <div class="qa-block">
+        <h4>Mistake 6: Using <code>drop='first'</code> without considering the model</h4>
+        <p>It is useful for linear models but is not compulsory for every algorithm.</p>
+    </div>
+
+    <h2>44. Recommended Practical Encoder</h2>
+    <p>For many real-world projects:</p>
+    <pre><code>from sklearn.preprocessing import OneHotEncoder
+
+ohe = OneHotEncoder(
+    handle_unknown='ignore',
+    sparse_output=False
+)</code></pre>
+    <p>For a linear model:</p>
+    <pre><code>ohe = OneHotEncoder(
+    drop='first',
+    handle_unknown='ignore',
+    sparse_output=False
+)</code></pre>
+
+    <h2>45. Interview Questions 🎯</h2>
+    
+    <div class="qa-block">
+        <h4>Q1. What is One-Hot Encoding?</h4>
+        <p>One-Hot Encoding converts nominal categorical values into binary vectors by creating one binary column for every category.</p>
+    </div>
+
+    <div class="qa-block">
+        <h4>Q2. Why is One-Hot Encoding used?</h4>
+        <p>It converts nominal categorical data into numerical data without introducing an artificial order.</p>
+    </div>
+
+    <div class="qa-block">
+        <h4>Q3. What is a dummy variable?</h4>
+        <p>A dummy variable is a binary column containing <code>0</code> or <code>1</code> created during One-Hot Encoding.</p>
+    </div>
+
+    <div class="qa-block">
+        <h4>Q4. What is the Dummy Variable Trap?</h4>
+        <p>The Dummy Variable Trap occurs when all dummy columns are retained and one dummy column can be perfectly predicted from the others, creating perfect multicollinearity.</p>
+    </div>
+
+    <div class="qa-block">
+        <h4>Q5. How can we avoid the Dummy Variable Trap?</h4>
+        <p>If there are <code>n</code> categories, keep only <code>n − 1 dummy columns</code>. In Scikit-learn: <code>OneHotEncoder(drop='first')</code></p>
+    </div>
+
+    <div class="qa-block">
+        <h4>Q6. What is high cardinality?</h4>
+        <p>High cardinality means a categorical feature contains many unique categories.</p>
+    </div>
+
+    <div class="qa-block">
+        <h4>Q7. How can we handle high-cardinality data?</h4>
+        <p>Possible methods: Group rare categories into <code>Other</code>, Keep only frequent categories, Frequency Encoding, Target Encoding, Hash Encoding, Embeddings.</p>
+    </div>
+
+    <div class="qa-block">
+        <h4>Q8. What does <code>handle_unknown='ignore'</code> do?</h4>
+        <p>It prevents errors when new categories appear during transformation.</p>
+    </div>
+
+    <div class="qa-block">
+        <h4>Q9. Why is <code>OneHotEncoder</code> preferred over <code>pd.get_dummies()</code> in ML pipelines?</h4>
+        <p><code>OneHotEncoder</code> learns and remembers categories, applies consistent transformations, handles unknown categories and works with Scikit-learn pipelines.</p>
+    </div>
+
+    <div class="qa-block">
+        <h4>Q10. What is the difference between <code>fit_transform()</code> and <code>transform()</code>?</h4>
+        <p><code>fit_transform()</code>: Learns categories + transforms data.<br>
+        <code>transform()</code>: Uses already learned categories to transform data.</p>
+    </div>
+
+    <div class="summary-box">
+        <h2>46. Final Summary 🧠</h2>
+        <div class="tree">Categorical Data
+        │
+        ├── Ordinal Data
+        │       │
+        │       └── Ordinal Encoding
+        │
+        └── Nominal Data
+                │
+                └── One-Hot Encoding</div>
+        <br>
+        <p><strong>Important points:</strong></p>
+        <div class="tree">Nominal data
+        ↓
+One-Hot Encoding
+        ↓
+One binary column per category
+        ↓
+n categories → n columns
+        ↓
+Optional: remove one category
+        ↓
+n categories → n − 1 columns
+        ↓
+Helps avoid perfect multicollinearity</div>
+        <br>
+        <p><strong>For high-cardinality features:</strong></p>
+        <div class="tree">Many rare categories
+        ↓
+Combine rare categories
+        ↓
+Create “Other” category
+        ↓
+Apply One-Hot Encoding
+        ↓
+Reduced dimensionality</div>
+        <br>
+        <p><strong>Most important practical code:</strong></p>
+        <pre><code>from sklearn.preprocessing import OneHotEncoder
+
+ohe = OneHotEncoder(
+    handle_unknown='ignore',
+    sparse_output=False
+)
+
+X_train_encoded = ohe.fit_transform(X_train[['Fuel', 'Owner']])
+X_test_encoded = ohe.transform(X_test[['Fuel', 'Owner']])</code></pre>
+        <p><strong>For linear models:</strong></p>
+        <pre><code>ohe = OneHotEncoder(
+    drop='first',
+    handle_unknown='ignore',
+    sparse_output=False
+)</code></pre>
+        <p style="text-align: center; margin-top: 3em; font-weight: bold; color: var(--secondary-color);">
+            This completes Day 27: One-Hot Encoding ✅📘
+        </p>
+    </div>
+
+</div>
+
+</body>
+</html>
