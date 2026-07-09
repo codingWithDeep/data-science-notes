@@ -1,0 +1,451 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Day 33 — Handling Mixed Data in Machine Learning 🔀📊</title>
+    <style>
+        :root {
+            --primary-color: #1a252f;
+            --secondary-color: #2980b9;
+            --bg-color: #ffffff;
+            --text-color: #333333;
+            --code-bg: #1e1e1e;
+            --code-text: #d4d4d4;
+            --warning-bg: #fff8e1;
+            --success-bg: #e8f5e9;
+            --danger-bg: #ffebee;
+            --info-bg: #e3f2fd;
+            --border-color: #e0e0e0;
+            --tree-bg: #f5f7fa;
+        }
+
+        html, body {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            min-height: 100%;
+        }
+
+        body {
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            line-height: 1.75;
+            color: var(--text-color);
+            background-color: var(--bg-color);
+        }
+
+        .container {
+            width: 100%;
+            max-width: 100%;
+            box-sizing: border-box;
+            padding: 50px 10%;
+        }
+
+        h1, h2, h3, h4, h5 {
+            color: var(--primary-color);
+            margin-top: 2.5em;
+            margin-bottom: 1em;
+        }
+
+        h1 {
+            font-size: 2.8em;
+            border-bottom: 4px solid var(--secondary-color);
+            padding-bottom: 20px;
+            margin-top: 0;
+        }
+
+        h2 {
+            font-size: 2em;
+            border-left: 6px solid var(--secondary-color);
+            padding-left: 20px;
+            margin-top: 3.5em;
+        }
+
+        h3 {
+            font-size: 1.4em;
+            color: #34495e;
+            margin-top: 2em;
+        }
+
+        h4 {
+            font-size: 1.15em;
+            color: #2c3e50;
+            margin-bottom: 0.8em;
+        }
+
+        p {
+            margin-bottom: 1.2em;
+            font-size: 1.05em;
+        }
+
+        strong {
+            color: var(--primary-color);
+            font-weight: 600;
+        }
+
+        ul, ol {
+            padding-left: 30px;
+            margin-bottom: 1.2em;
+        }
+
+        li {
+            margin-bottom: 0.6em;
+            font-size: 1.05em;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 2em 0;
+            font-size: 1em;
+            display: block;
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        th, td {
+            padding: 14px 20px;
+            text-align: left;
+            border: 1px solid var(--border-color);
+        }
+
+        th {
+            background-color: var(--primary-color);
+            color: #ffffff;
+            font-weight: 600;
+        }
+
+        tr:nth-child(even) {
+            background-color: #f8f9fa;
+        }
+
+        tr:hover {
+            background-color: #eef2f5;
+        }
+
+        pre {
+            background-color: var(--code-bg);
+            color: var(--code-text);
+            padding: 25px;
+            border-radius: 6px;
+            overflow-x: auto;
+            font-family: 'Fira Code', 'Consolas', 'Courier New', monospace;
+            font-size: 0.95em;
+            line-height: 1.6;
+            margin: 1.5em 0;
+            border: 1px solid #444;
+        }
+
+        code {
+            font-family: 'Fira Code', 'Consolas', 'Courier New', monospace;
+        }
+
+        p code, li code, td code {
+            background-color: #eef2f5;
+            color: #c0392b;
+            padding: 3px 7px;
+            border-radius: 4px;
+            font-size: 0.9em;
+            border: 1px solid #dde4ea;
+        }
+
+        blockquote {
+            border-left: 6px solid var(--secondary-color);
+            margin: 2em 0;
+            padding: 20px 30px;
+            background-color: #f4f8fb;
+            color: #444;
+            font-style: italic;
+            font-size: 1.15em;
+        }
+
+        .alert {
+            padding: 20px 25px;
+            margin: 2em 0;
+            border-radius: 0 6px 6px 0;
+            font-size: 1.05em;
+        }
+
+        .alert-warning { background-color: var(--warning-bg); border-left: 6px solid #f9a825; }
+        .alert-danger { background-color: var(--danger-bg); border-left: 6px solid #e53935; }
+        .alert-success { background-color: var(--success-bg); border-left: 6px solid #43a047; }
+        .alert-info { background-color: var(--info-bg); border-left: 6px solid #2980b9; }
+
+        .tree {
+            font-family: 'Fira Code', 'Consolas', 'Courier New', monospace;
+            background: var(--tree-bg);
+            padding: 20px;
+            border-radius: 6px;
+            border: 1px solid var(--border-color);
+            white-space: pre;
+            line-height: 1.5;
+            margin: 1.5em 0;
+            font-size: 1em;
+            overflow-x: auto;
+        }
+
+        .summary-box {
+            background-color: #e8f0fe;
+            border: 2px dashed var(--secondary-color);
+            padding: 35px 40px;
+            border-radius: 8px;
+            margin-top: 3em;
+        }
+
+        .summary-box h2 {
+            border-left: none;
+            padding-left: 0;
+            margin-top: 0;
+            color: var(--secondary-color);
+        }
+        
+        .step-grid {
+            display: grid;
+            grid-template-columns: 100px 1fr;
+            gap: 15px;
+            margin: 2em 0;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            border-left: 5px solid var(--secondary-color);
+        }
+
+        .step-num {
+            background: var(--secondary-color);
+            color: white;
+            height: 40px;
+            width: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            margin-top: 5px;
+        }
+
+        @media (max-width: 768px) {
+            .container { padding: 20px 5%; }
+            h1 { font-size: 2em; }
+            h2 { font-size: 1.5em; }
+            th, td { padding: 10px 15px; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+
+    <h1>Day 33 — Handling Mixed Data in Machine Learning 🔀📊</h1>
+
+    <h2>1. Introduction</h2>
+    <p>Until now, we have studied many feature-engineering techniques, including: Handling missing values, Encoding categorical variables, One-Hot/Ordinal Encoding, ColumnTransformer, Mathematical transformations (FunctionTransformer, PowerTransformer), and Encoding numerical features.</p>
+    <p>In this lesson, we will study a slightly different feature-engineering problem:</p>
+    <blockquote>
+        <strong>How can we handle mixed data in a dataset?</strong>
+    </blockquote>
+    <p>Mixed-data columns and date-time columns are different from previous topics. They often require custom logic because there is no single universal transformation that works for every dataset.</p>
+
+    <h2>2. What Is Mixed Data?</h2>
+    <p>Mixed data occurs when a single column contains more than one type of information (e.g., Numerical and Categorical). Sometimes both types are present inside the <strong>same value</strong>, while in other cases they appear as separate values in the <strong>same column</strong>.</p>
+    
+    <table>
+        <thead><tr><th>Cabin</th></tr></thead>
+        <tbody>
+            <tr><td>C85</td></tr>
+            <tr><td>C123</td></tr>
+            <tr><td>E46</td></tr>
+            <tr><td>B57</td></tr>
+        </tbody>
+    </table>
+    
+    <p>The value <code>C85</code> contains two different pieces of information:</p>
+    <div class="tree">C85
+│└── Numerical information: 85
+└─── Categorical information: C</div>
+    
+    <h2>3. Why Is Mixed Data a Problem?</h2>
+    <p>If we treat the complete values as categorical variables, every cabin may become a separate category (e.g., C85 → Category 1, C123 → Category 2). This may create many unique categories and increase dimensionality.</p>
+    <p>However, useful information is hidden inside these values. After separating the information:</p>
+    <ul>
+        <li>The number of cabin categories becomes much smaller.</li>
+        <li>The numerical information is preserved.</li>
+        <li>The data becomes easier to analyse and encode.</li>
+        <li>Machine-learning models can use the information more effectively.</li>
+    </ul>
+
+    <h2>4. Two Common Types of Mixed Data</h2>
+    
+    <h3>Type 1: Numerical and Categorical Values in the Same Column but Different Rows</h3>
+    <table>
+        <thead><tr><th>Number</th></tr></thead>
+        <tbody>
+            <tr><td>3</td></tr>
+            <tr><td>1</td></tr>
+            <tr><td>Alone</td></tr>
+            <tr><td>5</td></tr>
+        </tbody>
+    </table>
+    <p>The solution is to create two new columns. Notice an important property: <strong>For every row, one of the newly created columns usually contains a missing value.</strong></p>
+    <table>
+        <thead><tr><th>Original Value</th><th style="text-align:center;">Numerical</th><th>Categorical</th></tr></thead>
+        <tbody>
+            <tr><td>3</td><td style="text-align:center;">3</td><td>Missing</td></tr>
+            <tr><td>Alone</td><td style="text-align:center;">Missing</td><td>Alone</td></tr>
+            <tr><td>5</td><td style="text-align:center;">5</td><td>Missing</td></tr>
+        </tbody>
+    </table>
+
+    <h3>Type 2: Numerical and Categorical Information Combined Inside the Same Value</h3>
+    <p>Like the Titanic <code>Cabin</code> column. The solution is to split the original feature into two new features.</p>
+    <table>
+        <thead><tr><th>Original Cabin</th><th>Cabin Category</th><th style="text-align:right;">Cabin Number</th></tr></thead>
+        <tbody>
+            <tr><td>C85</td><td>C</td><td style="text-align:right;">85</td></tr>
+            <tr><td>C123</td><td>C</td><td style="text-align:right;">123</td></tr>
+            <tr><td>E46</td><td>E</td><td style="text-align:right;">46</td></tr>
+        </tbody>
+    </table>
+
+    <h2>5. Dataset Used in the Lecture</h2>
+    <p>The dataset contains four columns:</p>
+    <table>
+        <thead><tr><th>Column</th><th>Description</th></tr></thead>
+        <tbody>
+            <tr><td><code>Cabin</code></td><td>Passenger cabin information (Mixed Type 2)</td></tr>
+            <tr><td><code>Ticket</code></td><td>Passenger ticket information (Mixed Type 2)</td></tr>
+            <tr><td><code>Number</code></td><td>Number of people travelling with passenger (Mixed Type 1)</td></tr>
+            <tr><td><code>Survived</code></td><td>Target/output variable</td></tr>
+        </tbody>
+    </table>
+
+    <h2>6. Analysing the Mixed `Number` Column</h2>
+    <pre><code>df["number"].unique()
+# array([2, 3, 4, "Alone", 5])
+
+df["number"].value_counts()</code></pre>
+    <p>This confirms the column contains both Numbers and Text values.</p>
+
+    <h2>7. Extracting Numerical Values</h2>
+    <pre><code>df["number_numerical"] = pd.to_numeric(
+    df["number"],
+    errors="coerce"
+)</code></pre>
+    <div class="alert alert-info">
+        <strong>Explanation:</strong> <code>pd.to_numeric()</code> attempts to convert every value into a numerical value. Using <code>errors="coerce"</code> converts invalid numerical values (like "Alone") into <code>NaN</code> (Not a Number).
+    </div>
+
+    <h2>8. Creating the Categorical Column</h2>
+    <pre><code>df["number_categorical"] = np.where(
+    df["number_numerical"].isnull(),
+    df["number"],
+    np.nan
+)</code></pre>
+    <p><strong>Logic:</strong> If the numerical value is missing (<code>isnull() == True</code>), the original value was categorical, so copy it. Otherwise, store <code>NaN</code>.</p>
+
+    <h2>9. Complete Code for Type 1 Mixed Data</h2>
+    <pre><code>import pandas as pd
+import numpy as np
+
+df["number_numerical"] = pd.to_numeric(df["number"], errors="coerce")
+
+df["number_categorical"] = np.where(
+    df["number_numerical"].isnull(),
+    df["number"],
+    np.nan
+)</code></pre>
+
+    <h2>10 & 11. Handling the Titanic `Cabin` Column & Extracting Number</h2>
+    <pre><code>df["Cabin_num"] = df["Cabin"].str.extract(r"(\d+)")
+
+df["Cabin_num"] = pd.to_numeric(df["Cabin_num"], errors="coerce")</code></pre>
+    <div class="alert alert-info">
+        <strong>Regular-expression explanation:</strong> <code>r"(\d+)"</code> means extract one or more consecutive digits. <code>r</code> (Raw string), <code>()</code> (Capturing group), <code>\d</code> (Any digit 0-9), <code>+</code> (One or more).
+    </div>
+
+    <h2>12. Extracting the Cabin Category</h2>
+    <pre><code>df["Cabin_cat"] = df["Cabin"].str[0]
+
+# Alternative method:
+df["Cabin_cat"] = df["Cabin"].str.extract(r"([A-Za-z]+)")</code></pre>
+    <p>This extracts the first character (or all alphabetic characters) from every cabin value.</p>
+
+    <h2>13. Complete Cabin Feature-Engineering Code</h2>
+    <pre><code>df["Cabin_num"] = pd.to_numeric(
+    df["Cabin"].str.extract(r"(\d+)")[0],
+    errors="coerce"
+)
+
+df["Cabin_cat"] = df["Cabin"].str[0]</code></pre>
+
+    <h2>14. Handling Missing Cabin Values</h2>
+    <pre><code># For numerical cabin number:
+df["Cabin_num"] = df["Cabin_num"].fillna(0) 
+# (Or use median imputation in a Pipeline)
+
+# For categorical cabin feature:
+df["Cabin_cat"] = df["Cabin_cat"].fillna("Missing")</code></pre>
+
+    <h2>15. Reduction in Cardinality</h2>
+    <p>Before extraction, <code>df["Cabin"].nunique()</code> may return a massive number. After extracting only the cabin category, it reduces to just a few letters (A, B, C, D, E, F, G, Missing).</p>
+    <div class="alert alert-success">
+        <strong>Reducing unnecessary cardinality</strong> can: Reduce dimensionality, Improve model efficiency, Reduce memory usage, Reduce overfitting, and Improve generalisation.
+    </div>
+
+    <h2>16. Visualising Cabin Categories</h2>
+    <pre><code>df["Cabin_cat"].value_counts().plot(kind="bar")</code></pre>
+    <p>This allows us to determine which cabin category contains the most passengers and whether cabin categories may be related to survival.</p>
+
+    <h2>17, 18 & 19. Handling the Ticket Column</h2>
+    <p>Ticket values like <code>A/5 21171</code> or <code>PC 17599</code> contain a categorical prefix and a numerical number.</p>
+    
+    <h4>Extracting Ticket Numbers:</h4>
+    <pre><code>df["Ticket_num"] = pd.to_numeric(
+    df["Ticket"].str.extract(r"(\d+)$")[0],
+    errors="coerce"
+)</code></pre>
+    <p><code>$</code> ensures it extracts numbers at the <strong>end</strong> of the string.</p>
+
+    <h4>Extracting Ticket Categories:</h4>
+    <pre><code>df["Ticket_cat"] = (
+    df["Ticket"]
+    .str.replace(r"\d+", "", regex=True)
+    .str.replace(r"[./]", "", regex=True)
+    .str.strip()
+)
+
+df["Ticket_cat"] = df["Ticket_cat"].replace("", "Missing")</code></pre>
+    
+    <div class="alert alert-warning">
+        <strong>Why Is Ticket Extraction More Difficult?</strong> Cabin values usually have a simple format (Letter + Numbers). Ticket values may have many formats with spaces, periods, and slashes. There is no single regular expression that works perfectly for every dataset.
+    </div>
+
+    <h2>20. General Workflow for Handling Mixed Data</h2>
+    <div class="step-grid">
+        <div class="step-num">1</div>
+        <div><strong>Inspect the column:</strong> <code>df["column"].head()</code></div>
+    </div>
+    <div class="step-grid">
+        <div class="step-num">2</div>
+        <div><strong>Check the data type:</strong> <code>df["column"].dtype</code></div>
+    </div>
+    <div class="step-grid">
+        <div class="step-num">3</div>
+        <div><strong>Check unique values:</strong> <code>df["column"].unique()</code></div>
+    </div>
+    <div class="step-grid">
+        <div class="step-num">4</div>
+        <div><strong>Count frequencies:</strong> <code>df["column"].value_counts(dropna=False)</code></div>
+    </div>
+    <div class="step-grid">
+        <div class="step-num">5</div>
+        <div><strong>Identify hidden information:</strong> Does it contain letters? Numbers? Are they in different rows or combined?</div>
+    </div>
+    <div class="step-grid">
+        <div class="step-num">6</div>
+        <div><strong>Split the information:</strong> Create separate Numerical and Categorical features.</div>
+    </div>
+    <div class="step-grid">
+        <div class="step-num">7</div>
+        <div><strong>Handle missing values:</strong> Use Median for numbers, "Missing" for categories.</div>
+    </div>
+    <
