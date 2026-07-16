@@ -1,0 +1,1322 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Day 38 – Advanced Missing Value Handling</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['Inter', 'sans-serif'] },
+                }
+            }
+        }
+    </script>
+    <style>
+        body { background: #000; font-family: 'Inter', sans-serif; }
+        @keyframes fadeInUp { from { opacity: 0; transform: translateY(30px); } to { opacity: 1; transform: translateY(0); } }
+        .animate-in { animation: fadeInUp 0.8s ease-out forwards; opacity: 0; }
+        .delay-1 { animation-delay: 0.2s; }
+        .delay-2 { animation-delay: 0.4s; }
+        .delay-3 { animation-delay: 0.6s; }
+        @keyframes pulse-glow { 0%, 100% { box-shadow: 0 0 20px rgba(99,102,241,0.15); } 50% { box-shadow: 0 0 40px rgba(99,102,241,0.35); } }
+        .glow-card:hover { animation: pulse-glow 2s ease-in-out infinite; }
+        @keyframes float { 0%, 100% { transform: translateY(0px); } 50% { transform: translateY(-10px); } }
+        .float-anim { animation: float 4s ease-in-out infinite; }
+        @keyframes barGrow { from { width: 0; } }
+        .bar-animate { animation: barGrow 1s ease-out forwards; }
+        .glass { background: rgba(22,22,22,0.6); backdrop-filter: blur(20px); border: 1px solid rgba(255,255,255,0.08); }
+        .glass-light { background: rgba(255,255,255,0.03); backdrop-filter: blur(12px); border: 1px solid rgba(255,255,255,0.06); }
+        .gradient-text { background: linear-gradient(to right,#FFF,#FFF,#A3A3A3); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+        .accent-gradient { background: linear-gradient(135deg,#6366F1,#8B5CF6); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+        .green-gradient { background: linear-gradient(135deg,#10B981,#4ADE80); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+        .red-gradient { background: linear-gradient(135deg,#EF4444,#F87171); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+        .amber-gradient { background: linear-gradient(135deg,#F59E0B,#FBBF24); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+        .teal-gradient { background: linear-gradient(135deg,#14B8A6,#5EEAD4); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+        .rose-gradient { background: linear-gradient(135deg,#F43F5E,#FB7185); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+        .code-block { background: rgba(0,0,0,0.6); border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; font-family: 'Courier New', monospace; font-size: 14px; line-height: 1.7; overflow-x: auto; }
+        .code-block .keyword { color: #C084FC; }
+        .code-block .string { color: #4ADE80; }
+        .code-block .comment { color: #737373; }
+        .code-block .func { color: #60A5FA; }
+        .code-block .number { color: #FBBF24; }
+        .code-block .bool { color: #F87171; }
+        .table-container { background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.06); border-radius: 16px; overflow: hidden; }
+        .table-container table { width: 100%; border-collapse: collapse; }
+        .table-container th { background: rgba(99,102,241,0.1); padding: 12px 20px; text-align: left; font-weight: 500; font-size: 13px; text-transform: uppercase; letter-spacing: 0.05em; color: #A3A3A3; border-bottom: 1px solid rgba(255,255,255,0.06); }
+        .table-container td { padding: 12px 20px; border-bottom: 1px solid rgba(255,255,255,0.04); font-size: 14px; color: #E5E5E5; }
+        .table-container tr:last-child td { border-bottom: none; }
+        .table-container tr:hover td { background: rgba(255,255,255,0.02); }
+        .nan-cell { color: #EF4444; font-style: italic; }
+        .true-cell { color: #4ADE80; font-weight: 500; }
+        .false-cell { color: #737373; }
+        .toc-link { transition: all 0.3s ease; border-left: 2px solid transparent; padding-left: 12px; }
+        .toc-link:hover { color: #818CF8; border-left-color: #6366F1; padding-left: 16px; }
+        .toc-link.active { color: #818CF8; border-left-color: #6366F1; }
+        .section-divider { height: 1px; background: linear-gradient(to right, transparent, rgba(99,102,241,0.3), transparent); }
+        .scroll-progress { position: fixed; top: 0; left: 0; height: 3px; background: linear-gradient(to right, #6366F1, #8B5CF6); z-index: 9999; transition: width 0.1s linear; }
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: #000; }
+        ::-webkit-scrollbar-thumb { background: #333; border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: #555; }
+        .nav-blur { background: rgba(0,0,0,0.7); backdrop-filter: blur(12px); border-bottom: 1px solid rgba(255,255,255,0.06); }
+        .warning-box { background: rgba(245,158,11,0.08); border: 1px solid rgba(245,158,11,0.2); border-radius: 12px; }
+        .danger-box { background: rgba(239,68,68,0.08); border: 1px solid rgba(239,68,68,0.2); border-radius: 12px; }
+        .success-box { background: rgba(16,185,129,0.08); border: 1px solid rgba(16,185,129,0.2); border-radius: 12px; }
+        .info-box { background: rgba(99,102,241,0.08); border: 1px solid rgba(99,102,241,0.2); border-radius: 12px; }
+        .star-box { background: rgba(251,191,36,0.06); border: 1px solid rgba(251,191,36,0.15); border-radius: 12px; }
+        .pipeline-step { position: relative; }
+        .pipeline-step::after { content: ''; position: absolute; left: 50%; bottom: -20px; width: 2px; height: 20px; background: rgba(99,102,241,0.3); }
+        .pipeline-step:last-child::after { display: none; }
+        .dist-shape { font-family: monospace; font-size: 11px; line-height: 1.2; color: #6366F1; white-space: pre; }
+    </style>
+</head>
+<body class="text-white antialiased">
+
+<div class="scroll-progress" id="scrollProgress"></div>
+
+<!-- Navigation -->
+<nav class="fixed top-0 left-0 right-0 z-50 nav-blur h-16 flex items-center px-6">
+    <div class="max-w-7xl mx-auto w-full flex items-center justify-between">
+        <div class="flex items-center gap-3">
+            <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-indigo-500 to-purple-500 flex items-center justify-center text-sm font-semibold">38</div>
+            <span class="text-sm font-medium text-neutral-300 hidden sm:block">Advanced Missing Value Handling</span>
+        </div>
+        <div class="flex items-center gap-4">
+            <button id="tocToggle" class="flex items-center gap-2 text-sm text-neutral-400 hover:text-white transition-colors px-3 py-1.5 rounded-lg hover:bg-white/5">
+                <i data-lucide="list" class="w-4 h-4"></i>
+                <span class="hidden sm:inline">Contents</span>
+            </button>
+            <button id="backToTop" class="flex items-center gap-2 text-sm text-neutral-400 hover:text-white transition-colors px-3 py-1.5 rounded-lg hover:bg-white/5">
+                <i data-lucide="arrow-up" class="w-4 h-4"></i>
+                <span class="hidden sm:inline">Top</span>
+            </button>
+        </div>
+    </div>
+</nav>
+
+<!-- TOC Sidebar -->
+<div id="tocSidebar" class="fixed top-16 right-0 w-72 h-[calc(100vh-4rem)] z-40 glass transform translate-x-full transition-transform duration-300 overflow-y-auto p-6">
+    <div class="flex items-center justify-between mb-6">
+        <h3 class="text-sm font-semibold text-neutral-300 uppercase tracking-wider">Contents</h3>
+        <button id="tocClose" class="text-neutral-500 hover:text-white transition-colors"><i data-lucide="x" class="w-4 h-4"></i></button>
+    </div>
+    <div class="space-y-1" id="tocLinks">
+        <a href="#revision" class="toc-link block text-sm text-neutral-500 py-1.5">Revision</a>
+        <a href="#random-sample" class="toc-link block text-sm text-neutral-500 py-1.5">Random Sample Imputation</a>
+        <a href="#rs-example" class="toc-link block text-sm text-neutral-500 py-1.5 pl-6">Example</a>
+        <a href="#rs-why-not" class="toc-link block text-sm text-neutral-500 py-1.5 pl-6">Why Not Random Numbers</a>
+        <a href="#rs-both-types" class="toc-link block text-sm text-neutral-500 py-1.5 pl-6">Works for Both Types</a>
+        <a href="#rs-advantages" class="toc-link block text-sm text-neutral-500 py-1.5 pl-6">Advantages</a>
+        <a href="#rs-best-for" class="toc-link block text-sm text-neutral-500 py-1.5 pl-6">Best / Not Ideal For</a>
+        <a href="#rs-disadvantages" class="toc-link block text-sm text-neutral-500 py-1.5 pl-6">Disadvantages</a>
+        <a href="#rs-code" class="toc-link block text-sm text-neutral-500 py-1.5 pl-6">Code: Titanic</a>
+        <a href="#rs-result" class="toc-link block text-sm text-neutral-500 py-1.5 pl-6">Result</a>
+        <a href="#rs-production" class="toc-link block text-sm text-neutral-500 py-1.5 pl-6">Production Tip</a>
+        <a href="#rs-categorical" class="toc-link block text-sm text-neutral-500 py-1.5 pl-6">Categorical Data</a>
+        <a href="#missing-indicator" class="toc-link block text-sm text-neutral-500 py-1.5">Missing Indicator</a>
+        <a href="#mi-why" class="toc-link block text-sm text-neutral-500 py-1.5 pl-6">Why It Helps</a>
+        <a href="#mi-code" class="toc-link block text-sm text-neutral-500 py-1.5 pl-6">Code Example</a>
+        <a href="#mi-result" class="toc-link block text-sm text-neutral-500 py-1.5 pl-6">Result</a>
+        <a href="#mi-easier" class="toc-link block text-sm text-neutral-500 py-1.5 pl-6">Easier Method</a>
+        <a href="#gridsearch" class="toc-link block text-sm text-neutral-500 py-1.5">Automatic Selection (GridSearchCV)</a>
+        <a href="#gs-pipeline" class="toc-link block text-sm text-neutral-500 py-1.5 pl-6">Pipeline</a>
+        <a href="#gs-combos" class="toc-link block text-sm text-neutral-500 py-1.5 pl-6">Combinations</a>
+        <a href="#best-practices" class="toc-link block text-sm text-neutral-500 py-1.5">Best Practices</a>
+        <a href="#summary-table" class="toc-link block text-sm text-neutral-500 py-1.5">Summary Table</a>
+        <a href="#takeaways" class="toc-link block text-sm text-neutral-500 py-1.5">Key Takeaways</a>
+    </div>
+</div>
+
+<!-- Hero -->
+<section class="relative min-h-screen flex items-center justify-center overflow-hidden pt-16">
+    <div class="absolute inset-0">
+        <div class="absolute top-1/3 left-1/4 w-[500px] h-[500px] bg-indigo-500/8 rounded-full blur-[120px]"></div>
+        <div class="absolute bottom-1/3 right-1/4 w-[400px] h-[400px] bg-purple-500/6 rounded-full blur-[100px]"></div>
+        <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[300px] h-[300px] bg-teal-500/4 rounded-full blur-[80px]"></div>
+    </div>
+    <div class="absolute inset-0" style="background-image: linear-gradient(to right, rgba(255,255,255,0.03) 1px, transparent 1px), linear-gradient(to bottom, rgba(255,255,255,0.03) 1px, transparent 1px); background-size: 40px 40px; mask-image: radial-gradient(ellipse at center, black 30%, transparent 70%);"></div>
+
+    <div class="relative z-10 max-w-5xl mx-auto px-6 text-center">
+        <div class="animate-in">
+            <div class="inline-flex items-center gap-2 px-4 py-2 rounded-full glass-light text-xs font-medium text-indigo-400 mb-8 tracking-wide uppercase">
+                <i data-lucide="book-open" class="w-3.5 h-3.5"></i>
+                Day 38 — Feature Engineering
+            </div>
+        </div>
+        <h1 class="animate-in delay-1 text-4xl sm:text-5xl lg:text-6xl font-semibold tracking-tight leading-[1.1] mb-6">
+            <span class="gradient-text">Advanced Missing Value</span><br>
+            <span class="accent-gradient">Handling</span>
+        </h1>
+        <p class="animate-in delay-2 text-lg sm:text-xl font-light text-neutral-400 max-w-2xl mx-auto leading-relaxed mb-4">
+            Random Sample Imputation · Missing Indicator · GridSearchCV
+        </p>
+        <p class="animate-in delay-2 text-sm font-light text-neutral-500 max-w-xl mx-auto leading-relaxed mb-10">
+            Completing the univariate missing value handling toolkit
+        </p>
+        <div class="animate-in delay-3 flex flex-wrap items-center justify-center gap-4">
+            <a href="#revision" class="inline-flex items-center gap-2 px-8 py-3.5 bg-indigo-600 hover:bg-indigo-700 rounded-xl text-sm font-medium transition-all duration-300 hover:scale-105 hover:shadow-lg hover:shadow-indigo-500/20">
+                Start Reading <i data-lucide="chevron-down" class="w-4 h-4"></i>
+            </a>
+            <a href="#takeaways" class="inline-flex items-center gap-2 px-8 py-3.5 glass rounded-xl text-sm font-medium text-neutral-300 hover:text-white hover:border-white/20 transition-all duration-300">
+                Key Takeaways <i data-lucide="bookmark" class="w-4 h-4"></i>
+            </a>
+        </div>
+        <div class="animate-in delay-3 grid grid-cols-3 gap-4 mt-16 max-w-lg mx-auto">
+            <div class="glass-light rounded-xl p-4 text-center">
+                <div class="text-2xl font-semibold text-indigo-400">1</div>
+                <div class="text-xs text-neutral-500 mt-1">Random Sample</div>
+            </div>
+            <div class="glass-light rounded-xl p-4 text-center">
+                <div class="text-2xl font-semibold text-teal-400">2</div>
+                <div class="text-xs text-neutral-500 mt-1">Missing Indicator</div>
+            </div>
+            <div class="glass-light rounded-xl p-4 text-center">
+                <div class="text-2xl font-semibold text-amber-400">3</div>
+                <div class="text-xs text-neutral-500 mt-1">GridSearchCV</div>
+            </div>
+        </div>
+    </div>
+    <div class="absolute bottom-8 left-1/2 -translate-x-1/2 float-anim">
+        <div class="w-6 h-10 rounded-full border-2 border-neutral-700 flex items-start justify-center p-1.5">
+            <div class="w-1 h-2.5 bg-neutral-500 rounded-full animate-bounce"></div>
+        </div>
+    </div>
+</section>
+
+<!-- Main Content -->
+<main class="max-w-5xl mx-auto px-6 pb-32">
+
+    <!-- Revision -->
+    <section id="revision" class="pt-32 scroll-mt-24">
+        <div class="flex items-center gap-3 mb-6">
+            <div class="w-10 h-10 rounded-xl bg-neutral-500/10 border border-neutral-500/20 flex items-center justify-center">
+                <i data-lucide="rotate-ccw" class="w-5 h-5 text-neutral-400"></i>
+            </div>
+            <h2 class="text-2xl sm:text-3xl font-semibold tracking-tight gradient-text">Revision</h2>
+        </div>
+        <p class="text-neutral-400 font-light mb-8 leading-relaxed">In the previous lectures we learned:</p>
+
+        <div class="grid md:grid-cols-3 gap-6 mb-8">
+            <div class="glass rounded-2xl p-6">
+                <div class="flex items-center gap-2 mb-3">
+                    <span class="w-7 h-7 rounded-lg bg-red-500/15 flex items-center justify-center text-red-400 text-xs font-bold">V1</span>
+                    <h3 class="text-sm font-semibold text-white">Deleting Rows</h3>
+                </div>
+                <ul class="space-y-1.5 text-xs text-neutral-400 font-light">
+                    <li>• Remove rows with missing values</li>
+                    <li>• Useful only when missing count is very small</li>
+                    <li>• If many rows removed → information lost</li>
+                </ul>
+            </div>
+            <div class="glass rounded-2xl p-6">
+                <div class="flex items-center gap-2 mb-3">
+                    <span class="w-7 h-7 rounded-lg bg-indigo-500/15 flex items-center justify-center text-indigo-400 text-xs font-bold">V2</span>
+                    <h3 class="text-sm font-semibold text-white">Numerical Missing</h3>
+                </div>
+                <div class="flex flex-wrap gap-1.5">
+                    <span class="px-2 py-1 rounded bg-indigo-500/10 text-indigo-400 text-xs">Mean</span>
+                    <span class="px-2 py-1 rounded bg-purple-500/10 text-purple-400 text-xs">Median</span>
+                    <span class="px-2 py-1 rounded bg-amber-500/10 text-amber-400 text-xs">Arbitrary Value</span>
+                </div>
+            </div>
+            <div class="glass rounded-2xl p-6">
+                <div class="flex items-center gap-2 mb-3">
+                    <span class="w-7 h-7 rounded-lg bg-teal-500/15 flex items-center justify-center text-teal-400 text-xs font-bold">V3</span>
+                    <h3 class="text-sm font-semibold text-white">Categorical Missing</h3>
+                </div>
+                <div class="flex flex-wrap gap-1.5">
+                    <span class="px-2 py-1 rounded bg-teal-500/10 text-teal-400 text-xs">Most Frequent</span>
+                    <span class="px-2 py-1 rounded bg-violet-500/10 text-violet-400 text-xs">Constant Category</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="info-box p-5 flex items-start gap-3">
+            <i data-lucide="sparkles" class="w-5 h-5 text-indigo-400 mt-0.5 flex-shrink-0"></i>
+            <p class="text-sm text-neutral-300">Today introduces <strong class="text-indigo-400">3 advanced techniques</strong>. After this, the basic (univariate) missing value handling toolkit is almost complete.</p>
+        </div>
+    </section>
+
+    <div class="section-divider my-20"></div>
+
+    <!-- 1. Random Sample Imputation -->
+    <section id="random-sample" class="pt-8 scroll-mt-24">
+        <div class="flex items-center gap-3 mb-6">
+            <div class="w-10 h-10 rounded-xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center">
+                <span class="text-indigo-400 font-semibold text-lg">1</span>
+            </div>
+            <h2 class="text-2xl sm:text-3xl font-semibold tracking-tight accent-gradient">Random Sample Imputation</h2>
+        </div>
+
+        <div class="glass rounded-2xl p-8 space-y-5">
+            <h3 class="text-lg font-semibold text-white">Definition</h3>
+            <p class="text-neutral-300 font-light leading-relaxed">
+                Random Sample Imputation replaces missing values by <strong class="text-white">randomly selecting existing values from the same column</strong>.
+            </p>
+            <p class="text-neutral-400 font-light leading-relaxed">
+                Instead of creating new values, we <strong class="text-indigo-400">reuse values that already exist</strong> in the dataset.
+            </p>
+        </div>
+    </section>
+
+    <!-- Example -->
+    <section id="rs-example" class="pt-16 scroll-mt-24">
+        <div class="glass rounded-2xl p-8 space-y-6 glow-card transition-all duration-500">
+            <h3 class="text-lg font-semibold text-white">Example</h3>
+
+            <div class="grid sm:grid-cols-2 gap-6">
+                <div>
+                    <p class="text-xs text-neutral-500 uppercase tracking-wider font-medium mb-3">Original</p>
+                    <div class="table-container">
+                        <table>
+                            <thead><tr><th>Age</th></tr></thead>
+                            <tbody>
+                                <tr><td>22</td></tr>
+                                <tr><td>25</td></tr>
+                                <tr><td class="nan-cell">NaN</td></tr>
+                                <tr><td>31</td></tr>
+                                <tr><td>24</td></tr>
+                                <tr><td class="nan-cell">NaN</td></tr>
+                                <tr><td>35</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                <div>
+                    <p class="text-xs text-green-400 uppercase tracking-wider font-medium mb-3">After Random Imputation</p>
+                    <div class="table-container">
+                        <table>
+                            <thead><tr><th>Age</th></tr></thead>
+                            <tbody>
+                                <tr><td>22</td></tr>
+                                <tr><td>25</td></tr>
+                                <tr><td class="text-green-400/80">24 <span class="text-[10px] text-neutral-500 ml-1">← sampled</span></td></tr>
+                                <tr><td>31</td></tr>
+                                <tr><td>24</td></tr>
+                                <tr><td class="text-green-400/80">35 <span class="text-[10px] text-neutral-500 ml-1">← sampled</span></td></tr>
+                                <tr><td>35</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <div class="success-box p-4 flex items-start gap-3">
+                <i data-lucide="check-circle" class="w-4 h-4 text-green-400 mt-0.5 flex-shrink-0"></i>
+                <p class="text-sm text-neutral-400">The new values <strong class="text-green-400">already existed</strong> in the dataset. We do <strong class="text-red-400">NOT</strong> generate completely random numbers.</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- Why Not Random Numbers -->
+    <section id="rs-why-not" class="pt-16 scroll-mt-24">
+        <div class="glass rounded-2xl p-8">
+            <div class="danger-box p-5 flex items-start gap-3">
+                <i data-lucide="x" class="w-5 h-5 text-red-400 mt-0.5 flex-shrink-0"></i>
+                <div>
+                    <p class="text-sm text-red-300 font-medium mb-2">Why not use random numbers like 500 or 900?</p>
+                    <p class="text-sm text-neutral-400">Because those numbers may <strong class="text-red-400">not belong to the actual data distribution</strong>.</p>
+                    <p class="text-sm text-neutral-500 mt-1">Instead, we randomly pick from the <strong class="text-white">observed values only</strong>.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Works for Both Types -->
+    <section id="rs-both-types" class="pt-16 scroll-mt-24">
+        <div class="flex items-center gap-3 mb-6">
+            <div class="w-10 h-10 rounded-xl bg-purple-500/10 border border-purple-500/20 flex items-center justify-center">
+                <i data-lucide="columns" class="w-5 h-5 text-purple-400"></i>
+            </div>
+            <h2 class="text-xl sm:text-2xl font-semibold tracking-tight gradient-text">Works for Both Types of Data</h2>
+        </div>
+        <div class="grid md:grid-cols-2 gap-6">
+            <div class="glass rounded-2xl p-6">
+                <div class="flex items-center gap-2 mb-4">
+                    <i data-lucide="hash" class="w-4 h-4 text-indigo-400"></i>
+                    <h4 class="text-sm font-semibold text-indigo-400">Numerical</h4>
+                </div>
+                <div class="code-block p-4 text-sm">
+                    Age<br><span class="number">22</span><br><span class="number">31</span><br><span class="number">45</span><br><span class="nan-cell">NaN</span><br><br>
+                    <span class="comment">Replace NaN by randomly selecting</span><br>
+                    <span class="number">22</span> <span class="keyword">or</span> <span class="number">31</span> <span class="keyword">or</span> <span class="number">45</span>
+                </div>
+            </div>
+            <div class="glass rounded-2xl p-6">
+                <div class="flex items-center gap-2 mb-4">
+                    <i data-lucide="type" class="w-4 h-4 text-teal-400"></i>
+                    <h4 class="text-sm font-semibold text-teal-400">Categorical</h4>
+                </div>
+                <div class="code-block p-4 text-sm">
+                    Gender<br><span class="string">Male</span><br><span class="string">Female</span><br><span class="string">Male</span><br><span class="nan-cell">NaN</span><br><br>
+                    <span class="comment">Replace NaN by</span><br>
+                    <span class="string">Male</span> <span class="keyword">or</span> <span class="string">Female</span><br>
+                    <span class="comment">chosen randomly</span>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <div class="section-divider my-20"></div>
+
+    <!-- Advantages -->
+    <section id="rs-advantages" class="pt-8 scroll-mt-24">
+        <div class="flex items-center gap-3 mb-6">
+            <div class="w-10 h-10 rounded-xl bg-green-500/10 border border-green-500/20 flex items-center justify-center">
+                <i data-lucide="thumbs-up" class="w-5 h-5 text-green-400"></i>
+            </div>
+            <h2 class="text-2xl sm:text-3xl font-semibold tracking-tight green-gradient">Advantages</h2>
+        </div>
+
+        <div class="space-y-6">
+            <!-- Advantage 1 -->
+            <div class="glass rounded-2xl p-8">
+                <div class="flex items-center gap-3 mb-3">
+                    <span class="w-8 h-8 rounded-lg bg-green-500/15 flex items-center justify-center text-green-400 text-sm font-semibold">1</span>
+                    <h3 class="text-lg font-semibold text-white">Very Easy to Apply</h3>
+                </div>
+                <p class="text-sm text-neutral-400 font-light">Concept is extremely simple. Only randomly sample from existing observations.</p>
+            </div>
+
+            <!-- Advantage 2 — STAR -->
+            <div class="star-box p-8">
+                <div class="flex items-center gap-3 mb-3">
+                    <span class="w-8 h-8 rounded-lg bg-amber-500/20 flex items-center justify-center text-amber-400 text-sm font-semibold">2</span>
+                    <h3 class="text-lg font-semibold text-amber-300">Preserves Data Distribution ⭐</h3>
+                </div>
+                <p class="text-sm text-neutral-300 font-light leading-relaxed mb-4">
+                    This is the <strong class="text-amber-300">biggest advantage</strong>. Unlike Mean or Median Imputation, Random Sample Imputation keeps the overall distribution <strong class="text-white">almost unchanged</strong>.
+                </p>
+
+                <div class="grid sm:grid-cols-2 gap-4 mb-4">
+                    <div class="glass-light rounded-xl p-4">
+                        <p class="text-xs text-neutral-500 uppercase tracking-wider mb-2">Original</p>
+                        <div class="dist-shape text-center">        *<br>      *****<br>    *********<br>  *************</div>
+                    </div>
+                    <div class="glass-light rounded-xl p-4">
+                        <p class="text-xs text-green-400 uppercase tracking-wider mb-2">After Random Sample</p>
+                        <div class="dist-shape text-center">       *<br>      *****<br>    ********<br>  *************</div>
+                    </div>
+                </div>
+                <p class="text-sm text-green-400 text-center font-medium">Almost identical.</p>
+
+                <div class="section-divider my-5"></div>
+
+                <p class="text-xs text-indigo-400 uppercase tracking-wider font-medium mb-3">Why?</p>
+                <p class="text-sm text-neutral-400 font-light leading-relaxed mb-3">
+                    Because <strong class="text-white">frequently occurring values have a higher probability</strong> of being selected.
+                </p>
+                <div class="glass-light rounded-xl p-4">
+                    <p class="text-sm text-neutral-400 font-light">Suppose <strong class="text-white">Age 22</strong> appears <span class="text-indigo-400 font-medium">200 times</span> and <strong class="text-white">Age 80</strong> appears <span class="text-red-400 font-medium">5 times</span>.</p>
+                    <p class="text-sm text-neutral-400 font-light mt-2">Random sampling naturally selects <strong class="text-indigo-400">22 much more often</strong> than 80. Hence the distribution remains almost the same.</p>
+                </div>
+            </div>
+
+            <!-- Advantage 3 -->
+            <div class="glass rounded-2xl p-8">
+                <div class="flex items-center gap-3 mb-3">
+                    <span class="w-8 h-8 rounded-lg bg-green-500/15 flex items-center justify-center text-green-400 text-sm font-semibold">3</span>
+                    <h3 class="text-lg font-semibold text-white">Variance is Preserved</h3>
+                </div>
+                <p class="text-sm text-neutral-400 font-light leading-relaxed">Mean imputation reduces variance because every missing value becomes the same mean. Random Sample Imputation <strong class="text-green-400">preserves variance</strong> because different existing values are inserted. This is especially useful for statistical models.</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- Best For / Not Ideal For -->
+    <section id="rs-best-for" class="pt-16 scroll-mt-24">
+        <div class="grid md:grid-cols-2 gap-6">
+            <div class="glass rounded-2xl p-8 border-green-500/20">
+                <div class="flex items-center gap-2 mb-4">
+                    <i data-lucide="check-circle" class="w-5 h-5 text-green-400"></i>
+                    <h3 class="text-lg font-semibold text-green-400">Best For — Linear Models</h3>
+                </div>
+                <div class="flex flex-wrap gap-2 mb-3">
+                    <span class="px-3 py-1.5 rounded-lg bg-green-500/10 text-green-400 text-xs border border-green-500/20">Linear Regression</span>
+                    <span class="px-3 py-1.5 rounded-lg bg-green-500/10 text-green-400 text-xs border border-green-500/20">Logistic Regression</span>
+                    <span class="px-3 py-1.5 rounded-lg bg-green-500/10 text-green-400 text-xs border border-green-500/20">Linear SVM</span>
+                </div>
+                <p class="text-sm text-neutral-400 font-light">These models assume certain statistical properties of data. Since Random Sample Imputation preserves distribution, it generally performs better.</p>
+            </div>
+            <div class="glass rounded-2xl p-8 border-red-500/20">
+                <div class="flex items-center gap-2 mb-4">
+                    <i data-lucide="x-circle" class="w-5 h-5 text-red-400"></i>
+                    <h3 class="text-lg font-semibold text-red-400">Not Ideal For — Tree-Based Models</h3>
+                </div>
+                <div class="flex flex-wrap gap-2 mb-3">
+                    <span class="px-3 py-1.5 rounded-lg bg-red-500/10 text-red-400 text-xs border border-red-500/20">Decision Tree</span>
+                    <span class="px-3 py-1.5 rounded-lg bg-red-500/10 text-red-400 text-xs border border-red-500/20">Random Forest</span>
+                    <span class="px-3 py-1.5 rounded-lg bg-red-500/10 text-red-400 text-xs border border-red-500/20">XGBoost</span>
+                    <span class="px-3 py-1.5 rounded-lg bg-red-500/10 text-red-400 text-xs border border-red-500/20">LightGBM</span>
+                </div>
+                <p class="text-sm text-neutral-400 font-light">Because trees split data differently and random replacement may introduce <strong class="text-red-400">unnecessary noise</strong>.</p>
+            </div>
+        </div>
+    </section>
+
+    <div class="section-divider my-20"></div>
+
+    <!-- Disadvantages -->
+    <section id="rs-disadvantages" class="pt-8 scroll-mt-24">
+        <div class="flex items-center gap-3 mb-6">
+            <div class="w-10 h-10 rounded-xl bg-red-500/10 border border-red-500/20 flex items-center justify-center">
+                <i data-lucide="thumbs-down" class="w-5 h-5 text-red-400"></i>
+            </div>
+            <h2 class="text-2xl sm:text-3xl font-semibold tracking-tight red-gradient">Disadvantages</h2>
+        </div>
+
+        <div class="space-y-6">
+            <div class="glass rounded-2xl p-8">
+                <div class="flex items-center gap-3 mb-4">
+                    <span class="w-8 h-8 rounded-lg bg-red-500/15 flex items-center justify-center text-red-400 text-sm font-semibold">1</span>
+                    <h3 class="text-lg font-semibold text-white">Correlation Gets Disturbed</h3>
+                </div>
+                <p class="text-sm text-neutral-400 font-light leading-relaxed mb-4">Although individual column distribution stays similar, <strong class="text-red-400">relationships between columns change</strong>.</p>
+                <div class="grid sm:grid-cols-2 gap-4">
+                    <div class="glass-light rounded-xl p-4 text-center">
+                        <p class="text-xs text-neutral-500 mb-2">Original</p>
+                        <p class="text-sm text-neutral-300">Age ↑ &nbsp;→&nbsp; Salary ↑</p>
+                        <p class="text-xs text-green-400 mt-1">Strong correlation</p>
+                    </div>
+                    <div class="glass-light rounded-xl p-4 text-center">
+                        <p class="text-xs text-neutral-500 mb-2">After Random Replacement</p>
+                        <p class="text-sm text-neutral-300">Age values shuffled</p>
+                        <p class="text-xs text-red-400 mt-1">Correlation becomes weaker</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="glass rounded-2xl p-8">
+                <div class="flex items-center gap-3 mb-3">
+                    <span class="w-8 h-8 rounded-lg bg-red-500/15 flex items-center justify-center text-red-400 text-sm font-semibold">2</span>
+                    <h3 class="text-lg font-semibold text-white">Random Noise is Introduced</h3>
+                </div>
+                <p class="text-sm text-neutral-400 font-light">The inserted values are random. Therefore additional randomness enters the dataset.</p>
+            </div>
+
+            <div class="glass rounded-2xl p-8">
+                <div class="flex items-center gap-3 mb-3">
+                    <span class="w-8 h-8 rounded-lg bg-red-500/15 flex items-center justify-center text-red-400 text-sm font-semibold">3</span>
+                    <h3 class="text-lg font-semibold text-white">Memory Problem During Deployment</h3>
+                </div>
+                <p class="text-sm text-neutral-400 font-light leading-relaxed mb-3">During prediction, the model needs access to the <strong class="text-white">original training values</strong>. Future missing values must also be replaced using values sampled from the training data.</p>
+                <div class="warning-box p-4 flex items-start gap-3">
+                    <i data-lucide="alert-triangle" class="w-4 h-4 text-amber-400 mt-0.5 flex-shrink-0"></i>
+                    <p class="text-sm text-neutral-400">If training data is huge, <strong class="text-amber-400">server memory usage increases</strong>.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <div class="section-divider my-20"></div>
+
+    <!-- Code: Titanic -->
+    <section id="rs-code" class="pt-8 scroll-mt-24">
+        <div class="flex items-center gap-3 mb-6">
+            <div class="w-10 h-10 rounded-xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center">
+                <i data-lucide="code" class="w-5 h-5 text-indigo-400"></i>
+            </div>
+            <h2 class="text-2xl sm:text-3xl font-semibold tracking-tight gradient-text">Code — Titanic Dataset</h2>
+        </div>
+
+        <div class="glass rounded-2xl p-8 space-y-6">
+            <div>
+                <p class="text-xs text-neutral-500 uppercase tracking-wider font-medium mb-3">Setup</p>
+                <div class="flex flex-wrap gap-3">
+                    <div class="glass-light rounded-xl px-4 py-2 flex items-center gap-2">
+                        <i data-lucide="hash" class="w-3.5 h-3.5 text-indigo-400"></i>
+                        <span class="text-sm text-neutral-300">Age</span>
+                    </div>
+                    <div class="glass-light rounded-xl px-4 py-2 flex items-center gap-2">
+                        <i data-lucide="hash" class="w-3.5 h-3.5 text-purple-400"></i>
+                        <span class="text-sm text-neutral-300">Fare</span>
+                    </div>
+                    <div class="glass-light rounded-xl px-4 py-2 flex items-center gap-2">
+                        <i data-lucide="target" class="w-3.5 h-3.5 text-green-400"></i>
+                        <span class="text-sm text-neutral-300">Survived</span>
+                        <span class="text-[10px] px-1.5 py-0.5 rounded bg-green-500/10 text-green-400">Target</span>
+                    </div>
+                </div>
+                <p class="text-sm text-neutral-500 mt-3">Age contains about <strong class="text-amber-400">20%</strong> missing values.</p>
+            </div>
+
+            <div class="section-divider"></div>
+
+            <div>
+                <p class="text-xs text-neutral-500 uppercase tracking-wider font-medium mb-3">Procedure</p>
+                <div class="space-y-3">
+                    <div class="flex items-start gap-3 p-3 rounded-xl glass-light">
+                        <span class="w-6 h-6 rounded bg-indigo-500/15 flex items-center justify-center text-indigo-400 text-xs font-bold flex-shrink-0 mt-0.5">1</span>
+                        <p class="text-sm text-neutral-300">Split into Train / Test</p>
+                    </div>
+                    <div class="flex items-start gap-3 p-3 rounded-xl glass-light">
+                        <span class="w-6 h-6 rounded bg-indigo-500/15 flex items-center justify-center text-indigo-400 text-xs font-bold flex-shrink-0 mt-0.5">2</span>
+                        <p class="text-sm text-neutral-300">Create a copy of Age</p>
+                    </div>
+                    <div class="flex items-start gap-3 p-3 rounded-xl glass-light">
+                        <span class="w-6 h-6 rounded bg-indigo-500/15 flex items-center justify-center text-indigo-400 text-xs font-bold flex-shrink-0 mt-0.5">3</span>
+                        <p class="text-sm text-neutral-300">Remove missing values</p>
+                    </div>
+                    <div class="flex items-start gap-3 p-3 rounded-xl glass-light">
+                        <span class="w-6 h-6 rounded bg-indigo-500/15 flex items-center justify-center text-indigo-400 text-xs font-bold flex-shrink-0 mt-0.5">4</span>
+                        <p class="text-sm text-neutral-300">Randomly sample existing Age values</p>
+                    </div>
+                    <div class="flex items-start gap-3 p-3 rounded-xl glass-light">
+                        <span class="w-6 h-6 rounded bg-indigo-500/15 flex items-center justify-center text-indigo-400 text-xs font-bold flex-shrink-0 mt-0.5">5</span>
+                        <p class="text-sm text-neutral-300">Fill missing values</p>
+                    </div>
+                    <div class="flex items-start gap-3 p-3 rounded-xl glass-light">
+                        <span class="w-6 h-6 rounded bg-indigo-500/15 flex items-center justify-center text-indigo-400 text-xs font-bold flex-shrink-0 mt-0.5">6</span>
+                        <p class="text-sm text-neutral-300">Compare before and after</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Result -->
+    <section id="rs-result" class="pt-16 scroll-mt-24">
+        <div class="glass rounded-2xl p-8 space-y-6">
+            <h3 class="text-lg font-semibold text-white">Result</h3>
+
+            <div>
+                <p class="text-xs text-neutral-500 uppercase tracking-wider font-medium mb-4">Histogram Comparison</p>
+                <div class="grid sm:grid-cols-2 gap-4 mb-4">
+                    <div class="glass-light rounded-xl p-4 text-center">
+                        <svg width="160" height="60" viewBox="0 0 160 60" class="mx-auto opacity-70">
+                            <line x1="10" y1="50" x2="150" y2="50" stroke="#525252" stroke-width="1"/>
+                            <path d="M10 50 Q30 50 50 35 Q70 10 80 8 Q90 10 110 35 Q130 50 150 50" fill="none" stroke="#6366F1" stroke-width="1.5" stroke-linecap="round"/>
+                            <path d="M10 50 Q30 50 50 35 Q70 10 80 8 Q90 10 110 35 Q130 50 150 50 Z" fill="rgba(99,102,241,0.08)"/>
+                        </svg>
+                        <p class="text-xs text-neutral-500 mt-2">Original Distribution</p>
+                    </div>
+                    <div class="glass-light rounded-xl p-4 text-center">
+                        <svg width="160" height="60" viewBox="0 0 160 60" class="mx-auto opacity-70">
+                            <line x1="10" y1="50" x2="150" y2="50" stroke="#525252" stroke-width="1"/>
+                            <path d="M10 50 Q30 50 50 35 Q70 10 80 8 Q90 10 110 35 Q130 50 150 50" fill="none" stroke="#10B981" stroke-width="1.5" stroke-linecap="round" stroke-dasharray="4,3"/>
+                            <path d="M10 50 Q30 50 50 35 Q70 10 80 8 Q90 10 110 35 Q130 50 150 50 Z" fill="rgba(16,185,129,0.06)"/>
+                        </svg>
+                        <p class="text-xs text-neutral-500 mt-2">Imputed Distribution</p>
+                    </div>
+                </div>
+                <div class="success-box p-4 flex items-start gap-3">
+                    <i data-lucide="check-circle" class="w-4 h-4 text-green-400 mt-0.5 flex-shrink-0"></i>
+                    <p class="text-sm text-neutral-400"><strong class="text-green-400">Almost same</strong> — This proves Random Sample Imputation preserves distribution.</p>
+                </div>
+            </div>
+
+            <div class="section-divider"></div>
+
+            <div>
+                <p class="text-xs text-neutral-500 uppercase tracking-wider font-medium mb-4">Correlation Check</p>
+                <div class="grid sm:grid-cols-2 gap-4">
+                    <div class="glass-light rounded-xl p-4 text-center">
+                        <p class="text-xs text-neutral-500 mb-1">Original Correlation(Age, Fare)</p>
+                        <p class="text-2xl font-semibold text-indigo-400">≈ 0.114</p>
+                    </div>
+                    <div class="glass-light rounded-xl p-4 text-center">
+                        <p class="text-xs text-neutral-500 mb-1">After Random Imputation</p>
+                        <p class="text-2xl font-semibold text-red-400">≈ 0.076</p>
+                    </div>
+                </div>
+                <p class="text-sm text-neutral-500 mt-3 text-center">Distribution stayed similar, but <strong class="text-red-400">correlation changed</strong>. This confirms one disadvantage.</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- Production Tip -->
+    <section id="rs-production" class="pt-16 scroll-mt-24">
+        <div class="star-box p-8 space-y-5">
+            <div class="flex items-center gap-2">
+                <i data-lucide="star" class="w-5 h-5 text-amber-400"></i>
+                <h3 class="text-lg font-semibold text-amber-300">Production Tip ⭐ — Very Important</h3>
+            </div>
+
+            <p class="text-sm text-neutral-300 font-light leading-relaxed">Suppose a user submits the <strong class="text-white">same input multiple times</strong>. Random sampling every time may generate different imputations.</p>
+
+            <div class="grid sm:grid-cols-2 gap-4">
+                <div class="glass-light rounded-xl p-4">
+                    <p class="text-xs text-neutral-500 mb-2">Input 1 — Age missing</p>
+                    <p class="text-sm text-neutral-300">Model inserts <strong class="text-indigo-400">24</strong></p>
+                    <p class="text-xs text-green-400 mt-1">Prediction = Approved</p>
+                </div>
+                <div class="glass-light rounded-xl p-4">
+                    <p class="text-xs text-neutral-500 mb-2">Same Input — Second time</p>
+                    <p class="text-sm text-neutral-300">Model inserts <strong class="text-red-400">41</strong></p>
+                    <p class="text-xs text-red-400 mt-1">Prediction changes!</p>
+                </div>
+            </div>
+
+            <div class="danger-box p-4 flex items-start gap-3">
+                <i data-lucide="alert-octagon" class="w-4 h-4 text-red-400 mt-0.5 flex-shrink-0"></i>
+                <p class="text-sm text-neutral-300">This is <strong class="text-red-400">undesirable</strong>. Different predictions for the same input.</p>
+            </div>
+
+            <div class="section-divider"></div>
+
+            <div>
+                <p class="text-xs text-green-400 uppercase tracking-wider font-medium mb-3">Solution</p>
+                <p class="text-sm text-neutral-300 font-light leading-relaxed mb-3">Use a <strong class="text-green-400">fixed random seed</strong> (<code class="text-green-400 bg-green-500/10 px-1.5 py-0.5 rounded text-xs">random_state</code>) based on a deterministic value (for example, another feature or row identifier).</p>
+                <div class="success-box p-4 flex items-center gap-3">
+                    <i data-lucide="check-circle" class="w-4 h-4 text-green-400 flex-shrink-0"></i>
+                    <p class="text-sm text-neutral-300">Same input → Same sampled value → <strong class="text-green-400">Stable predictions</strong></p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Random Sample for Categorical -->
+    <section id="rs-categorical" class="pt-16 scroll-mt-24">
+        <div class="flex items-center gap-3 mb-6">
+            <div class="w-10 h-10 rounded-xl bg-teal-500/10 border border-teal-500/20 flex items-center justify-center">
+                <i data-lucide="type" class="w-5 h-5 text-teal-400"></i>
+            </div>
+            <h2 class="text-xl sm:text-2xl font-semibold tracking-tight teal-gradient">Random Sample Imputation for Categorical Data</h2>
+        </div>
+
+        <div class="glass rounded-2xl p-8 space-y-6">
+            <div>
+                <p class="text-xs text-neutral-500 uppercase tracking-wider font-medium mb-3">Example — House Prices</p>
+                <div class="flex flex-wrap gap-3 mb-4">
+                    <div class="glass-light rounded-xl px-4 py-2 flex items-center gap-2">
+                        <i data-lucide="flame" class="w-3.5 h-3.5 text-orange-400"></i>
+                        <span class="text-sm text-neutral-300">FireplaceQu</span>
+                        <span class="text-[10px] px-1.5 py-0.5 rounded bg-red-500/10 text-red-400">~50% missing</span>
+                    </div>
+                    <div class="glass-light rounded-xl px-4 py-2 flex items-center gap-2">
+                        <i data-lucide="car" class="w-3.5 h-3.5 text-blue-400"></i>
+                        <span class="text-sm text-neutral-300">GarageQual</span>
+                        <span class="text-[10px] px-1.5 py-0.5 rounded bg-green-500/10 text-green-400">~5% missing</span>
+                    </div>
+                </div>
+                <p class="text-sm text-neutral-400 font-light">Randomly sample existing categories: Excellent, Good, Fair, Poor — randomly assign one.</p>
+            </div>
+
+            <div class="section-divider"></div>
+
+            <div class="grid sm:grid-cols-2 gap-4">
+                <div class="success-box p-5">
+                    <p class="text-xs text-green-400 uppercase tracking-wider font-medium mb-2">~5% Missing</p>
+                    <p class="text-sm text-neutral-300 font-light">Category frequencies remain <strong class="text-green-400">almost unchanged</strong>. Technique works well.</p>
+                </div>
+                <div class="danger-box p-5">
+                    <p class="text-xs text-red-400 uppercase tracking-wider font-medium mb-2">~50% Missing</p>
+                    <p class="text-sm text-neutral-300 font-light">Category frequencies change <strong class="text-red-400">significantly</strong>. This becomes a red flag.</p>
+                </div>
+            </div>
+
+            <div class="warning-box p-4 flex items-start gap-3">
+                <i data-lucide="alert-triangle" class="w-4 h-4 text-amber-400 mt-0.5 flex-shrink-0"></i>
+                <p class="text-sm text-neutral-300"><strong class="text-amber-300">Important Conclusion:</strong> Random Sample Imputation works better when missing percentage is relatively low. If missing percentage is very high, choose another imputation technique.</p>
+            </div>
+        </div>
+    </section>
+
+    <div class="section-divider my-20"></div>
+
+    <!-- 2. Missing Indicator -->
+    <section id="missing-indicator" class="pt-8 scroll-mt-24">
+        <div class="flex items-center gap-3 mb-6">
+            <div class="w-10 h-10 rounded-xl bg-teal-500/10 border border-teal-500/20 flex items-center justify-center">
+                <span class="text-teal-400 font-semibold text-lg">2</span>
+            </div>
+            <h2 class="text-2xl sm:text-3xl font-semibold tracking-tight teal-gradient">Missing Indicator</h2>
+        </div>
+
+        <div class="glass rounded-2xl p-8 space-y-6">
+            <p class="text-neutral-300 font-light leading-relaxed">One of the most <strong class="text-white">interesting feature engineering techniques</strong>.</p>
+
+            <div>
+                <p class="text-xs text-neutral-500 uppercase tracking-wider font-medium mb-3">Idea</p>
+                <p class="text-sm text-neutral-300 font-light leading-relaxed">Instead of only filling missing values, <strong class="text-teal-400">create a new binary column</strong> indicating whether the original value was missing.</p>
+            </div>
+
+            <div class="grid sm:grid-cols-2 gap-4">
+                <div>
+                    <p class="text-xs text-neutral-500 uppercase tracking-wider font-medium mb-3">Original</p>
+                    <div class="table-container">
+                        <table>
+                            <thead><tr><th>Age</th></tr></thead>
+                            <tbody>
+                                <tr><td>22</td></tr>
+                                <tr><td>31</td></tr>
+                                <tr><td class="nan-cell">NaN</td></tr>
+                                <tr><td>45</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                <div>
+                    <p class="text-xs text-teal-400 uppercase tracking-wider font-medium mb-3">After — Create Age_NA</p>
+                    <div class="table-container">
+                        <table>
+                            <thead><tr><th>Age</th><th>Age_NA</th></tr></thead>
+                            <tbody>
+                                <tr><td>22</td><td class="false-cell">False</td></tr>
+                                <tr><td>31</td><td class="false-cell">False</td></tr>
+                                <tr><td class="nan-cell">NaN</td><td class="true-cell">True</td></tr>
+                                <tr><td>45</td><td class="false-cell">False</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <p class="text-sm text-neutral-500 text-center">Then perform normal imputation on the original column.</p>
+        </div>
+    </section>
+
+    <!-- Why It Helps -->
+    <section id="mi-why" class="pt-16 scroll-mt-24">
+        <div class="glass rounded-2xl p-8 space-y-6">
+            <div class="flex items-center gap-2 mb-2">
+                <i data-lucide="lightbulb" class="w-5 h-5 text-amber-400"></i>
+                <h3 class="text-lg font-semibold text-white">Why Does This Help?</h3>
+            </div>
+            <p class="text-sm text-neutral-300 font-light leading-relaxed">Sometimes, <strong class="text-teal-400">missingness itself contains useful information</strong>.</p>
+
+            <div class="grid sm:grid-cols-2 gap-4">
+                <div class="glass-light rounded-xl p-5">
+                    <div class="flex items-center gap-2 mb-2">
+                        <i data-lucide="heart-pulse" class="w-4 h-4 text-rose-400"></i>
+                        <p class="text-sm font-medium text-rose-400">Medical Dataset</p>
+                    </div>
+                    <p class="text-xs text-neutral-400 font-light">Patients who skipped a test may differ systematically from those who completed it.</p>
+                </div>
+                <div class="glass-light rounded-xl p-5">
+                    <div class="flex items-center gap-2 mb-2">
+                        <i data-lucide="landmark" class="w-4 h-4 text-blue-400"></i>
+                        <p class="text-sm font-medium text-blue-400">Bank Dataset</p>
+                    </div>
+                    <p class="text-xs text-neutral-400 font-light">People who did not report income may have different credit behavior.</p>
+                </div>
+            </div>
+
+            <p class="text-sm text-neutral-400 font-light">The model can learn this <strong class="text-white">hidden pattern</strong>.</p>
+
+            <div class="section-divider"></div>
+
+            <div class="star-box p-4 flex items-start gap-3">
+                <i data-lucide="trophy" class="w-5 h-5 text-amber-400 mt-0.5 flex-shrink-0"></i>
+                <div>
+                    <p class="text-sm text-amber-300 font-medium">Kaggle Competition Note</p>
+                    <p class="text-sm text-neutral-400 mt-1">Participants used Missing Indicator and it <strong class="text-amber-300">significantly improved performance</strong>.</p>
+                </div>
+            </div>
+
+            <div class="section-divider"></div>
+
+            <div>
+                <p class="text-xs text-neutral-500 uppercase tracking-wider font-medium mb-3">Intuition</p>
+                <p class="text-sm text-neutral-400 font-light leading-relaxed">Machine Learning models can learn: <strong class="text-white">Rows with missing values vs Rows without missing values</strong>. This additional information sometimes improves prediction.</p>
+            </div>
+
+            <div class="warning-box p-4 flex items-start gap-3">
+                <i data-lucide="alert-triangle" class="w-4 h-4 text-amber-400 mt-0.5 flex-shrink-0"></i>
+                <p class="text-sm text-neutral-400"><strong class="text-amber-300">Does it Always Work?</strong> No. It is not guaranteed. But it is a <strong class="text-white">useful trick worth trying</strong>.</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- Code Example -->
+    <section id="mi-code" class="pt-16 scroll-mt-24">
+        <div class="flex items-center gap-3 mb-6">
+            <div class="w-10 h-10 rounded-xl bg-teal-500/10 border border-teal-500/20 flex items-center justify-center">
+                <i data-lucide="code" class="w-5 h-5 text-teal-400"></i>
+            </div>
+            <h2 class="text-2xl sm:text-3xl font-semibold tracking-tight gradient-text">Missing Indicator — Code</h2>
+        </div>
+
+        <div class="glass rounded-2xl p-8 space-y-5">
+            <div>
+                <p class="text-xs text-neutral-500 uppercase tracking-wider font-medium mb-3">Step 1 — Create MissingIndicator</p>
+                <div class="code-block p-4">
+                    <span class="keyword">from</span> sklearn.impute <span class="keyword">import</span> MissingIndicator<br><br>
+                    mi = <span class="func">MissingIndicator</span>()
+                </div>
+            </div>
+
+            <div>
+                <p class="text-xs text-neutral-500 uppercase tracking-wider font-medium mb-3">Step 2 & 3 — Fit & Transform</p>
+                <div class="code-block p-4">
+                    mi.<span class="func">fit</span>(X_train)<br>
+                    X_train_missing = mi.<span class="func">transform</span>(X_train)
+                </div>
+                <p class="text-xs text-neutral-500 mt-2">A new boolean column is generated: <span class="text-green-400">True</span> = Missing, <span class="text-neutral-500">False</span> = Not Missing</p>
+            </div>
+
+            <div>
+                <p class="text-xs text-neutral-500 uppercase tracking-wider font-medium mb-3">Step 4 — Merge & Train</p>
+                <div class="code-block p-4">
+                    <span class="comment"># Merge with original dataset</span><br>
+                    <span class="comment"># Now perform Mean Imputation</span><br>
+                    <span class="comment"># Finally train Logistic Regression</span>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Result -->
+    <section id="mi-result" class="pt-16 scroll-mt-24">
+        <div class="glass rounded-2xl p-8">
+            <div class="grid sm:grid-cols-2 gap-6">
+                <div class="glass-light rounded-xl p-6 text-center">
+                    <p class="text-xs text-neutral-500 uppercase tracking-wider mb-3">Without Missing Indicator</p>
+                    <p class="text-3xl font-semibold text-neutral-400">≈ 61%</p>
+                    <p class="text-xs text-neutral-500 mt-1">Accuracy</p>
+                </div>
+                <div class="success-box p-6 text-center">
+                    <p class="text-xs text-green-400 uppercase tracking-wider mb-3">With Missing Indicator</p>
+                    <p class="text-3xl font-semibold text-green-400">≈ 63%</p>
+                    <p class="text-xs text-neutral-400 mt-1">Accuracy (↑ ~2% improvement)</p>
+                </div>
+            </div>
+            <p class="text-sm text-neutral-500 text-center mt-4">This shows that the <strong class="text-teal-400">missingness itself carried useful information</strong>.</p>
+        </div>
+    </section>
+
+    <!-- Easier Method -->
+    <section id="mi-easier" class="pt-16 scroll-mt-24">
+        <div class="flex items-center gap-3 mb-6">
+            <div class="w-10 h-10 rounded-xl bg-green-500/10 border border-green-500/20 flex items-center justify-center">
+                <i data-lucide="zap" class="w-5 h-5 text-green-400"></i>
+            </div>
+            <h2 class="text-xl sm:text-2xl font-semibold tracking-tight green-gradient">Easier Method — add_indicator=True</h2>
+        </div>
+
+        <div class="glass rounded-2xl p-8 space-y-5">
+            <p class="text-sm text-neutral-400 font-light">Instead of using MissingIndicator separately, Scikit-Learn provides:</p>
+
+            <div class="code-block p-6">
+                <span class="func">SimpleImputer</span>(<br>
+                &nbsp;&nbsp;strategy=<span class="string">'mean'</span>,<br>
+                &nbsp;&nbsp;add_indicator=<span class="bool">True</span><br>
+                )
+            </div>
+
+            <div>
+                <p class="text-xs text-green-400 uppercase tracking-wider font-medium mb-3">Advantages</p>
+                <ul class="space-y-2 text-sm text-neutral-400 font-light">
+                    <li class="flex items-start gap-2"><i data-lucide="check" class="w-4 h-4 text-green-400 mt-0.5 flex-shrink-0"></i>Simpler</li>
+                    <li class="flex items-start gap-2"><i data-lucide="check" class="w-4 h-4 text-green-400 mt-0.5 flex-shrink-0"></i>Cleaner</li>
+                    <li class="flex items-start gap-2"><i data-lucide="check" class="w-4 h-4 text-green-400 mt-0.5 flex-shrink-0"></i>No need to merge columns manually</li>
+                </ul>
+            </div>
+
+            <div class="success-box p-4 flex items-start gap-3">
+                <i data-lucide="star" class="w-4 h-4 text-green-400 mt-0.5 flex-shrink-0"></i>
+                <p class="text-sm text-neutral-300">This is the <strong class="text-green-400">recommended approach</strong> in modern Scikit-Learn pipelines.</p>
+            </div>
+        </div>
+    </section>
+
+    <div class="section-divider my-20"></div>
+
+    <!-- 3. GridSearchCV -->
+    <section id="gridsearch" class="pt-8 scroll-mt-24">
+        <div class="flex items-center gap-3 mb-6">
+            <div class="w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center">
+                <span class="text-amber-400 font-semibold text-lg">3</span>
+            </div>
+            <h2 class="text-2xl sm:text-3xl font-semibold tracking-tight amber-gradient">Automatically Selecting Best Imputation Method</h2>
+        </div>
+
+        <div class="glass rounded-2xl p-8 space-y-5">
+            <div class="info-box p-5 flex items-start gap-3">
+                <i data-lucide="help-circle" class="w-5 h-5 text-indigo-400 mt-0.5 flex-shrink-0"></i>
+                <div>
+                    <p class="text-sm text-indigo-300 font-medium mb-1">Question</p>
+                    <p class="text-sm text-neutral-400">How do we know whether Mean or Median is better? Or Most Frequent vs Constant?</p>
+                </div>
+            </div>
+
+            <div class="flex justify-center">
+                <div class="px-6 py-3 rounded-xl bg-amber-500/15 text-amber-400 text-lg font-semibold border border-amber-500/30">GridSearchCV</div>
+            </div>
+
+            <p class="text-sm text-neutral-400 font-light leading-relaxed text-center">GridSearchCV automatically tests different parameter combinations and selects the one giving the <strong class="text-white">best cross-validation performance</strong>. Instead of manually trying every imputation strategy, GridSearchCV performs the search automatically.</p>
+        </div>
+    </section>
+
+    <!-- Pipeline -->
+    <section id="gs-pipeline" class="pt-16 scroll-mt-24">
+        <div class="flex items-center gap-3 mb-6">
+            <div class="w-10 h-10 rounded-xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center">
+                <i data-lucide="workflow" class="w-5 h-5 text-indigo-400"></i>
+            </div>
+            <h2 class="text-xl sm:text-2xl font-semibold tracking-tight gradient-text">Pipeline Used</h2>
+        </div>
+
+        <div class="glass rounded-2xl p-8">
+            <div class="flex flex-col items-center gap-0">
+                <div class="pipeline-step w-full max-w-sm glass-light rounded-xl p-4 text-center">
+                    <p class="text-sm text-neutral-300 font-medium">Input Data</p>
+                </div>
+                <div class="w-0.5 h-5 bg-indigo-500/30"></div>
+                <div class="pipeline-step w-full max-w-sm glass-light rounded-xl p-4 text-center border-indigo-500/20">
+                    <p class="text-sm text-indigo-400 font-medium">ColumnTransformer</p>
+                </div>
+                <div class="w-0.5 h-5 bg-indigo-500/30"></div>
+
+                <div class="w-full max-w-md grid grid-cols-2 gap-4">
+                    <div class="glass-light rounded-xl p-4 text-center border-indigo-500/15">
+                        <p class="text-xs text-indigo-400 uppercase tracking-wider mb-2">Numerical Pipeline</p>
+                        <div class="space-y-2">
+                            <div class="px-3 py-1.5 rounded-lg bg-indigo-500/10 text-indigo-300 text-xs">SimpleImputer</div>
+                            <i data-lucide="arrow-down" class="w-3 h-3 text-indigo-500/40 mx-auto"></i>
+                            <div class="px-3 py-1.5 rounded-lg bg-indigo-500/10 text-indigo-300 text-xs">StandardScaler</div>
+                        </div>
+                    </div>
+                    <div class="glass-light rounded-xl p-4 text-center border-teal-500/15">
+                        <p class="text-xs text-teal-400 uppercase tracking-wider mb-2">Categorical Pipeline</p>
+                        <div class="space-y-2">
+                            <div class="px-3 py-1.5 rounded-lg bg-teal-500/10 text-teal-300 text-xs">SimpleImputer</div>
+                            <i data-lucide="arrow-down" class="w-3 h-3 text-teal-500/40 mx-auto"></i>
+                            <div class="px-3 py-1.5 rounded-lg bg-teal-500/10 text-teal-300 text-xs">OneHotEncoder</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="w-0.5 h-5 bg-indigo-500/30"></div>
+                <div class="pipeline-step w-full max-w-sm glass-light rounded-xl p-4 text-center border-green-500/20">
+                    <p class="text-sm text-green-400 font-medium">Logistic Regression</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Combinations -->
+    <section id="gs-combos" class="pt-16 scroll-mt-24">
+        <div class="glass rounded-2xl p-8 space-y-6">
+            <div class="grid sm:grid-cols-2 gap-6 mb-6">
+                <div>
+                    <p class="text-xs text-indigo-400 uppercase tracking-wider font-medium mb-3">Numerical Parameters</p>
+                    <div class="space-y-2">
+                        <div class="flex items-center gap-3 p-3 rounded-lg glass-light">
+                            <span class="w-6 h-6 rounded bg-indigo-500/15 flex items-center justify-center text-indigo-400 text-xs">A</span>
+                            <code class="text-sm text-neutral-300">strategy='mean'</code>
+                        </div>
+                        <div class="flex items-center gap-3 p-3 rounded-lg glass-light">
+                            <span class="w-6 h-6 rounded bg-indigo-500/15 flex items-center justify-center text-indigo-400 text-xs">B</span>
+                            <code class="text-sm text-neutral-300">strategy='median'</code>
+                        </div>
+                    </div>
+                </div>
+                <div>
+                    <p class="text-xs text-teal-400 uppercase tracking-wider font-medium mb-3">Categorical Parameters</p>
+                    <div class="space-y-2">
+                        <div class="flex items-center gap-3 p-3 rounded-lg glass-light">
+                            <span class="w-6 h-6 rounded bg-teal-500/15 flex items-center justify-center text-teal-400 text-xs">X</span>
+                            <code class="text-sm text-neutral-300">strategy='most_frequent'</code>
+                        </div>
+                        <div class="flex items-center gap-3 p-3 rounded-lg glass-light">
+                            <span class="w-6 h-6 rounded bg-teal-500/15 flex items-center justify-center text-teal-400 text-xs">Y</span>
+                            <code class="text-sm text-neutral-300">strategy='constant'</code>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div>
+                <p class="text-xs text-amber-400 uppercase tracking-wider font-medium mb-3">GridSearchCV Tests All Combinations</p>
+                <div class="table-container">
+                    <table>
+                        <thead><tr><th>Combination</th><th>Numerical</th><th>Categorical</th></tr></thead>
+                        <tbody>
+                            <tr><td class="text-neutral-500">1</td><td class="text-indigo-400">Mean</td><td class="text-teal-400">Most Frequent</td></tr>
+                            <tr><td class="text-neutral-500">2</td><td class="text-indigo-400">Mean</td><td class="text-teal-400">Constant</td></tr>
+                            <tr><td class="text-neutral-500">3</td><td class="text-indigo-400">Median</td><td class="text-teal-400">Most Frequent</td></tr>
+                            <tr><td class="text-neutral-500">4</td><td class="text-indigo-400">Median</td><td class="text-teal-400">Constant</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+                <p class="text-sm text-neutral-500 mt-3 text-center">Then selects the <strong class="text-amber-400">best-performing combination</strong>.</p>
+            </div>
+
+            <div>
+                <p class="text-xs text-green-400 uppercase tracking-wider font-medium mb-3">Advantages</p>
+                <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                    <div class="glass-light rounded-xl p-3 text-center text-xs text-neutral-400">Automatic parameter tuning</div>
+                    <div class="glass-light rounded-xl p-3 text-center text-xs text-neutral-400">Better CV accuracy</div>
+                    <div class="glass-light rounded-xl p-3 text-center text-xs text-neutral-400">Avoids manual experimentation</div>
+                    <div class="glass-light rounded-xl p-3 text-center text-xs text-neutral-400">Easy Pipeline integration</div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <div class="section-divider my-20"></div>
+
+    <!-- Best Practices -->
+    <section id="best-practices" class="pt-8 scroll-mt-24">
+        <div class="flex items-center gap-3 mb-8">
+            <div class="w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center">
+                <i data-lucide="award" class="w-5 h-5 text-amber-400"></i>
+            </div>
+            <h2 class="text-2xl sm:text-3xl font-semibold tracking-tight amber-gradient">Best Practices for Data Scientists ⭐</h2>
+        </div>
+
+        <div class="space-y-4">
+            <div class="glass rounded-2xl p-6 flex items-start gap-4 hover:border-indigo-500/20 transition-colors duration-500">
+                <div class="w-10 h-10 rounded-xl bg-indigo-500/10 flex items-center justify-center flex-shrink-0 mt-0.5">
+                    <i data-lucide="trending-up" class="w-5 h-5 text-indigo-400"></i>
+                </div>
+                <div>
+                    <p class="text-sm text-white font-medium mb-1">Use <span class="text-indigo-400">Mean Imputation</span> when</p>
+                    <p class="text-sm text-neutral-400 font-light">Data is normally distributed · No extreme outliers</p>
+                </div>
+            </div>
+
+            <div class="glass rounded-2xl p-6 flex items-start gap-4 hover:border-purple-500/20 transition-colors duration-500">
+                <div class="w-10 h-10 rounded-xl bg-purple-500/10 flex items-center justify-center flex-shrink-0 mt-0.5">
+                    <i data-lucide="trending-down" class="w-5 h-5 text-purple-400"></i>
+                </div>
+                <div>
+                    <p class="text-sm text-white font-medium mb-1">Use <span class="text-purple-400">Median Imputation</span> when</p>
+                    <p class="text-sm text-neutral-400 font-light">Data is skewed · Outliers exist</p>
+                </div>
+            </div>
+
+            <div class="glass rounded-2xl p-6 flex items-start gap-4 hover:border-teal-500/20 transition-colors duration-500">
+                <div class="w-10 h-10 rounded-xl bg-teal-500/10 flex items-center justify-center flex-shrink-0 mt-0.5">
+                    <i data-lucide="bar-chart-3" class="w-5 h-5 text-teal-400"></i>
+                </div>
+                <div>
+                    <p class="text-sm text-white font-medium mb-1">Use <span class="text-teal-400">Most Frequent</span> when</p>
+                    <p class="text-sm text-neutral-400 font-light">Categorical feature has few missing values</p>
+                </div>
+            </div>
+
+            <div class="glass rounded-2xl p-6 flex items-start gap-4 hover:border-green-500/20 transition-colors duration-500">
+                <div class="w-10 h-10 rounded-xl bg-green-500/10 flex items-center justify-center flex-shrink-0 mt-0.5">
+                    <i data-lucide="shuffle" class="w-5 h-5 text-green-400"></i>
+                </div>
+                <div>
+                    <p class="text-sm text-white font-medium mb-1">Use <span class="text-green-400">Random Sample Imputation</span> when</p>
+                    <p class="text-sm text-neutral-400 font-light">You want to preserve the original distribution · Missing percentage is relatively low · You are using linear models</p>
+                </div>
+            </div>
+
+            <div class="glass rounded-2xl p-6 flex items-start gap-4 hover:border-rose-500/20 transition-colors duration-500">
+                <div class="w-10 h-10 rounded-xl bg-rose-500/10 flex items-center justify-center flex-shrink-0 mt-0.5">
+                    <i data-lucide="toggle-right" class="w-5 h-5 text-rose-400"></i>
+                </div>
+                <div>
+                    <p class="text-sm text-white font-medium mb-1">Use <span class="text-rose-400">Missing Indicator</span> when</p>
+                    <p class="text-sm text-neutral-400 font-light">Missing values may themselves contain information · Performance improvement is desired · Especially useful with linear models and some ensemble methods</p>
+                </div>
+            </div>
+
+            <div class="star-box p-6 flex items-start gap-4">
+                <div class="w-10 h-10 rounded-xl bg-amber-500/10 flex items-center justify-center flex-shrink-0 mt-0.5">
+                    <i data-lucide="search" class="w-5 h-5 text-amber-400"></i>
+                </div>
+                <div>
+                    <p class="text-sm text-amber-300 font-medium mb-1">Always Evaluate Different Imputation Methods</p>
+                    <p class="text-sm text-neutral-400 font-light">Never assume one method is universally best. Use <strong class="text-white">Cross-validation</strong>, <strong class="text-white">Pipelines</strong>, and <strong class="text-white">GridSearchCV</strong> to identify the best strategy for your dataset.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <div class="section-divider my-20"></div>
+
+    <!-- Summary Table -->
+    <section id="summary-table" class="pt-8 scroll-mt-24">
+        <div class="flex items-center gap-3 mb-6">
+            <div class="w-10 h-10 rounded-xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center">
+                <i data-lucide="table" class="w-5 h-5 text-indigo-400"></i>
+            </div>
+            <h2 class="text-2xl sm:text-3xl font-semibold tracking-tight gradient-text">Summary Table</h2>
+        </div>
+
+        <div class="table-container overflow-x-auto">
+            <table class="min-w-[700px]">
+                <thead>
+                    <tr>
+                        <th>Technique</th>
+                        <th>Best Use Case</th>
+                        <th>Advantages</th>
+                        <th>Disadvantages</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td class="text-indigo-400 font-medium">Mean Imputation</td>
+                        <td class="text-sm">Normally distributed numerical data</td>
+                        <td class="text-sm">Simple and fast</td>
+                        <td class="text-sm">Reduces variance, sensitive to outliers</td>
+                    </tr>
+                    <tr>
+                        <td class="text-purple-400 font-medium">Median Imputation</td>
+                        <td class="text-sm">Skewed numerical data</td>
+                        <td class="text-sm">Robust to outliers</td>
+                        <td class="text-sm">Slight distortion of distribution</td>
+                    </tr>
+                    <tr>
+                        <td class="text-teal-400 font-medium">Most Frequent</td>
+                        <td class="text-sm">Categorical data</td>
+                        <td class="text-sm">Easy and effective</td>
+                        <td class="text-sm">May overrepresent dominant category</td>
+                    </tr>
+                    <tr>
+                        <td class="text-green-400 font-medium">Random Sample</td>
+                        <td class="text-sm">Preserve original distribution</td>
+                        <td class="text-sm">Maintains variance and distribution</td>
+                        <td class="text-sm">Alters feature correlations, introduces randomness</td>
+                    </tr>
+                    <tr>
+                        <td class="text-rose-400 font-medium">Missing Indicator</td>
+                        <td class="text-sm">Missingness carries information</td>
+                        <td class="text-sm">Can improve model accuracy</td>
+                        <td class="text-sm">Not beneficial for every dataset</td>
+                    </tr>
+                    <tr>
+                        <td class="text-amber-400 font-medium">GridSearchCV</td>
+                        <td class="text-sm">Selecting best strategy</td>
+                        <td class="text-sm">Automated and data-driven</td>
+                        <td class="text-sm">Computationally more expensive</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </section>
+
+    <div class="section-divider my-20"></div>
+
+    <!-- Key Takeaways -->
+    <section id="takeaways" class="pt-8 scroll-mt-24">
+        <div class="flex items-center gap-3 mb-8">
+            <div class="w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center">
+                <i data-lucide="bookmark" class="w-5 h-5 text-amber-400"></i>
+            </div>
+            <h2 class="text-2xl sm:text-3xl font-semibold tracking-tight amber-gradient">Key Takeaways</h2>
+        </div>
+
+        <div class="space-y-4">
+            <div class="glass rounded-2xl p-6 flex items-start gap-4 hover:border-amber-500/20 transition-colors duration-500">
+                <div class="w-8 h-8 rounded-lg bg-amber-500/10 flex items-center justify-center flex-shrink-0 mt-0.5"><span class="text-amber-400 text-sm font-bold">1</span></div>
+                <p class="text-sm text-neutral-300 font-light leading-relaxed"><strong class="text-white">Random Sample Imputation</strong> replaces missing values by randomly picking from existing observations — it does <strong class="text-red-400">not</strong> generate new numbers.</p>
+            </div>
+            <div class="glass rounded-2xl p-6 flex items-start gap-4 hover:border-amber-500/20 transition-colors duration-500">
+                <div class="w-8 h-8 rounded-lg bg-amber-500/10 flex items-center justify-center flex-shrink-0 mt-0.5"><span class="text-amber-400 text-sm font-bold">2</span></div>
+                <p class="text-sm text-neutral-300 font-light leading-relaxed">Its <strong class="text-amber-400">biggest advantage</strong> is preserving the original distribution and variance — frequently occurring values are naturally selected more often.</p>
+            </div>
+            <div class="glass rounded-2xl p-6 flex items-start gap-4 hover:border-amber-500/20 transition-colors duration-500">
+                <div class="w-8 h-8 rounded-lg bg-amber-500/10 flex items-center justify-center flex-shrink-0 mt-0.5"><span class="text-amber-400 text-sm font-bold">3</span></div>
+                <p class="text-sm text-neutral-300 font-light leading-relaxed">It works best for <strong class="text-green-400">linear models</strong> and when missing percentage is <strong class="text-green-400">relatively low</strong>. It is not ideal for tree-based models.</p>
+            </div>
+            <div class="glass rounded-2xl p-6 flex items-start gap-4 hover:border-amber-500/20 transition-colors duration-500">
+                <div class="w-8 h-8 rounded-lg bg-amber-500/10 flex items-center justify-center flex-shrink-0 mt-0.5"><span class="text-amber-400 text-sm font-bold">4</span></div>
+                <p class="text-sm text-neutral-300 font-light leading-relaxed">Key disadvantages: <strong class="text-red-400">correlation gets disturbed</strong>, random noise is introduced, and <strong class="text-red-400">memory overhead</strong> during deployment (must store training values).</p>
+            </div>
+            <div class="glass rounded-2xl p-6 flex items-start gap-4 hover:border-amber-500/20 transition-colors duration-500">
+                <div class="w-8 h-8 rounded-lg bg-amber-500/10 flex items-center justify-center flex-shrink-0 mt-0.5"><span class="text-amber-400 text-sm font-bold">5</span></div>
+                <p class="text-sm text-neutral-300 font-light leading-relaxed"><strong class="text-amber-400">Production tip:</strong> Use a fixed <code class="text-green-400 bg-green-500/10 px-1 py-0.5 rounded text-xs">random_state</code> to ensure the same input always gets the same imputed value — avoiding unstable predictions.</p>
+            </div>
+            <div class="glass rounded-2xl p-6 flex items-start gap-4 hover:border-amber-500/20 transition-colors duration-500">
+                <div class="w-8 h-8 rounded-lg bg-amber-500/10 flex items-center justify-center flex-shrink-0 mt-0.5"><span class="text-amber-400 text-sm font-bold">6</span></div>
+                <p class="text-sm text-neutral-300 font-light leading-relaxed"><strong class="text-teal-400">Missing Indicator</strong> creates a new binary column (True/False) showing where values were originally missing — letting the model learn patterns from the missingness itself.</p>
+            </div>
+            <div class="glass rounded-2xl p-6 flex items-start gap-4 hover:border-amber-500/20 transition-colors duration-500">
+                <div class="w-8 h-8 rounded-lg bg-amber-500/10 flex items-center justify-center flex-shrink-0 mt-0.5"><span class="text-amber-400 text-sm font-bold">7</span></div>
+                <p class="text-sm text-neutral-300 font-light leading-relaxed">The easiest way to use Missing Indicator: <code class="text-green-400 bg-green-500/10 px-1 py-0.5 rounded text-xs">SimpleImputer(add_indicator=True)</code> — the recommended modern approach.</p>
+            </div>
+            <div class="glass rounded-2xl p-6 flex items-start gap-4 hover:border-amber-500/20 transition-colors duration-500">
+                <div class="w-8 h-8 rounded-lg bg-amber-500/10 flex items-center justify-center flex-shrink-0 mt-0.5"><span class="text-amber-400 text-sm font-bold">8</span></div>
+                <p class="text-sm text-neutral-300 font-light leading-relaxed"><strong class="text-amber-400">GridSearchCV</strong> automates the search for the best imputation strategy by testing all parameter combinations (e.g., Mean+MostFrequent, Median+Constant, etc.) via cross-validation.</p>
+            </div>
+            <div class="glass rounded-2xl p-6 flex items-start gap-4 hover:border-amber-500/20 transition-colors duration-500">
+                <div class="w-8 h-8 rounded-lg bg-amber-500/10 flex items-center justify-center flex-shrink-0 mt-0.5"><span class="text-amber-400 text-sm font-bold">9</span></div>
+                <p class="text-sm text-neutral-300 font-light leading-relaxed"><strong class="text-amber-400">Never assume one method is universally best.</strong> Always evaluate using Cross-validation, Pipelines, and GridSearchCV to find the right strategy for your specific dataset.</p>
+            </div>
+            <div class="glass rounded-2xl p-6 flex items-start gap-4 hover:border-amber-500/20 transition-colors duration-500">
+                <div class="w-8 h-8 rounded-lg bg-amber-500/10 flex items-center justify-center flex-shrink-0 mt-0.5"><span class="text-amber-400 text-sm font-bold">10</span></div>
+                <p class="text-sm text-neutral-300 font-light leading-relaxed">After this lecture, the basic <strong class="text-white">(univariate) missing value handling techniques are almost complete</strong>.</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="mt-32 pt-12 border-t border-white/5">
+        <div class="flex flex-col sm:flex-row items-center justify-between gap-4">
+            <div class="flex items-center gap-3">
+                <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-indigo-500 to-purple-500 flex items-center justify-center text-sm font-semibold">38</div>
+                <span class="text-sm text-neutral-500">Day 38 — Feature Engineering Study Notes</span>
+            </div>
+            <p class="text-xs text-neutral-600">Complete notes for study, revision, interviews, and real-world ML workflows.</p>
+        </div>
+    </footer>
+
+</main>
+
+<script>
+    lucide.createIcons();
+
+    window.addEventListener('scroll', () => {
+        const scrollTop = window.scrollY;
+        const docHeight = document.documentElement.scrollHeight - window.innerHeight;
+        document.getElementById('scrollProgress').style.width = (scrollTop / docHeight * 100) + '%';
+    });
+
+    const tocToggle = document.getElementById('tocToggle');
+    const tocSidebar = document.getElementById('tocSidebar');
+    const tocClose = document.getElementById('tocClose');
+    let tocOpen = false;
+
+    tocToggle.addEventListener('click', () => {
+        tocOpen = !tocOpen;
+        tocSidebar.style.transform = tocOpen ? 'translateX(0)' : 'translateX(100%)';
+    });
+    tocClose.addEventListener('click', () => {
+        tocOpen = false;
+        tocSidebar.style.transform = 'translateX(100%)';
+    });
+    document.querySelectorAll('.toc-link').forEach(link => {
+        link.addEventListener('click', () => {
+            tocOpen = false;
+            tocSidebar.style.transform = 'translateX(100%)';
+        });
+    });
+    document.getElementById('backToTop').addEventListener('click', () => {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    });
+
+    const observer = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+            if (entry.isIntersecting) {
+                entry.target.style.opacity = '1';
+                entry.target.style.transform = 'translateY(0)';
+            }
+        });
+    }, { root: null, rootMargin: '0px 0px -80px 0px', threshold: 0.1 });
+
+    document.querySelectorAll('main > section, main > div').forEach(section => {
+        section.style.opacity = '0';
+        section.style.transform = 'translateY(20px)';
+        section.style.transition = 'opacity 0.6s ease-out, transform 0.6s ease-out';
+        observer.observe(section);
+    });
+
+    const sections = document.querySelectorAll('section[id]');
+    const tocLinksAll = document.querySelectorAll('.toc-link');
+    const highlightObserver = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+            if (entry.isIntersecting) {
+                const id = entry.target.getAttribute('id');
+                tocLinksAll.forEach(link => {
+                    link.classList.toggle('active', link.getAttribute('href') === '#' + id);
+                });
+            }
+        });
+    }, { rootMargin: '-20% 0px -70% 0px' });
+    sections.forEach(section => highlightObserver.observe(section));
+</script>
+
+</body>
+</html>
