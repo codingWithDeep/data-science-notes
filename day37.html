@@ -1,0 +1,1660 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Day 37 – Handling Missing Categorical Data</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['Inter', 'sans-serif'] },
+                }
+            }
+        }
+    </script>
+    <style>
+        body { background: #000; font-family: 'Inter', sans-serif; }
+
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(30px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .animate-in { animation: fadeInUp 0.8s ease-out forwards; opacity: 0; }
+        .delay-1 { animation-delay: 0.2s; }
+        .delay-2 { animation-delay: 0.4s; }
+        .delay-3 { animation-delay: 0.6s; }
+
+        @keyframes pulse-glow {
+            0%, 100% { box-shadow: 0 0 20px rgba(99,102,241,0.15); }
+            50% { box-shadow: 0 0 40px rgba(99,102,241,0.35); }
+        }
+        .glow-card:hover { animation: pulse-glow 2s ease-in-out infinite; }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-10px); }
+        }
+        .float-anim { animation: float 4s ease-in-out infinite; }
+
+        .glass {
+            background: rgba(22, 22, 22, 0.6);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255,255,255,0.08);
+        }
+        .glass-light {
+            background: rgba(255,255,255,0.03);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255,255,255,0.06);
+        }
+
+        .gradient-text {
+            background: linear-gradient(to right, #FFFFFF, #FFFFFF, #A3A3A3);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        .accent-gradient {
+            background: linear-gradient(135deg, #6366F1, #8B5CF6);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        .green-gradient {
+            background: linear-gradient(135deg, #10B981, #4ADE80);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        .red-gradient {
+            background: linear-gradient(135deg, #EF4444, #F87171);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        .amber-gradient {
+            background: linear-gradient(135deg, #F59E0B, #FBBF24);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        .teal-gradient {
+            background: linear-gradient(135deg, #14B8A6, #5EEAD4);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .code-block {
+            background: rgba(0,0,0,0.6);
+            border: 1px solid rgba(255,255,255,0.08);
+            border-radius: 12px;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            line-height: 1.7;
+            overflow-x: auto;
+        }
+        .code-block .keyword { color: #C084FC; }
+        .code-block .string { color: #4ADE80; }
+        .code-block .comment { color: #737373; }
+        .code-block .func { color: #60A5FA; }
+        .code-block .number { color: #FBBF24; }
+
+        .table-container {
+            background: rgba(255,255,255,0.02);
+            border: 1px solid rgba(255,255,255,0.06);
+            border-radius: 16px;
+            overflow: hidden;
+        }
+        .table-container table { width: 100%; border-collapse: collapse; }
+        .table-container th {
+            background: rgba(99,102,241,0.1);
+            padding: 12px 20px;
+            text-align: left;
+            font-weight: 500;
+            font-size: 13px;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: #A3A3A3;
+            border-bottom: 1px solid rgba(255,255,255,0.06);
+        }
+        .table-container td {
+            padding: 12px 20px;
+            border-bottom: 1px solid rgba(255,255,255,0.04);
+            font-size: 14px;
+            color: #E5E5E5;
+        }
+        .table-container tr:last-child td { border-bottom: none; }
+        .table-container tr:hover td { background: rgba(255,255,255,0.02); }
+        .nan-cell { color: #EF4444; font-style: italic; }
+        .missing-cell {
+            color: #F59E0B;
+            font-style: italic;
+        }
+
+        .toc-link {
+            transition: all 0.3s ease;
+            border-left: 2px solid transparent;
+            padding-left: 12px;
+        }
+        .toc-link:hover {
+            color: #818CF8;
+            border-left-color: #6366F1;
+            padding-left: 16px;
+        }
+        .toc-link.active {
+            color: #818CF8;
+            border-left-color: #6366F1;
+        }
+
+        .section-divider {
+            height: 1px;
+            background: linear-gradient(to right, transparent, rgba(99,102,241,0.3), transparent);
+        }
+
+        .scroll-progress {
+            position: fixed;
+            top: 0; left: 0;
+            height: 3px;
+            background: linear-gradient(to right, #6366F1, #8B5CF6);
+            z-index: 9999;
+            transition: width 0.1s linear;
+        }
+
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: #000; }
+        ::-webkit-scrollbar-thumb { background: #333; border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: #555; }
+
+        .nav-blur {
+            background: rgba(0,0,0,0.7);
+            backdrop-filter: blur(12px);
+            border-bottom: 1px solid rgba(255,255,255,0.06);
+        }
+
+        .warning-box {
+            background: rgba(245,158,11,0.08);
+            border: 1px solid rgba(245,158,11,0.2);
+            border-radius: 12px;
+        }
+        .danger-box {
+            background: rgba(239,68,68,0.08);
+            border: 1px solid rgba(239,68,68,0.2);
+            border-radius: 12px;
+        }
+        .success-box {
+            background: rgba(16,185,129,0.08);
+            border: 1px solid rgba(16,185,129,0.2);
+            border-radius: 12px;
+        }
+        .info-box {
+            background: rgba(99,102,241,0.08);
+            border: 1px solid rgba(99,102,241,0.2);
+            border-radius: 12px;
+        }
+
+        .freq-bar {
+            height: 24px;
+            border-radius: 6px;
+            transition: width 0.8s ease-out;
+        }
+
+        .comparison-table td:first-child {
+            font-weight: 500;
+            color: #E5E5E5;
+            white-space: nowrap;
+        }
+
+        .interview-q {
+            counter-increment: q-counter;
+        }
+        .interview-q::before {
+            content: 'Q' counter(q-counter);
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 32px;
+            height: 32px;
+            border-radius: 8px;
+            background: rgba(99,102,241,0.15);
+            color: #818CF8;
+            font-size: 12px;
+            font-weight: 600;
+            flex-shrink: 0;
+            margin-right: 12px;
+        }
+
+        .category-tag {
+            display: inline-flex;
+            align-items: center;
+            padding: 4px 12px;
+            border-radius: 8px;
+            font-size: 13px;
+            font-weight: 500;
+        }
+
+        @keyframes barGrow {
+            from { width: 0; }
+        }
+        .bar-animate { animation: barGrow 1s ease-out forwards; }
+
+        .pdf-line {
+            fill: none;
+            stroke-width: 2;
+            stroke-linecap: round;
+        }
+    </style>
+</head>
+<body class="text-white antialiased">
+
+    <!-- Scroll Progress -->
+    <div class="scroll-progress" id="scrollProgress"></div>
+
+    <!-- Navigation -->
+    <nav class="fixed top-0 left-0 right-0 z-50 nav-blur h-16 flex items-center px-6">
+        <div class="max-w-7xl mx-auto w-full flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-indigo-500 to-purple-500 flex items-center justify-center text-sm font-semibold">37</div>
+                <span class="text-sm font-medium text-neutral-300 hidden sm:block">Handling Missing Categorical Data</span>
+            </div>
+            <div class="flex items-center gap-4">
+                <button id="tocToggle" class="flex items-center gap-2 text-sm text-neutral-400 hover:text-white transition-colors px-3 py-1.5 rounded-lg hover:bg-white/5">
+                    <i data-lucide="list" class="w-4 h-4"></i>
+                    <span class="hidden sm:inline">Contents</span>
+                </button>
+                <button id="backToTop" class="flex items-center gap-2 text-sm text-neutral-400 hover:text-white transition-colors px-3 py-1.5 rounded-lg hover:bg-white/5">
+                    <i data-lucide="arrow-up" class="w-4 h-4"></i>
+                    <span class="hidden sm:inline">Top</span>
+                </button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- TOC Sidebar -->
+    <div id="tocSidebar" class="fixed top-16 right-0 w-72 h-[calc(100vh-4rem)] z-40 glass transform translate-x-full transition-transform duration-300 overflow-y-auto p-6">
+        <div class="flex items-center justify-between mb-6">
+            <h3 class="text-sm font-semibold text-neutral-300 uppercase tracking-wider">Contents</h3>
+            <button id="tocClose" class="text-neutral-500 hover:text-white transition-colors">
+                <i data-lucide="x" class="w-4 h-4"></i>
+            </button>
+        </div>
+        <div class="space-y-1" id="tocLinks">
+            <a href="#intro" class="toc-link block text-sm text-neutral-500 py-1.5">Introduction</a>
+            <a href="#why-matters" class="toc-link block text-sm text-neutral-500 py-1.5">Why Missing Values Matter</a>
+            <a href="#recap" class="toc-link block text-sm text-neutral-500 py-1.5">Recap: Numerical Imputation</a>
+            <a href="#no-mean-median" class="toc-link block text-sm text-neutral-500 py-1.5">Cannot Use Mean/Median</a>
+            <a href="#mode-imputation" class="toc-link block text-sm text-neutral-500 py-1.5">Technique 1: Mode Imputation</a>
+            <a href="#mode-numerical" class="toc-link block text-sm text-neutral-500 py-1.5 pl-6">Mode for Numerical?</a>
+            <a href="#when-mode" class="toc-link block text-sm text-neutral-500 py-1.5 pl-6">When to Use Mode</a>
+            <a href="#adv-mode" class="toc-link block text-sm text-neutral-500 py-1.5 pl-6">Advantages</a>
+            <a href="#disadv-mode" class="toc-link block text-sm text-neutral-500 py-1.5 pl-6">Disadvantages</a>
+            <a href="#missing-cat" class="toc-link block text-sm text-neutral-500 py-1.5">Technique 2: Missing Category</a>
+            <a href="#why-helps" class="toc-link block text-sm text-neutral-500 py-1.5 pl-6">Why This Helps</a>
+            <a href="#numerical-analogy" class="toc-link block text-sm text-neutral-500 py-1.5 pl-6">Numerical Analogy</a>
+            <a href="#when-missing-cat" class="toc-link block text-sm text-neutral-500 py-1.5 pl-6">When to Use</a>
+            <a href="#adv-missing" class="toc-link block text-sm text-neutral-500 py-1.5 pl-6">Advantages & Limitation</a>
+            <a href="#practical" class="toc-link block text-sm text-neutral-500 py-1.5">Practical: Housing Dataset</a>
+            <a href="#garage" class="toc-link block text-sm text-neutral-500 py-1.5 pl-6">Garage Quality</a>
+            <a href="#fireplace" class="toc-link block text-sm text-neutral-500 py-1.5 pl-6">Fireplace Quality</a>
+            <a href="#practical-conclusion" class="toc-link block text-sm text-neutral-500 py-1.5 pl-6">Practical Conclusion</a>
+            <a href="#sklearn-mode" class="toc-link block text-sm text-neutral-500 py-1.5">SKlearn: Most Frequent</a>
+            <a href="#sklearn-missing" class="toc-link block text-sm text-neutral-500 py-1.5">SKlearn: Missing Category</a>
+            <a href="#comparison" class="toc-link block text-sm text-neutral-500 py-1.5">Comparison Table</a>
+            <a href="#decision-guide" class="toc-link block text-sm text-neutral-500 py-1.5">Decision Guide</a>
+            <a href="#interview" class="toc-link block text-sm text-neutral-500 py-1.5">Interview Questions</a>
+            <a href="#takeaways" class="toc-link block text-sm text-neutral-500 py-1.5">Key Takeaways</a>
+        </div>
+    </div>
+
+    <!-- Hero Section -->
+    <section class="relative min-h-screen flex items-center justify-center overflow-hidden pt-16">
+        <div class="absolute inset-0">
+            <div class="absolute top-1/3 left-1/3 w-[500px] h-[500px] bg-indigo-500/8 rounded-full blur-[120px]"></div>
+            <div class="absolute bottom-1/3 right-1/3 w-[400px] h-[400px] bg-teal-500/6 rounded-full blur-[100px]"></div>
+        </div>
+        <div class="absolute inset-0" style="background-image: linear-gradient(to right, rgba(255,255,255,0.03) 1px, transparent 1px), linear-gradient(to bottom, rgba(255,255,255,0.03) 1px, transparent 1px); background-size: 40px 40px; mask-image: radial-gradient(ellipse at center, black 30%, transparent 70%);"></div>
+
+        <div class="relative z-10 max-w-5xl mx-auto px-6 text-center">
+            <div class="animate-in">
+                <div class="inline-flex items-center gap-2 px-4 py-2 rounded-full glass-light text-xs font-medium text-indigo-400 mb-8 tracking-wide uppercase">
+                    <i data-lucide="book-open" class="w-3.5 h-3.5"></i>
+                    Day 37 — Feature Engineering Notes
+                </div>
+            </div>
+
+            <h1 class="animate-in delay-1 text-4xl sm:text-5xl lg:text-6xl font-semibold tracking-tight leading-[1.1] mb-6">
+                <span class="gradient-text">Handling Missing Values in</span><br>
+                <span class="accent-gradient">Categorical Data</span>
+            </h1>
+
+            <p class="animate-in delay-2 text-lg sm:text-xl font-light text-neutral-400 max-w-2xl mx-auto leading-relaxed mb-4">
+                Fill missing values in categorical columns correctly
+            </p>
+            <p class="animate-in delay-2 text-sm font-light text-neutral-500 max-w-xl mx-auto leading-relaxed mb-10">
+                Beginner → Intermediate &nbsp;·&nbsp; Mode Imputation &nbsp;·&nbsp; Missing Category Imputation
+            </p>
+
+            <div class="animate-in delay-3 flex flex-wrap items-center justify-center gap-4">
+                <a href="#intro" class="inline-flex items-center gap-2 px-8 py-3.5 bg-indigo-600 hover:bg-indigo-700 rounded-xl text-sm font-medium transition-all duration-300 hover:scale-105 hover:shadow-lg hover:shadow-indigo-500/20">
+                    Start Reading
+                    <i data-lucide="chevron-down" class="w-4 h-4"></i>
+                </a>
+                <a href="#takeaways" class="inline-flex items-center gap-2 px-8 py-3.5 glass rounded-xl text-sm font-medium text-neutral-300 hover:text-white hover:border-white/20 transition-all duration-300">
+                    Key Takeaways
+                    <i data-lucide="bookmark" class="w-4 h-4"></i>
+                </a>
+            </div>
+
+            <div class="animate-in delay-3 grid grid-cols-2 sm:grid-cols-3 gap-4 mt-16 max-w-xl mx-auto">
+                <div class="glass-light rounded-xl p-4 text-center">
+                    <div class="text-2xl font-semibold text-indigo-400">2</div>
+                    <div class="text-xs text-neutral-500 mt-1">Main Techniques</div>
+                </div>
+                <div class="glass-light rounded-xl p-4 text-center">
+                    <div class="text-2xl font-semibold text-teal-400">2</div>
+                    <div class="text-xs text-neutral-500 mt-1">SKlearn Methods</div>
+                </div>
+                <div class="glass-light rounded-xl p-4 text-center">
+                    <div class="text-2xl font-semibold text-amber-400">5</div>
+                    <div class="text-xs text-neutral-500 mt-1">Interview Qs</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="absolute bottom-8 left-1/2 -translate-x-1/2 float-anim">
+            <div class="w-6 h-10 rounded-full border-2 border-neutral-700 flex items-start justify-center p-1.5">
+                <div class="w-1 h-2.5 bg-neutral-500 rounded-full animate-bounce"></div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Main Content -->
+    <main class="max-w-5xl mx-auto px-6 pb-32">
+
+        <!-- Introduction -->
+        <section id="intro" class="pt-32 scroll-mt-24">
+            <div class="flex items-center gap-3 mb-6">
+                <div class="w-10 h-10 rounded-xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center">
+                    <i data-lucide="file-text" class="w-5 h-5 text-indigo-400"></i>
+                </div>
+                <h2 class="text-2xl sm:text-3xl font-semibold tracking-tight gradient-text">Introduction</h2>
+            </div>
+
+            <div class="glass rounded-2xl p-8 space-y-5">
+                <p class="text-neutral-300 font-light leading-relaxed">
+                    In the previous lecture, we learned how to handle <strong class="text-white font-medium">missing values in numerical features</strong> using Mean Imputation and Median Imputation.
+                </p>
+                <p class="text-neutral-300 font-light leading-relaxed">
+                    In this lecture, the focus shifts to <strong class="text-white font-medium">categorical (text) features</strong>.
+                </p>
+                <p class="text-neutral-400 font-light leading-relaxed">
+                    Unlike numerical data, categorical variables <strong class="text-red-400">cannot</strong> be filled using the mean or median. Therefore, <strong class="text-white">different techniques are required</strong>.
+                </p>
+
+                <div class="info-box p-5 flex items-start gap-3">
+                    <i data-lucide="info" class="w-5 h-5 text-indigo-400 mt-0.5 flex-shrink-0"></i>
+                    <div>
+                        <p class="text-sm text-indigo-300 font-medium mb-1">Two Main Techniques Covered</p>
+                        <div class="flex flex-wrap gap-2 mt-2">
+                            <span class="px-3 py-1.5 rounded-lg bg-indigo-500/10 text-indigo-400 text-sm border border-indigo-500/20">1. Most Frequent (Mode) Imputation</span>
+                            <span class="px-3 py-1.5 rounded-lg bg-teal-500/10 text-teal-400 text-sm border border-teal-500/20">2. Missing Category Imputation</span>
+                        </div>
+                        <p class="text-xs text-neutral-500 mt-3">Other techniques (Random Value Imputation, etc.) will be covered later.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <div class="section-divider my-20"></div>
+
+        <!-- Why Missing Values Matter -->
+        <section id="why-matters" class="pt-8 scroll-mt-24">
+            <div class="flex items-center gap-3 mb-6">
+                <div class="w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center">
+                    <i data-lucide="alert-circle" class="w-5 h-5 text-amber-400"></i>
+                </div>
+                <h2 class="text-2xl sm:text-3xl font-semibold tracking-tight amber-gradient">Why Missing Values Matter</h2>
+            </div>
+
+            <div class="glass rounded-2xl p-8 space-y-6">
+                <p class="text-neutral-300 font-light leading-relaxed">
+                    Almost every machine learning algorithm <strong class="text-white font-medium">struggles with missing data</strong>. Therefore, before training a model, missing values must be handled appropriately.
+                </p>
+
+                <div>
+                    <p class="text-xs text-neutral-500 uppercase tracking-wider font-medium mb-4">The choice depends on:</p>
+                    <div class="grid sm:grid-cols-3 gap-4">
+                        <div class="glass-light rounded-xl p-5 text-center">
+                            <i data-lucide="percent" class="w-6 h-6 text-indigo-400 mx-auto mb-3"></i>
+                            <p class="text-sm text-neutral-300 font-medium">Percentage of missing values</p>
+                        </div>
+                        <div class="glass-light rounded-xl p-5 text-center">
+                            <i data-lucide="columns" class="w-6 h-6 text-purple-400 mx-auto mb-3"></i>
+                            <p class="text-sm text-neutral-300 font-medium">Type of feature</p>
+                            <p class="text-xs text-neutral-500 mt-1">Numerical or Categorical</p>
+                        </div>
+                        <div class="glass-light rounded-xl p-5 text-center">
+                            <i data-lucide="shuffle" class="w-6 h-6 text-teal-400 mx-auto mb-3"></i>
+                            <p class="text-sm text-neutral-300 font-medium">Missing mechanism</p>
+                            <p class="text-xs text-neutral-500 mt-1">MCAR, MAR, MNAR</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <div class="section-divider my-20"></div>
+
+        <!-- Recap -->
+        <section id="recap" class="pt-8 scroll-mt-24">
+            <div class="flex items-center gap-3 mb-6">
+                <div class="w-10 h-10 rounded-xl bg-neutral-500/10 border border-neutral-500/20 flex items-center justify-center">
+                    <i data-lucide="rotate-ccw" class="w-5 h-5 text-neutral-400"></i>
+                </div>
+                <h2 class="text-2xl sm:text-3xl font-semibold tracking-tight gradient-text">Recap — Numerical Imputation</h2>
+            </div>
+
+            <div class="glass rounded-2xl p-8">
+                <p class="text-neutral-400 font-light leading-relaxed mb-4">For numerical columns, if missing values are <strong class="text-white">less than 5%</strong>, generally use:</p>
+                <div class="flex flex-wrap gap-3 justify-center">
+                    <span class="px-5 py-2.5 rounded-xl bg-indigo-500/10 text-indigo-400 text-sm font-medium border border-indigo-500/20">Mean Imputation</span>
+                    <span class="px-5 py-2.5 rounded-xl bg-purple-500/10 text-purple-400 text-sm font-medium border border-purple-500/20">Median Imputation</span>
+                </div>
+                <p class="text-sm text-neutral-500 text-center mt-4">because these preserve the distribution better.</p>
+            </div>
+        </section>
+
+        <div class="section-divider my-20"></div>
+
+        <!-- Cannot Use Mean/Median -->
+        <section id="no-mean-median" class="pt-8 scroll-mt-24">
+            <div class="flex items-center gap-3 mb-6">
+                <div class="w-10 h-10 rounded-xl bg-red-500/10 border border-red-500/20 flex items-center justify-center">
+                    <i data-lucide="x-circle" class="w-5 h-5 text-red-400"></i>
+                </div>
+                <h2 class="text-2xl sm:text-3xl font-semibold tracking-tight red-gradient">Categorical Data Cannot Use Mean or Median</h2>
+            </div>
+
+            <div class="glass rounded-2xl p-8 space-y-6">
+                <p class="text-neutral-400 font-light leading-relaxed">Suppose you have a column:</p>
+
+                <div class="table-container max-w-xs">
+                    <table>
+                        <thead><tr><th>City</th></tr></thead>
+                        <tbody>
+                            <tr><td>Mumbai</td></tr>
+                            <tr><td>Delhi</td></tr>
+                            <tr><td>Kolkata</td></tr>
+                            <tr><td>Mumbai</td></tr>
+                            <tr><td>Mumbai</td></tr>
+                            <tr><td>Delhi</td></tr>
+                            <tr><td class="nan-cell">Missing</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="danger-box p-5 flex items-start gap-3">
+                    <i data-lucide="x" class="w-5 h-5 text-red-400 mt-0.5 flex-shrink-0"></i>
+                    <div>
+                        <p class="text-sm text-red-300 font-medium mb-1">You cannot calculate</p>
+                        <div class="flex gap-3 mt-2">
+                            <span class="px-3 py-1 rounded bg-red-500/10 text-red-400 text-sm line-through">Mean</span>
+                            <span class="px-3 py-1 rounded bg-red-500/10 text-red-400 text-sm line-through">Median</span>
+                        </div>
+                        <p class="text-sm text-neutral-500 mt-2">because these are text values.</p>
+                    </div>
+                </div>
+
+                <div class="success-box p-4 flex items-center gap-3">
+                    <i data-lucide="lightbulb" class="w-5 h-5 text-green-400 flex-shrink-0"></i>
+                    <p class="text-sm text-neutral-300">Instead, use the <strong class="text-green-400">Mode</strong>.</p>
+                </div>
+            </div>
+        </section>
+
+        <div class="section-divider my-20"></div>
+
+        <!-- Technique 1: Mode Imputation -->
+        <section id="mode-imputation" class="pt-8 scroll-mt-24">
+            <div class="flex items-center gap-3 mb-6">
+                <div class="w-10 h-10 rounded-xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center">
+                    <span class="text-indigo-400 font-semibold text-lg">1</span>
+                </div>
+                <h2 class="text-2xl sm:text-3xl font-semibold tracking-tight gradient-text">Most Frequent (Mode) Imputation</h2>
+            </div>
+
+            <!-- Definition -->
+            <div class="glass rounded-2xl p-8 mb-6">
+                <h3 class="text-lg font-semibold text-white mb-3">Definition</h3>
+                <p class="text-neutral-300 font-light leading-relaxed">
+                    Replace every missing value with the category that appears <strong class="text-white font-medium">most frequently</strong>.
+                </p>
+                <div class="mt-4 p-4 rounded-xl bg-indigo-500/5 border border-indigo-500/10 text-center">
+                    <span class="text-indigo-400 font-mono text-sm">Imputed Value = Mode</span>
+                </div>
+            </div>
+
+            <!-- Example -->
+            <div class="glass rounded-2xl p-8 space-y-6 glow-card transition-all duration-500">
+                <h3 class="text-lg font-semibold text-white">Example</h3>
+
+                <div>
+                    <p class="text-xs text-neutral-500 uppercase tracking-wider font-medium mb-3">Original Data</p>
+                    <div class="table-container max-w-xs">
+                        <table>
+                            <thead><tr><th>City</th></tr></thead>
+                            <tbody>
+                                <tr><td>Mumbai</td></tr>
+                                <tr><td>Delhi</td></tr>
+                                <tr><td>Mumbai</td></tr>
+                                <tr><td>Kolkata</td></tr>
+                                <tr><td>Mumbai</td></tr>
+                                <tr><td class="nan-cell">Missing</td></tr>
+                                <tr><td class="nan-cell">Missing</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Frequency Bars -->
+                <div>
+                    <p class="text-xs text-neutral-500 uppercase tracking-wider font-medium mb-4">Frequency Count</p>
+                    <div class="space-y-3 max-w-md">
+                        <div class="flex items-center gap-3">
+                            <span class="text-sm text-neutral-300 w-16 text-right">Mumbai</span>
+                            <div class="flex-1 bg-white/5 rounded-lg overflow-hidden h-7">
+                                <div class="freq-bar bg-indigo-500/60 flex items-center px-3 bar-animate" style="width: 60%">
+                                    <span class="text-xs text-white font-medium">= 3</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-3">
+                            <span class="text-sm text-neutral-300 w-16 text-right">Delhi</span>
+                            <div class="flex-1 bg-white/5 rounded-lg overflow-hidden h-7">
+                                <div class="freq-bar bg-purple-500/50 flex items-center px-3 bar-animate" style="width: 40%">
+                                    <span class="text-xs text-white font-medium">= 2</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-3">
+                            <span class="text-sm text-neutral-300 w-16 text-right">Kolkata</span>
+                            <div class="flex-1 bg-white/5 rounded-lg overflow-hidden h-7">
+                                <div class="freq-bar bg-violet-500/40 flex items-center px-3 bar-animate" style="width: 20%">
+                                    <span class="text-xs text-white font-medium">= 1</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mt-4 flex items-center gap-2">
+                        <i data-lucide="arrow-right" class="w-4 h-4 text-indigo-400"></i>
+                        <span class="text-sm text-indigo-400 font-medium">Mode = Mumbai</span>
+                    </div>
+                </div>
+
+                <!-- After Imputation -->
+                <div>
+                    <p class="text-xs text-green-400 uppercase tracking-wider font-medium mb-3">After Imputation</p>
+                    <div class="table-container max-w-xs">
+                        <table>
+                            <thead><tr><th>City</th></tr></thead>
+                            <tbody>
+                                <tr><td>Mumbai</td></tr>
+                                <tr><td>Delhi</td></tr>
+                                <tr><td>Mumbai</td></tr>
+                                <tr><td>Kolkata</td></tr>
+                                <tr><td>Mumbai</td></tr>
+                                <tr><td class="text-green-400/80">Mumbai <span class="text-[10px] text-neutral-500 ml-1">← was missing</span></td></tr>
+                                <tr><td class="text-green-400/80">Mumbai <span class="text-[10px] text-neutral-500 ml-1">← was missing</span></td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <p class="text-sm text-neutral-500 mt-3">Every missing value becomes <strong class="text-indigo-400">Mumbai</strong>.</p>
+                </div>
+            </div>
+        </section>
+
+        <div class="section-divider my-20"></div>
+
+        <!-- Can Mode Be Used for Numerical? -->
+        <section id="mode-numerical" class="pt-8 scroll-mt-24">
+            <div class="flex items-center gap-3 mb-6">
+                <div class="w-10 h-10 rounded-xl bg-purple-500/10 border border-purple-500/20 flex items-center justify-center">
+                    <i data-lucide="help-circle" class="w-5 h-5 text-purple-400"></i>
+                </div>
+                <h2 class="text-xl sm:text-2xl font-semibold tracking-tight gradient-text">Can Mode Be Used for Numerical Features?</h2>
+            </div>
+
+            <div class="glass rounded-2xl p-8 space-y-5">
+                <p class="text-neutral-300 font-light leading-relaxed">
+                    Technically, <strong class="text-green-400">Yes</strong>. Every numerical column also has a mode.
+                </p>
+
+                <div class="code-block p-4 text-sm">
+                    <span class="number">2</span><br>
+                    <span class="number">4</span><br>
+                    <span class="number">5</span>  <span class="comment">← Mode</span><br>
+                    <span class="number">5</span>  <span class="comment">← Mode</span><br>
+                    <span class="number">6</span><br>
+                    <span class="number">8</span><br>
+                    <span class="nan-cell">Missing</span> → <span class="number">5</span>
+                </div>
+
+                <div class="warning-box p-5 flex items-start gap-3">
+                    <i data-lucide="alert-triangle" class="w-5 h-5 text-amber-400 mt-0.5 flex-shrink-0"></i>
+                    <div>
+                        <p class="text-sm text-amber-300 font-medium mb-2">However, this is rarely preferred because:</p>
+                        <ul class="space-y-1.5 text-sm text-neutral-400">
+                            <li class="flex items-start gap-2"><i data-lucide="minus" class="w-3.5 h-3.5 text-amber-400 mt-1 flex-shrink-0"></i>Mean performs better for symmetric distributions</li>
+                            <li class="flex items-start gap-2"><i data-lucide="minus" class="w-3.5 h-3.5 text-amber-400 mt-1 flex-shrink-0"></i>Median performs better for skewed distributions</li>
+                        </ul>
+                        <p class="text-sm text-neutral-300 mt-2">Mode is mainly used for <strong class="text-indigo-400">categorical features</strong>.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <div class="section-divider my-20"></div>
+
+        <!-- When Should Mode Imputation Be Used -->
+        <section id="when-mode" class="pt-8 scroll-mt-24">
+            <div class="flex items-center gap-3 mb-6">
+                <div class="w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center">
+                    <i data-lucide="target" class="w-5 h-5 text-amber-400"></i>
+                </div>
+                <h2 class="text-2xl sm:text-3xl font-semibold tracking-tight amber-gradient">When Should Mode Imputation Be Used?</h2>
+            </div>
+
+            <div class="space-y-6">
+                <!-- Condition 1 -->
+                <div class="glass rounded-2xl p-8">
+                    <div class="flex items-center gap-3 mb-4">
+                        <span class="w-8 h-8 rounded-lg bg-indigo-500/20 flex items-center justify-center text-indigo-400 text-sm font-semibold">1</span>
+                        <h3 class="text-lg font-semibold text-white">Missing values should be MCAR</h3>
+                    </div>
+                    <p class="text-sm text-neutral-400 font-light leading-relaxed mb-3">
+                        <strong class="text-white">Missing Completely At Random (MCAR)</strong> — The probability of missingness does not depend on any feature.
+                    </p>
+                    <div class="glass-light rounded-xl p-4 flex items-start gap-3">
+                        <i data-lucide="lightbulb" class="w-4 h-4 text-amber-400 mt-0.5 flex-shrink-0"></i>
+                        <p class="text-sm text-neutral-400"><strong class="text-neutral-200">Example:</strong> A survey response was lost accidentally.</p>
+                    </div>
+                </div>
+
+                <!-- Condition 2 -->
+                <div class="glass rounded-2xl p-8">
+                    <div class="flex items-center gap-3 mb-4">
+                        <span class="w-8 h-8 rounded-lg bg-purple-500/20 flex items-center justify-center text-purple-400 text-sm font-semibold">2</span>
+                        <h3 class="text-lg font-semibold text-white">One category should dominate</h3>
+                    </div>
+
+                    <div class="grid md:grid-cols-2 gap-6">
+                        <!-- Good -->
+                        <div class="success-box p-5">
+                            <p class="text-xs text-green-400 uppercase tracking-wider font-medium mb-3">✓ Ideal</p>
+                            <div class="space-y-2">
+                                <div class="flex items-center gap-3">
+                                    <span class="text-xs text-neutral-400 w-14 text-right">Mumbai</span>
+                                    <div class="flex-1 bg-white/5 rounded h-5 overflow-hidden">
+                                        <div class="h-full bg-green-500/50 rounded" style="width:80%"></div>
+                                    </div>
+                                    <span class="text-xs text-green-400 font-medium w-10">80%</span>
+                                </div>
+                                <div class="flex items-center gap-3">
+                                    <span class="text-xs text-neutral-400 w-14 text-right">Delhi</span>
+                                    <div class="flex-1 bg-white/5 rounded h-5 overflow-hidden">
+                                        <div class="h-full bg-green-500/30 rounded" style="width:15%"></div>
+                                    </div>
+                                    <span class="text-xs text-neutral-500 font-medium w-10">15%</span>
+                                </div>
+                                <div class="flex items-center gap-3">
+                                    <span class="text-xs text-neutral-400 w-14 text-right">Kolkata</span>
+                                    <div class="flex-1 bg-white/5 rounded h-5 overflow-hidden">
+                                        <div class="h-full bg-green-500/20 rounded" style="width:5%"></div>
+                                    </div>
+                                    <span class="text-xs text-neutral-500 font-medium w-10">5%</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Bad -->
+                        <div class="danger-box p-5">
+                            <p class="text-xs text-red-400 uppercase tracking-wider font-medium mb-3">✗ Not Good</p>
+                            <div class="space-y-2">
+                                <div class="flex items-center gap-3">
+                                    <span class="text-xs text-neutral-400 w-14 text-right">Mumbai</span>
+                                    <div class="flex-1 bg-white/5 rounded h-5 overflow-hidden">
+                                        <div class="h-full bg-red-500/40 rounded" style="width:35%"></div>
+                                    </div>
+                                    <span class="text-xs text-red-400 font-medium w-10">35%</span>
+                                </div>
+                                <div class="flex items-center gap-3">
+                                    <span class="text-xs text-neutral-400 w-14 text-right">Delhi</span>
+                                    <div class="flex-1 bg-white/5 rounded h-5 overflow-hidden">
+                                        <div class="h-full bg-red-500/35 rounded" style="width:33%"></div>
+                                    </div>
+                                    <span class="text-xs text-red-400 font-medium w-10">33%</span>
+                                </div>
+                                <div class="flex items-center gap-3">
+                                    <span class="text-xs text-neutral-400 w-14 text-right">Kolkata</span>
+                                    <div class="flex-1 bg-white/5 rounded h-5 overflow-hidden">
+                                        <div class="h-full bg-red-500/30 rounded" style="width:32%"></div>
+                                    </div>
+                                    <span class="text-xs text-red-400 font-medium w-10">32%</span>
+                                </div>
+                            </div>
+                            <p class="text-xs text-neutral-500 mt-3">No dominant category. Replacing everything with Mumbai would <strong class="text-red-400">introduce bias</strong>.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <div class="section-divider my-20"></div>
+
+        <!-- Advantages -->
+        <section id="adv-mode" class="pt-8 scroll-mt-24">
+            <div class="flex items-center gap-3 mb-6">
+                <div class="w-10 h-10 rounded-xl bg-green-500/10 border border-green-500/20 flex items-center justify-center">
+                    <i data-lucide="thumbs-up" class="w-5 h-5 text-green-400"></i>
+                </div>
+                <h2 class="text-2xl sm:text-3xl font-semibold tracking-tight green-gradient">Advantages of Mode Imputation</h2>
+            </div>
+
+            <div class="grid grid-cols-2 md:grid-cols-5 gap-4">
+                <div class="glass rounded-2xl p-5 text-center hover:border-green-500/20 transition-colors duration-500">
+                    <i data-lucide="zap" class="w-5 h-5 text-green-400 mx-auto mb-2"></i>
+                    <p class="text-sm text-neutral-300">Extremely easy</p>
+                </div>
+                <div class="glass rounded-2xl p-5 text-center hover:border-green-500/20 transition-colors duration-500">
+                    <i data-lucide="timer" class="w-5 h-5 text-green-400 mx-auto mb-2"></i>
+                    <p class="text-sm text-neutral-300">Fast</p>
+                </div>
+                <div class="glass rounded-2xl p-5 text-center hover:border-green-500/20 transition-colors duration-500">
+                    <i data-lucide="check-circle" class="w-5 h-5 text-green-400 mx-auto mb-2"></i>
+                    <p class="text-sm text-neutral-300">Works well for small missing %</p>
+                </div>
+                <div class="glass rounded-2xl p-5 text-center hover:border-green-500/20 transition-colors duration-500">
+                    <i data-lucide="rocket" class="w-5 h-5 text-green-400 mx-auto mb-2"></i>
+                    <p class="text-sm text-neutral-300">Production friendly</p>
+                </div>
+                <div class="glass rounded-2xl p-5 text-center hover:border-green-500/20 transition-colors duration-500 col-span-2 md:col-span-1">
+                    <i data-lucide="cpu" class="w-5 h-5 text-green-400 mx-auto mb-2"></i>
+                    <p class="text-sm text-neutral-300">Available in SKlearn</p>
+                </div>
+            </div>
+        </section>
+
+        <div class="section-divider my-20"></div>
+
+        <!-- Disadvantages -->
+        <section id="disadv-mode" class="pt-8 scroll-mt-24">
+            <div class="flex items-center gap-3 mb-6">
+                <div class="w-10 h-10 rounded-xl bg-red-500/10 border border-red-500/20 flex items-center justify-center">
+                    <i data-lucide="thumbs-down" class="w-5 h-5 text-red-400"></i>
+                </div>
+                <h2 class="text-2xl sm:text-3xl font-semibold tracking-tight red-gradient">Disadvantages</h2>
+            </div>
+
+            <div class="glass rounded-2xl p-8">
+                <p class="text-neutral-400 font-light leading-relaxed mb-6">Mode imputation <strong class="text-red-400">changes the distribution</strong>.</p>
+
+                <div class="grid md:grid-cols-2 gap-6">
+                    <div class="glass-light rounded-xl p-6">
+                        <p class="text-xs text-neutral-500 uppercase tracking-wider font-medium mb-4">Original Distribution</p>
+                        <div class="space-y-2">
+                            <div class="flex items-center gap-3">
+                                <span class="text-xs text-neutral-400 w-14 text-right">Mumbai</span>
+                                <div class="flex-1 bg-white/5 rounded h-5 overflow-hidden">
+                                    <div class="h-full bg-indigo-500/50 rounded" style="width:70%"></div>
+                                </div>
+                                <span class="text-xs text-neutral-400 w-10">70%</span>
+                            </div>
+                            <div class="flex items-center gap-3">
+                                <span class="text-xs text-neutral-400 w-14 text-right">Delhi</span>
+                                <div class="flex-1 bg-white/5 rounded h-5 overflow-hidden">
+                                    <div class="h-full bg-purple-500/40 rounded" style="width:20%"></div>
+                                </div>
+                                <span class="text-xs text-neutral-400 w-10">20%</span>
+                            </div>
+                            <div class="flex items-center gap-3">
+                                <span class="text-xs text-neutral-400 w-14 text-right">Kolkata</span>
+                                <div class="flex-1 bg-white/5 rounded h-5 overflow-hidden">
+                                    <div class="h-full bg-violet-500/30 rounded" style="width:10%"></div>
+                                </div>
+                                <span class="text-xs text-neutral-400 w-10">10%</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="glass-light rounded-xl p-6">
+                        <p class="text-xs text-red-400 uppercase tracking-wider font-medium mb-4">After Filling Missing Values</p>
+                        <div class="space-y-2">
+                            <div class="flex items-center gap-3">
+                                <span class="text-xs text-neutral-400 w-14 text-right">Mumbai</span>
+                                <div class="flex-1 bg-white/5 rounded h-5 overflow-hidden">
+                                    <div class="h-full bg-red-500/50 rounded" style="width:80%"></div>
+                                </div>
+                                <span class="text-xs text-red-400 font-medium w-10">80%</span>
+                            </div>
+                            <div class="flex items-center gap-3">
+                                <span class="text-xs text-neutral-400 w-14 text-right">Delhi</span>
+                                <div class="flex-1 bg-white/5 rounded h-5 overflow-hidden">
+                                    <div class="h-full bg-red-500/25 rounded" style="width:15%"></div>
+                                </div>
+                                <span class="text-xs text-neutral-500 w-10">15%</span>
+                            </div>
+                            <div class="flex items-center gap-3">
+                                <span class="text-xs text-neutral-400 w-14 text-right">Kolkata</span>
+                                <div class="flex-1 bg-white/5 rounded h-5 overflow-hidden">
+                                    <div class="h-full bg-red-500/15 rounded" style="width:5%"></div>
+                                </div>
+                                <span class="text-xs text-neutral-500 w-10">5%</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <p class="text-sm text-neutral-400 font-light mt-4 text-center">Now Mumbai becomes <strong class="text-red-400">even more dominant</strong>. The original distribution is <strong class="text-red-400">distorted</strong>.</p>
+            </div>
+        </section>
+
+        <div class="section-divider my-20"></div>
+
+        <!-- Technique 2: Missing Category Imputation -->
+        <section id="missing-cat" class="pt-8 scroll-mt-24">
+            <div class="flex items-center gap-3 mb-6">
+                <div class="w-10 h-10 rounded-xl bg-teal-500/10 border border-teal-500/20 flex items-center justify-center">
+                    <span class="text-teal-400 font-semibold text-lg">2</span>
+                </div>
+                <h2 class="text-2xl sm:text-3xl font-semibold tracking-tight teal-gradient">Missing Category Imputation</h2>
+            </div>
+
+            <div class="glass rounded-2xl p-8 space-y-6">
+                <p class="text-neutral-300 font-light leading-relaxed">
+                    Sometimes the missing percentage is very high:
+                </p>
+
+                <div class="flex justify-center gap-4">
+                    <span class="px-5 py-2 rounded-xl bg-red-500/10 text-red-400 text-lg font-semibold border border-red-500/20">40%</span>
+                    <span class="px-5 py-2 rounded-xl bg-red-500/10 text-red-400 text-lg font-semibold border border-red-500/20">50%</span>
+                    <span class="px-5 py-2 rounded-xl bg-red-500/10 text-red-400 text-lg font-semibold border border-red-500/20">60%</span>
+                </div>
+
+                <p class="text-neutral-400 font-light leading-relaxed">
+                    Instead of replacing everything with the mode, create a <strong class="text-teal-400">new category</strong> called:
+                </p>
+
+                <div class="flex justify-center">
+                    <span class="px-6 py-3 rounded-xl bg-teal-500/15 text-teal-400 text-xl font-semibold border border-teal-500/30 font-mono">"Missing"</span>
+                </div>
+
+                <div class="section-divider"></div>
+
+                <!-- Example -->
+                <div>
+                    <p class="text-xs text-neutral-500 uppercase tracking-wider font-medium mb-3">Original</p>
+                    <div class="table-container max-w-xs mb-4">
+                        <table>
+                            <thead><tr><th>City</th></tr></thead>
+                            <tbody>
+                                <tr><td>Mumbai</td></tr>
+                                <tr><td>Delhi</td></tr>
+                                <tr><td class="nan-cell">Missing</td></tr>
+                                <tr><td>Kolkata</td></tr>
+                                <tr><td class="nan-cell">Missing</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <p class="text-xs text-teal-400 uppercase tracking-wider font-medium mb-3">After Imputation</p>
+                    <div class="table-container max-w-xs">
+                        <table>
+                            <thead><tr><th>City</th></tr></thead>
+                            <tbody>
+                                <tr><td>Mumbai</td></tr>
+                                <tr><td>Delhi</td></tr>
+                                <tr><td class="missing-cell">Missing</td></tr>
+                                <tr><td>Kolkata</td></tr>
+                                <tr><td class="missing-cell">Missing</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <p class="text-sm text-neutral-400 font-light">Now <code class="text-teal-400 bg-teal-500/10 px-1.5 py-0.5 rounded">"Missing"</code> itself becomes another category.</p>
+
+                <div class="flex flex-wrap gap-2 justify-center">
+                    <span class="category-tag bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">Mumbai</span>
+                    <span class="category-tag bg-purple-500/10 text-purple-400 border border-purple-500/20">Delhi</span>
+                    <span class="category-tag bg-violet-500/10 text-violet-400 border border-violet-500/20">Kolkata</span>
+                    <span class="category-tag bg-teal-500/10 text-teal-400 border border-teal-500/20">Missing</span>
+                </div>
+            </div>
+        </section>
+
+        <!-- Why Does This Help -->
+        <section id="why-helps" class="pt-16 scroll-mt-24">
+            <div class="flex items-center gap-3 mb-6">
+                <div class="w-10 h-10 rounded-xl bg-teal-500/10 border border-teal-500/20 flex items-center justify-center">
+                    <i data-lucide="message-circle" class="w-5 h-5 text-teal-400"></i>
+                </div>
+                <h2 class="text-xl sm:text-2xl font-semibold tracking-tight gradient-text">Why Does This Help?</h2>
+            </div>
+
+            <div class="glass rounded-2xl p-8">
+                <p class="text-neutral-300 font-light leading-relaxed mb-4">
+                    Instead of pretending we know the value, we <strong class="text-white">explicitly tell the algorithm</strong>:
+                </p>
+
+                <div class="info-box p-6 flex items-start gap-4 mb-4">
+                    <i data-lucide="quote" class="w-6 h-6 text-indigo-400 mt-0.5 flex-shrink-0"></i>
+                    <p class="text-neutral-200 italic text-lg leading-relaxed">"This value was originally missing."</p>
+                </div>
+
+                <p class="text-sm text-neutral-400 font-light leading-relaxed">
+                    Sometimes, the fact that a value is missing <strong class="text-white">itself carries useful information</strong>. Many machine learning models can learn patterns from this.
+                </p>
+            </div>
+        </section>
+
+        <!-- Numerical Analogy -->
+        <section id="numerical-analogy" class="pt-16 scroll-mt-24">
+            <div class="flex items-center gap-3 mb-6">
+                <div class="w-10 h-10 rounded-xl bg-neutral-500/10 border border-neutral-500/20 flex items-center justify-center">
+                    <i data-lucide="repeat" class="w-5 h-5 text-neutral-400"></i>
+                </div>
+                <h2 class="text-xl sm:text-2xl font-semibold tracking-tight gradient-text">Numerical Analogy</h2>
+            </div>
+
+            <div class="glass rounded-2xl p-8">
+                <p class="text-neutral-400 font-light leading-relaxed mb-4">In numerical features, sometimes people replace missing values with:</p>
+
+                <div class="flex flex-wrap gap-3 justify-center mb-6">
+                    <span class="px-4 py-2 rounded-xl bg-amber-500/10 text-amber-400 font-mono text-sm border border-amber-500/20">-999</span>
+                    <span class="px-4 py-2 rounded-xl bg-amber-500/10 text-amber-400 font-mono text-sm border border-amber-500/20">999</span>
+                    <span class="px-4 py-2 rounded-xl bg-amber-500/10 text-amber-400 font-mono text-sm border border-amber-500/20">99</span>
+                </div>
+
+                <p class="text-sm text-neutral-500 text-center mb-6">These numbers indicate "This value was missing."</p>
+
+                <div class="flex flex-col sm:flex-row items-center justify-center gap-4">
+                    <div class="text-center">
+                        <p class="text-xs text-neutral-500 mb-2">For Numerical</p>
+                        <span class="px-4 py-2 rounded-xl bg-amber-500/10 text-amber-400 font-mono border border-amber-500/20">-999</span>
+                    </div>
+                    <i data-lucide="arrow-right" class="w-5 h-5 text-neutral-600 rotate-90 sm:rotate-0"></i>
+                    <div class="text-center">
+                        <p class="text-xs text-neutral-500 mb-2">For Categorical</p>
+                        <span class="px-4 py-2 rounded-xl bg-teal-500/10 text-teal-400 font-mono border border-teal-500/20">"Missing"</span>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- When to Use Missing Category -->
+        <section id="when-missing-cat" class="pt-16 scroll-mt-24">
+            <div class="flex items-center gap-3 mb-6">
+                <div class="w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center">
+                    <i data-lucide="help-circle" class="w-5 h-5 text-amber-400"></i>
+                </div>
+                <h2 class="text-xl sm:text-2xl font-semibold tracking-tight amber-gradient">When Should It Be Used?</h2>
+            </div>
+
+            <div class="grid md:grid-cols-2 gap-6">
+                <div class="warning-box p-6">
+                    <p class="text-xs text-amber-400 uppercase tracking-wider font-medium mb-3">Condition 1</p>
+                    <p class="text-sm text-neutral-300 font-medium mb-1">Missing values are NOT random</p>
+                    <p class="text-xs text-neutral-500">MAR or MNAR</p>
+                </div>
+                <div class="warning-box p-6">
+                    <p class="text-xs text-amber-400 uppercase tracking-wider font-medium mb-3">Condition 2</p>
+                    <p class="text-sm text-neutral-300 font-medium mb-1">Missing percentage is high</p>
+                    <div class="flex gap-2 mt-2">
+                        <span class="px-3 py-1 rounded bg-red-500/10 text-red-400 text-sm font-mono">40%</span>
+                        <span class="px-3 py-1 rounded bg-red-500/10 text-red-400 text-sm font-mono">50%</span>
+                        <span class="px-3 py-1 rounded bg-red-500/10 text-red-400 text-sm font-mono">60%</span>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Advantages & Limitation -->
+        <section id="adv-missing" class="pt-16 scroll-mt-24">
+            <div class="grid md:grid-cols-2 gap-6">
+                <div class="glass rounded-2xl p-8">
+                    <div class="flex items-center gap-2 mb-4">
+                        <i data-lucide="thumbs-up" class="w-5 h-5 text-green-400"></i>
+                        <h3 class="text-lg font-semibold text-green-400">Advantages</h3>
+                    </div>
+                    <ul class="space-y-3 text-sm text-neutral-400 font-light">
+                        <li class="flex items-start gap-2"><i data-lucide="check" class="w-4 h-4 text-green-400 mt-0.5 flex-shrink-0"></i>Very easy to implement</li>
+                        <li class="flex items-start gap-2"><i data-lucide="check" class="w-4 h-4 text-green-400 mt-0.5 flex-shrink-0"></i>Fast</li>
+                        <li class="flex items-start gap-2"><i data-lucide="check" class="w-4 h-4 text-green-400 mt-0.5 flex-shrink-0"></i>Works well with many ML algorithms</li>
+                        <li class="flex items-start gap-2"><i data-lucide="check" class="w-4 h-4 text-green-400 mt-0.5 flex-shrink-0"></i>Preserves information that a value was missing</li>
+                    </ul>
+                </div>
+
+                <div class="glass rounded-2xl p-8">
+                    <div class="flex items-center gap-2 mb-4">
+                        <i data-lucide="alert-triangle" class="w-5 h-5 text-amber-400"></i>
+                        <h3 class="text-lg font-semibold text-amber-400">Limitation</h3>
+                    </div>
+                    <p class="text-sm text-neutral-400 font-light leading-relaxed mb-3">
+                        It does <strong class="text-amber-400">not actually estimate</strong> the original value.
+                    </p>
+                    <p class="text-sm text-neutral-500 font-light leading-relaxed">
+                        It simply informs the model "This observation was missing." So performance may not always be optimal.
+                    </p>
+                </div>
+            </div>
+        </section>
+
+        <div class="section-divider my-20"></div>
+
+        <!-- Practical Demonstration -->
+        <section id="practical" class="pt-8 scroll-mt-24">
+            <div class="flex items-center gap-3 mb-6">
+                <div class="w-10 h-10 rounded-xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center">
+                    <i data-lucide="home" class="w-5 h-5 text-indigo-400"></i>
+                </div>
+                <h2 class="text-2xl sm:text-3xl font-semibold tracking-tight gradient-text">Practical Demonstration — Housing Dataset</h2>
+            </div>
+
+            <div class="glass rounded-2xl p-8 space-y-6">
+                <p class="text-neutral-400 font-light leading-relaxed">
+                    The instructor demonstrates both techniques using a famous housing dataset (similar to the <strong class="text-white">Ames Housing dataset</strong>).
+                </p>
+
+                <div>
+                    <p class="text-xs text-neutral-500 uppercase tracking-wider font-medium mb-3">Selected Columns</p>
+                    <div class="flex flex-wrap gap-3">
+                        <div class="glass-light rounded-xl px-5 py-3 flex items-center gap-2">
+                            <i data-lucide="flame" class="w-4 h-4 text-orange-400"></i>
+                            <span class="text-sm text-neutral-300">Fireplace Quality</span>
+                            <span class="text-[10px] px-1.5 py-0.5 rounded bg-indigo-500/10 text-indigo-400 font-medium">Categorical</span>
+                        </div>
+                        <div class="glass-light rounded-xl px-5 py-3 flex items-center gap-2">
+                            <i data-lucide="car" class="w-4 h-4 text-blue-400"></i>
+                            <span class="text-sm text-neutral-300">Garage Quality</span>
+                            <span class="text-[10px] px-1.5 py-0.5 rounded bg-indigo-500/10 text-indigo-400 font-medium">Categorical</span>
+                        </div>
+                        <div class="glass-light rounded-xl px-5 py-3 flex items-center gap-2">
+                            <i data-lucide="dollar-sign" class="w-4 h-4 text-green-400"></i>
+                            <span class="text-sm text-neutral-300">Sale Price</span>
+                            <span class="text-[10px] px-1.5 py-0.5 rounded bg-green-500/10 text-green-400 font-medium">Target</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="section-divider"></div>
+
+                <div>
+                    <p class="text-xs text-neutral-500 uppercase tracking-wider font-medium mb-4">Missing Values</p>
+                    <div class="grid sm:grid-cols-2 gap-4">
+                        <div class="glass-light rounded-xl p-5">
+                            <p class="text-sm text-neutral-300 font-medium mb-1">Garage Quality</p>
+                            <p class="text-xs text-green-400">Only about <strong>5%</strong> missing</p>
+                        </div>
+                        <div class="glass-light rounded-xl p-5">
+                            <p class="text-sm text-neutral-300 font-medium mb-1">Fireplace Quality</p>
+                            <p class="text-xs text-red-400">Around <strong>50–60%</strong> missing</p>
+                        </div>
+                    </div>
+                    <p class="text-sm text-neutral-500 mt-3">This allows comparison of both techniques.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Garage Quality -->
+        <section id="garage" class="pt-16 scroll-mt-24">
+            <div class="flex items-center gap-3 mb-6">
+                <div class="w-10 h-10 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center">
+                    <i data-lucide="car" class="w-5 h-5 text-blue-400"></i>
+                </div>
+                <h2 class="text-xl sm:text-2xl font-semibold tracking-tight gradient-text">Garage Quality Example</h2>
+            </div>
+
+            <div class="glass rounded-2xl p-8 space-y-6">
+                <div>
+                    <p class="text-xs text-neutral-500 uppercase tracking-wider font-medium mb-3">Quality Categories</p>
+                    <div class="flex flex-wrap gap-2">
+                        <span class="px-3 py-1.5 rounded-lg bg-green-500/10 text-green-400 text-sm border border-green-500/20"><strong>Ex</strong> — Excellent</span>
+                        <span class="px-3 py-1.5 rounded-lg bg-teal-500/10 text-teal-400 text-sm border border-teal-500/20"><strong>Gd</strong> — Good</span>
+                        <span class="px-3 py-1.5 rounded-lg bg-indigo-500/10 text-indigo-400 text-sm border border-indigo-500/20"><strong>TA</strong> — Typical/Average</span>
+                        <span class="px-3 py-1.5 rounded-lg bg-amber-500/10 text-amber-400 text-sm border border-amber-500/20"><strong>Fa</strong> — Fair</span>
+                        <span class="px-3 py-1.5 rounded-lg bg-red-500/10 text-red-400 text-sm border border-red-500/20"><strong>Po</strong> — Poor</span>
+                    </div>
+                    <p class="text-sm text-neutral-500 mt-3">The most frequent category (mode) is identified — for example, <strong class="text-indigo-400">TA</strong> or <strong class="text-teal-400">Gd</strong>, depending on the dataset.</p>
+                </div>
+
+                <div class="section-divider"></div>
+
+                <!-- PDF Analysis Before -->
+                <div>
+                    <p class="text-xs text-neutral-500 uppercase tracking-wider font-medium mb-3">Distribution Analysis — Before Imputation</p>
+                    <p class="text-sm text-neutral-400 font-light leading-relaxed mb-4">
+                        The instructor compares the distribution of <strong class="text-white">Sale Price</strong> using <strong class="text-indigo-400">Probability Density Function (PDF)</strong> plots (Kernel Density Estimation):
+                    </p>
+                    <div class="grid sm:grid-cols-2 gap-4">
+                        <div class="glass-light rounded-xl p-4 text-center">
+                            <svg width="160" height="60" viewBox="0 0 160 60" class="mx-auto opacity-70">
+                                <line x1="10" y1="50" x2="150" y2="50" stroke="#525252" stroke-width="1"/>
+                                <path d="M10 50 Q30 50 50 35 Q70 10 80 8 Q90 10 110 35 Q130 50 150 50" fill="none" stroke="#6366F1" stroke-width="1.5" class="pdf-line"/>
+                                <path d="M10 50 Q30 50 50 35 Q70 10 80 8 Q90 10 110 35 Q130 50 150 50 Z" fill="rgba(99,102,241,0.08)"/>
+                            </svg>
+                            <p class="text-xs text-neutral-500 mt-2">Available values</p>
+                        </div>
+                        <div class="glass-light rounded-xl p-4 text-center">
+                            <svg width="160" height="60" viewBox="0 0 160 60" class="mx-auto opacity-70">
+                                <line x1="10" y1="50" x2="150" y2="50" stroke="#525252" stroke-width="1"/>
+                                <path d="M10 50 Q30 50 50 35 Q70 10 80 8 Q90 10 110 35 Q130 50 150 50" fill="none" stroke="#14B8A6" stroke-width="1.5" class="pdf-line" stroke-dasharray="4,3"/>
+                                <path d="M10 50 Q30 50 50 35 Q70 10 80 8 Q90 10 110 35 Q130 50 150 50 Z" fill="rgba(20,184,166,0.06)"/>
+                            </svg>
+                            <p class="text-xs text-neutral-500 mt-2">Missing values</p>
+                        </div>
+                    </div>
+                    <div class="success-box p-4 mt-4 flex items-start gap-3">
+                        <i data-lucide="check-circle" class="w-4 h-4 text-green-400 mt-0.5 flex-shrink-0"></i>
+                        <p class="text-sm text-neutral-400">The two distributions are <strong class="text-green-400">already very similar</strong>. This suggests missing values are approximately random and the missing percentage is low.</p>
+                    </div>
+                </div>
+
+                <div class="section-divider"></div>
+
+                <!-- After Mode Imputation -->
+                <div>
+                    <p class="text-xs text-green-400 uppercase tracking-wider font-medium mb-3">After Mode Imputation</p>
+                    <p class="text-sm text-neutral-400 font-light leading-relaxed mb-4">Missing values are replaced with the most frequent category. The category frequency increases for the mode. The PDF is plotted again.</p>
+                    <div class="success-box p-5 flex items-start gap-3">
+                        <i data-lucide="check-circle" class="w-5 h-5 text-green-400 mt-0.5 flex-shrink-0"></i>
+                        <div>
+                            <p class="text-sm text-green-300 font-medium mb-1">Almost no change in the distribution.</p>
+                            <p class="text-sm text-neutral-400">Mode Imputation <strong class="text-green-400">worked well</strong> because:</p>
+                            <ul class="mt-2 space-y-1 text-sm text-neutral-500">
+                                <li class="flex items-center gap-2"><i data-lucide="check" class="w-3.5 h-3.5 text-green-400"></i>Missing percentage was low (~5%)</li>
+                                <li class="flex items-center gap-2"><i data-lucide="check" class="w-3.5 h-3.5 text-green-400"></i>Dominant category existed</li>
+                                <li class="flex items-center gap-2"><i data-lucide="check" class="w-3.5 h-3.5 text-green-400"></i>Missingness was close to random</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Fireplace Quality -->
+        <section id="fireplace" class="pt-16 scroll-mt-24">
+            <div class="flex items-center gap-3 mb-6">
+                <div class="w-10 h-10 rounded-xl bg-orange-500/10 border border-orange-500/20 flex items-center justify-center">
+                    <i data-lucide="flame" class="w-5 h-5 text-orange-400"></i>
+                </div>
+                <h2 class="text-xl sm:text-2xl font-semibold tracking-tight gradient-text">Fireplace Quality Example</h2>
+            </div>
+
+            <div class="glass rounded-2xl p-8 space-y-6">
+                <div class="danger-box p-4 flex items-center gap-3">
+                    <i data-lucide="alert-octagon" class="w-5 h-5 text-red-400 flex-shrink-0"></i>
+                    <p class="text-sm text-neutral-300">This column contains approximately <strong class="text-red-400">50–60%</strong> missing values. Additionally, the categories are <strong class="text-red-400">nearly balanced</strong> — no category strongly dominates.</p>
+                </div>
+
+                <!-- Before -->
+                <div>
+                    <p class="text-xs text-neutral-500 uppercase tracking-wider font-medium mb-3">Before Imputation</p>
+                    <p class="text-sm text-neutral-400 font-light leading-relaxed mb-4">PDFs of Sale Price are compared — one for available values, another for missing values.</p>
+                    <div class="grid sm:grid-cols-2 gap-4">
+                        <div class="glass-light rounded-xl p-4 text-center">
+                            <svg width="160" height="60" viewBox="0 0 160 60" class="mx-auto opacity-70">
+                                <line x1="10" y1="50" x2="150" y2="50" stroke="#525252" stroke-width="1"/>
+                                <path d="M10 50 Q35 50 55 30 Q75 5 85 5 Q95 5 115 30 Q135 50 150 50" fill="none" stroke="#6366F1" stroke-width="1.5" class="pdf-line"/>
+                                <path d="M10 50 Q35 50 55 30 Q75 5 85 5 Q95 5 115 30 Q135 50 150 50 Z" fill="rgba(99,102,241,0.08)"/>
+                            </svg>
+                            <p class="text-xs text-neutral-500 mt-2">Available values</p>
+                        </div>
+                        <div class="glass-light rounded-xl p-4 text-center">
+                            <svg width="160" height="60" viewBox="0 0 160 60" class="mx-auto opacity-70">
+                                <line x1="10" y1="50" x2="150" y2="50" stroke="#525252" stroke-width="1"/>
+                                <path d="M10 50 Q30 45 50 38 Q65 25 80 18 Q95 25 110 38 Q130 48 150 50" fill="none" stroke="#EF4444" stroke-width="1.5" class="pdf-line" stroke-dasharray="4,3"/>
+                                <path d="M10 50 Q30 45 50 38 Q65 25 80 18 Q95 25 110 38 Q130 48 150 50 Z" fill="rgba(239,68,68,0.06)"/>
+                            </svg>
+                            <p class="text-xs text-neutral-500 mt-2">Missing values</p>
+                        </div>
+                    </div>
+                    <p class="text-sm text-red-400 text-center mt-3">The distributions <strong>differ</strong>.</p>
+                </div>
+
+                <div class="section-divider"></div>
+
+                <!-- After Mode -->
+                <div>
+                    <p class="text-xs text-red-400 uppercase tracking-wider font-medium mb-3">After Mode Imputation</p>
+                    <ul class="space-y-2 text-sm text-neutral-400 font-light">
+                        <li class="flex items-start gap-2"><i data-lucide="x" class="w-4 h-4 text-red-400 mt-0.5 flex-shrink-0"></i>The most frequent category becomes <strong class="text-red-400">artificially much larger</strong></li>
+                        <li class="flex items-start gap-2"><i data-lucide="x" class="w-4 h-4 text-red-400 mt-0.5 flex-shrink-0"></i>The category distribution becomes <strong class="text-red-400">heavily distorted</strong></li>
+                        <li class="flex items-start gap-2"><i data-lucide="x" class="w-4 h-4 text-red-400 mt-0.5 flex-shrink-0"></i>The PDF <strong class="text-red-400">changes significantly</strong></li>
+                    </ul>
+                </div>
+            </div>
+        </section>
+
+        <!-- Practical Conclusion -->
+        <section id="practical-conclusion" class="pt-16 scroll-mt-24">
+            <div class="flex items-center gap-3 mb-6">
+                <div class="w-10 h-10 rounded-xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center">
+                    <i data-lucide="file-check" class="w-5 h-5 text-indigo-400"></i>
+                </div>
+                <h2 class="text-xl sm:text-2xl font-semibold tracking-tight gradient-text">Conclusion from Fireplace Quality</h2>
+            </div>
+
+            <div class="glass rounded-2xl p-8">
+                <p class="text-neutral-400 font-light leading-relaxed mb-4">Mode imputation performs poorly because:</p>
+                <ul class="space-y-2 text-sm text-neutral-400 font-light mb-6">
+                    <li class="flex items-start gap-2"><i data-lucide="x" class="w-4 h-4 text-red-400 mt-0.5 flex-shrink-0"></i>Missing percentage is very high</li>
+                    <li class="flex items-start gap-2"><i data-lucide="x" class="w-4 h-4 text-red-400 mt-0.5 flex-shrink-0"></i>No dominant category exists</li>
+                </ul>
+
+                <div class="success-box p-5 flex items-start gap-3">
+                    <i data-lucide="check-circle" class="w-5 h-5 text-green-400 mt-0.5 flex-shrink-0"></i>
+                    <p class="text-sm text-neutral-300">Mode Imputation should <strong class="text-red-400">not</strong> be used for this feature. Instead, <strong class="text-teal-400">Missing Category Imputation</strong> is a better choice.</p>
+                </div>
+            </div>
+        </section>
+
+        <div class="section-divider my-20"></div>
+
+        <!-- SKlearn: Most Frequent -->
+        <section id="sklearn-mode" class="pt-8 scroll-mt-24">
+            <div class="flex items-center gap-3 mb-6">
+                <div class="w-10 h-10 rounded-xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center">
+                    <i data-lucide="code" class="w-5 h-5 text-indigo-400"></i>
+                </div>
+                <h2 class="text-2xl sm:text-3xl font-semibold tracking-tight gradient-text">Scikit-Learn — Most Frequent</h2>
+            </div>
+
+            <div class="glass rounded-2xl p-8 space-y-5">
+                <div class="code-block p-6">
+                    <span class="keyword">from</span> sklearn.impute <span class="keyword">import</span> SimpleImputer<br><br>
+                    imputer = <span class="func">SimpleImputer</span>(strategy=<span class="string">'most_frequent'</span>)<br><br>
+                    X_train = imputer.<span class="func">fit_transform</span>(X_train)<br>
+                    X_test = imputer.<span class="func">transform</span>(X_test)
+                </div>
+
+                <div class="grid sm:grid-cols-2 gap-4">
+                    <div class="glass-light rounded-xl p-4">
+                        <p class="text-sm text-indigo-400 font-medium mb-1">fit_transform()</p>
+                        <p class="text-xs text-neutral-500">Learns the most frequent category from training data and applies it</p>
+                    </div>
+                    <div class="glass-light rounded-xl p-4">
+                        <p class="text-sm text-indigo-400 font-medium mb-1">transform()</p>
+                        <p class="text-xs text-neutral-500">Replaces missing values in both training and testing sets using the learned mode</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <div class="section-divider my-16"></div>
+
+        <!-- SKlearn: Missing Category -->
+        <section id="sklearn-missing" class="pt-8 scroll-mt-24">
+            <div class="flex items-center gap-3 mb-6">
+                <div class="w-10 h-10 rounded-xl bg-teal-500/10 border border-teal-500/20 flex items-center justify-center">
+                    <i data-lucide="code" class="w-5 h-5 text-teal-400"></i>
+                </div>
+                <h2 class="text-2xl sm:text-3xl font-semibold tracking-tight teal-gradient">Scikit-Learn — Missing Category</h2>
+            </div>
+
+            <div class="glass rounded-2xl p-8 space-y-5">
+                <div class="code-block p-6">
+                    <span class="keyword">from</span> sklearn.impute <span class="keyword">import</span> SimpleImputer<br><br>
+                    imputer = <span class="func">SimpleImputer</span>(<br>
+                    &nbsp;&nbsp;strategy=<span class="string">'constant'</span>,<br>
+                    &nbsp;&nbsp;fill_value=<span class="string">'Missing'</span><br>
+                    )<br><br>
+                    X_train = imputer.<span class="func">fit_transform</span>(X_train)<br>
+                    X_test = imputer.<span class="func">transform</span>(X_test)
+                </div>
+
+                <p class="text-sm text-neutral-400 text-center">Every missing value becomes <code class="text-teal-400 bg-teal-500/10 px-1.5 py-0.5 rounded">"Missing"</code></p>
+            </div>
+        </section>
+
+        <div class="section-divider my-20"></div>
+
+        <!-- Comparison Table -->
+        <section id="comparison" class="pt-8 scroll-mt-24">
+            <div class="flex items-center gap-3 mb-6">
+                <div class="w-10 h-10 rounded-xl bg-purple-500/10 border border-purple-500/20 flex items-center justify-center">
+                    <i data-lucide="table" class="w-5 h-5 text-purple-400"></i>
+                </div>
+                <h2 class="text-2xl sm:text-3xl font-semibold tracking-tight gradient-text">Comparison of the Two Techniques</h2>
+            </div>
+
+            <div class="table-container overflow-x-auto">
+                <table class="comparison-table">
+                    <thead>
+                        <tr>
+                            <th>Property</th>
+                            <th>Most Frequent Imputation</th>
+                            <th>Missing Category Imputation</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>Fill Value</td>
+                            <td><span class="text-indigo-400">Mode</span></td>
+                            <td><span class="text-teal-400">New category ("Missing")</span></td>
+                        </tr>
+                        <tr>
+                            <td>Best Missing Percentage</td>
+                            <td><span class="text-green-400">Low (&lt;5–10%)</span></td>
+                            <td><span class="text-red-400">High (30%+)</span></td>
+                        </tr>
+                        <tr>
+                            <td>Assumes MCAR?</td>
+                            <td><span class="text-green-400">Yes</span></td>
+                            <td><span class="text-neutral-500">Not necessary</span></td>
+                        </tr>
+                        <tr>
+                            <td>Distribution Change</td>
+                            <td><span class="text-red-400">Yes</span></td>
+                            <td><span class="text-green-400">Minimal category distortion</span></td>
+                        </tr>
+                        <tr>
+                            <td>Preserves Missing Information</td>
+                            <td><span class="text-red-400">❌ No</span></td>
+                            <td><span class="text-green-400">✅ Yes</span></td>
+                        </tr>
+                        <tr>
+                            <td>Easy to Implement</td>
+                            <td><span class="text-green-400">✅ Yes</span></td>
+                            <td><span class="text-green-400">✅ Yes</span></td>
+                        </tr>
+                        <tr>
+                            <td>Available in Scikit-Learn</td>
+                            <td><span class="text-green-400">✅ Yes</span></td>
+                            <td><span class="text-green-400">✅ Yes</span></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <div class="section-divider my-20"></div>
+
+        <!-- Decision Guide -->
+        <section id="decision-guide" class="pt-8 scroll-mt-24">
+            <div class="flex items-center gap-3 mb-6">
+                <div class="w-10 h-10 rounded-xl bg-green-500/10 border border-green-500/20 flex items-center justify-center">
+                    <i data-lucide="git-branch" class="w-5 h-5 text-green-400"></i>
+                </div>
+                <h2 class="text-2xl sm:text-3xl font-semibold tracking-tight green-gradient">Decision Guide</h2>
+            </div>
+
+            <div class="grid md:grid-cols-2 gap-6">
+                <!-- Use Mode -->
+                <div class="glass rounded-2xl p-8 border-indigo-500/20 hover:border-indigo-500/30 transition-colors duration-500">
+                    <div class="flex items-center gap-2 mb-5">
+                        <i data-lucide="check-circle" class="w-5 h-5 text-indigo-400"></i>
+                        <h3 class="text-lg font-semibold text-indigo-400">Use Mode Imputation when:</h3>
+                    </div>
+                    <ul class="space-y-3 text-sm text-neutral-400 font-light">
+                        <li class="flex items-start gap-2"><i data-lucide="check" class="w-4 h-4 text-indigo-400 mt-0.5 flex-shrink-0"></i>Missing values are low (typically &lt;5–10%)</li>
+                        <li class="flex items-start gap-2"><i data-lucide="check" class="w-4 h-4 text-indigo-400 mt-0.5 flex-shrink-0"></i>Missingness is approximately MCAR</li>
+                        <li class="flex items-start gap-2"><i data-lucide="check" class="w-4 h-4 text-indigo-400 mt-0.5 flex-shrink-0"></i>One category clearly dominates</li>
+                        <li class="flex items-start gap-2"><i data-lucide="check" class="w-4 h-4 text-indigo-400 mt-0.5 flex-shrink-0"></i>You want a simple and fast solution</li>
+                    </ul>
+                </div>
+
+                <!-- Use Missing Category -->
+                <div class="glass rounded-2xl p-8 border-teal-500/20 hover:border-teal-500/30 transition-colors duration-500">
+                    <div class="flex items-center gap-2 mb-5">
+                        <i data-lucide="check-circle" class="w-5 h-5 text-teal-400"></i>
+                        <h3 class="text-lg font-semibold text-teal-400">Use Missing Category when:</h3>
+                    </div>
+                    <ul class="space-y-3 text-sm text-neutral-400 font-light">
+                        <li class="flex items-start gap-2"><i data-lucide="check" class="w-4 h-4 text-teal-400 mt-0.5 flex-shrink-0"></i>Missing values are high</li>
+                        <li class="flex items-start gap-2"><i data-lucide="check" class="w-4 h-4 text-teal-400 mt-0.5 flex-shrink-0"></i>Missingness is informative (MAR/MNAR)</li>
+                        <li class="flex items-start gap-2"><i data-lucide="check" class="w-4 h-4 text-teal-400 mt-0.5 flex-shrink-0"></i>You want the model to recognize that a value was originally missing</li>
+                        <li class="flex items-start gap-2"><i data-lucide="check" class="w-4 h-4 text-teal-400 mt-0.5 flex-shrink-0"></i>There is no dominant category</li>
+                    </ul>
+                </div>
+            </div>
+        </section>
+
+        <div class="section-divider my-20"></div>
+
+        <!-- Interview Questions -->
+        <section id="interview" class="pt-8 scroll-mt-24">
+            <div class="flex items-center gap-3 mb-8">
+                <div class="w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center">
+                    <i data-lucide="message-square" class="w-5 h-5 text-amber-400"></i>
+                </div>
+                <h2 class="text-2xl sm:text-3xl font-semibold tracking-tight amber-gradient">Important Interview Questions</h2>
+            </div>
+
+            <div class="space-y-4" style="counter-reset: q-counter;">
+                <div class="interview-q glass rounded-2xl p-6 flex items-start hover:border-amber-500/20 transition-colors duration-500">
+                    <div>
+                        <p class="text-sm text-white font-medium mb-2">Why can't we use mean or median for categorical data?</p>
+                        <p class="text-sm text-neutral-400 font-light">Because categorical variables are <strong class="text-neutral-200">non-numeric</strong> and have no numerical ordering.</p>
+                    </div>
+                </div>
+
+                <div class="interview-q glass rounded-2xl p-6 flex items-start hover:border-amber-500/20 transition-colors duration-500">
+                    <div>
+                        <p class="text-sm text-white font-medium mb-2">What is mode imputation?</p>
+                        <p class="text-sm text-neutral-400 font-light">Replacing missing values with the <strong class="text-neutral-200">most frequently occurring category</strong>.</p>
+                    </div>
+                </div>
+
+                <div class="interview-q glass rounded-2xl p-6 flex items-start hover:border-amber-500/20 transition-colors duration-500">
+                    <div>
+                        <p class="text-sm text-white font-medium mb-2">When should mode imputation not be used?</p>
+                        <p class="text-sm text-neutral-400 font-light">When missing values are <strong class="text-red-400">high</strong> or <strong class="text-red-400">no category dominates</strong>.</p>
+                    </div>
+                </div>
+
+                <div class="interview-q glass rounded-2xl p-6 flex items-start hover:border-amber-500/20 transition-colors duration-500">
+                    <div>
+                        <p class="text-sm text-white font-medium mb-2">What is Missing Category Imputation?</p>
+                        <p class="text-sm text-neutral-400 font-light">Creating a <strong class="text-neutral-200">new category</strong> (e.g., <code class="text-teal-400 bg-teal-500/10 px-1 py-0.5 rounded text-xs">"Missing"</code>) for all missing values.</p>
+                    </div>
+                </div>
+
+                <div class="interview-q glass rounded-2xl p-6 flex items-start hover:border-amber-500/20 transition-colors duration-500">
+                    <div>
+                        <p class="text-sm text-white font-medium mb-2">Why can Missing Category Imputation be useful?</p>
+                        <p class="text-sm text-neutral-400 font-light">It preserves the information that the value was missing, which can itself be <strong class="text-neutral-200">predictive</strong>.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <div class="section-divider my-20"></div>
+
+        <!-- Key Takeaways -->
+        <section id="takeaways" class="pt-8 scroll-mt-24">
+            <div class="flex items-center gap-3 mb-8">
+                <div class="w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center">
+                    <i data-lucide="bookmark" class="w-5 h-5 text-amber-400"></i>
+                </div>
+                <h2 class="text-2xl sm:text-3xl font-semibold tracking-tight amber-gradient">Key Takeaways</h2>
+            </div>
+
+            <div class="space-y-4">
+                <div class="glass rounded-2xl p-6 flex items-start gap-4 hover:border-amber-500/20 transition-colors duration-500">
+                    <div class="w-8 h-8 rounded-lg bg-amber-500/10 flex items-center justify-center flex-shrink-0 mt-0.5">
+                        <span class="text-amber-400 text-sm font-bold">1</span>
+                    </div>
+                    <p class="text-sm text-neutral-300 font-light leading-relaxed">Categorical variables should <strong class="text-red-400">not</strong> use mean or median imputation.</p>
+                </div>
+
+                <div class="glass rounded-2xl p-6 flex items-start gap-4 hover:border-amber-500/20 transition-colors duration-500">
+                    <div class="w-8 h-8 rounded-lg bg-amber-500/10 flex items-center justify-center flex-shrink-0 mt-0.5">
+                        <span class="text-amber-400 text-sm font-bold">2</span>
+                    </div>
+                    <p class="text-sm text-neutral-300 font-light leading-relaxed"><strong class="text-white">Mode Imputation</strong> is the standard approach for low levels of missing categorical data.</p>
+                </div>
+
+                <div class="glass rounded-2xl p-6 flex items-start gap-4 hover:border-amber-500/20 transition-colors duration-500">
+                    <div class="w-8 h-8 rounded-lg bg-amber-500/10 flex items-center justify-center flex-shrink-0 mt-0.5">
+                        <span class="text-amber-400 text-sm font-bold">3</span>
+                    </div>
+                    <p class="text-sm text-neutral-300 font-light leading-relaxed">A <strong class="text-indigo-400">dominant category</strong> and approximately <strong class="text-indigo-400">MCAR</strong> missingness make mode imputation effective.</p>
+                </div>
+
+                <div class="glass rounded-2xl p-6 flex items-start gap-4 hover:border-amber-500/20 transition-colors duration-500">
+                    <div class="w-8 h-8 rounded-lg bg-amber-500/10 flex items-center justify-center flex-shrink-0 mt-0.5">
+                        <span class="text-amber-400 text-sm font-bold">4</span>
+                    </div>
+                    <p class="text-sm text-neutral-300 font-light leading-relaxed">Mode imputation <strong class="text-red-400">changes category frequencies</strong> and can distort distributions if overused.</p>
+                </div>
+
+                <div class="glass rounded-2xl p-6 flex items-start gap-4 hover:border-amber-500/20 transition-colors duration-500">
+                    <div class="w-8 h-8 rounded-lg bg-amber-500/10 flex items-center justify-center flex-shrink-0 mt-0.5">
+                        <span class="text-amber-400 text-sm font-bold">5</span>
+                    </div>
+                    <p class="text-sm text-neutral-300 font-light leading-relaxed"><strong class="text-white">Missing Category Imputation</strong> is preferred when missing values are <strong class="text-teal-400">numerous</strong> or <strong class="text-teal-400">informative</strong>.</p>
+                </div>
+
+                <div class="glass rounded-2xl p-6 flex items-start gap-4 hover:border-amber-500/20 transition-colors duration-500">
+                    <div class="w-8 h-8 rounded-lg bg-amber-500/10 flex items-center justify-center flex-shrink-0 mt-0.5">
+                        <span class="text-amber-400 text-sm font-bold">6</span>
+                    </div>
+                    <p class="text-sm text-neutral-300 font-light leading-relaxed">Always inspect the <strong class="text-white">percentage of missing values</strong>, <strong class="text-white">category distribution</strong>, and <strong class="text-white">target distribution</strong> before selecting an imputation strategy.</p>
+                </div>
+
+                <div class="glass rounded-2xl p-6 flex items-start gap-4 hover:border-amber-500/20 transition-colors duration-500">
+                    <div class="w-8 h-8 rounded-lg bg-amber-500/10 flex items-center justify-center flex-shrink-0 mt-0.5">
+                        <span class="text-amber-400 text-sm font-bold">7</span>
+                    </div>
+                    <p class="text-sm text-neutral-300 font-light leading-relaxed">
+                        <code class="text-indigo-400 bg-indigo-500/10 px-1.5 py-0.5 rounded text-xs">SimpleImputer(strategy='most_frequent')</code> implements mode imputation, while <code class="text-teal-400 bg-teal-500/10 px-1.5 py-0.5 rounded text-xs">SimpleImputer(strategy='constant', fill_value='Missing')</code> implements missing category imputation.
+                    </p>
+                </div>
+
+                <div class="glass rounded-2xl p-6 flex items-start gap-4 hover:border-amber-500/20 transition-colors duration-500">
+                    <div class="w-8 h-8 rounded-lg bg-amber-500/10 flex items-center justify-center flex-shrink-0 mt-0.5">
+                        <span class="text-amber-400 text-sm font-bold">8</span>
+                    </div>
+                    <p class="text-sm text-neutral-300 font-light leading-relaxed">There is <strong class="text-amber-400">no universal best method</strong> — the right technique depends on the dataset, the missingness mechanism, and <strong class="text-white">empirical validation through model performance</strong>.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Footer -->
+        <footer class="mt-32 pt-12 border-t border-white/5">
+            <div class="flex flex-col sm:flex-row items-center justify-between gap-4">
+                <div class="flex items-center gap-3">
+                    <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-indigo-500 to-purple-500 flex items-center justify-center text-sm font-semibold">37</div>
+                    <span class="text-sm text-neutral-500">Day 37 — Feature Engineering Study Notes</span>
+                </div>
+                <p class="text-xs text-neutral-600">Complete notes for study, revision, interviews, and real-world ML workflows.</p>
+            </div>
+        </footer>
+
+    </main>
+
+    <script>
+        // Initialize Lucide icons
+        lucide.createIcons();
+
+        // Scroll Progress Bar
+        window.addEventListener('scroll', () => {
+            const scrollTop = window.scrollY;
+            const docHeight = document.documentElement.scrollHeight - window.innerHeight;
+            const progress = (scrollTop / docHeight) * 100;
+            document.getElementById('scrollProgress').style.width = progress + '%';
+        });
+
+        // TOC Toggle
+        const tocToggle = document.getElementById('tocToggle');
+        const tocSidebar = document.getElementById('tocSidebar');
+        const tocClose = document.getElementById('tocClose');
+        let tocOpen = false;
+
+        tocToggle.addEventListener('click', () => {
+            tocOpen = !tocOpen;
+            tocSidebar.style.transform = tocOpen ? 'translateX(0)' : 'translateX(100%)';
+        });
+
+        tocClose.addEventListener('click', () => {
+            tocOpen = false;
+            tocSidebar.style.transform = 'translateX(100%)';
+        });
+
+        // Close TOC when clicking a link
+        document.querySelectorAll('.toc-link').forEach(link => {
+            link.addEventListener('click', () => {
+                tocOpen = false;
+                tocSidebar.style.transform = 'translateX(100%)';
+            });
+        });
+
+        // Back to Top
+        document.getElementById('backToTop').addEventListener('click', () => {
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        });
+
+        // Intersection Observer for fade-in animations
+        const observerOptions = {
+            root: null,
+            rootMargin: '0px 0px -80px 0px',
+            threshold: 0.1
+        };
+
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.style.opacity = '1';
+                    entry.target.style.transform = 'translateY(0)';
+                }
+            });
+        }, observerOptions);
+
+        // Apply to all sections
+        document.querySelectorAll('main > section, main > div').forEach(section => {
+            section.style.opacity = '0';
+            section.style.transform = 'translateY(20px)';
+            section.style.transition = 'opacity 0.6s ease-out, transform 0.6s ease-out';
+            observer.observe(section);
+        });
+
+        // Active TOC link highlighting
+        const sections = document.querySelectorAll('section[id]');
+        const tocLinksAll = document.querySelectorAll('.toc-link');
+
+        const highlightObserver = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    const id = entry.target.getAttribute('id');
+                    tocLinksAll.forEach(link => {
+                        link.classList.toggle('active', link.getAttribute('href') === '#' + id);
+                    });
+                }
+            });
+        }, { rootMargin: '-20% 0px -70% 0px' });
+
+        sections.forEach(section => highlightObserver.observe(section));
+
+        // Animate frequency bars when visible
+        const barObserver = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.querySelectorAll('.freq-bar').forEach(bar => {
+                        bar.style.width = bar.style.width; // trigger reflow
+                    });
+                }
+            });
+        }, { threshold: 0.3 });
+
+        document.querySelectorAll('.glass').forEach(el => {
+            if (el.querySelector('.freq-bar')) {
+                barObserver.observe(el);
+            }
+        });
+    </script>
+
+</body>
+</html>
