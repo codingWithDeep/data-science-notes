@@ -1,0 +1,607 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Day 35 — Handling Missing Data: Complete Case Analysis (CCA)</title>
+    <style>
+        :root {
+            --bg-color: #f3f5f7;
+            --card-bg: #ffffff;
+            --text-color: #212529;
+            --primary-color: #1a202c;
+            --accent-color: #6f42c1;
+            --code-bg: #1e293b;
+            --code-text: #d4d4d4;
+            --border-color: #e0e0e0;
+            --success-bg: #e8f5e9;
+            --success-border: #43a047;
+            --warning-bg: #fff8e1;
+            --warning-border: #f9a825;
+            --danger-bg: #ffebee;
+            --danger-border: #f44336;
+            --info-bg: #e3f2fd;
+            --info-border: #2196f3;
+        }
+
+        html, body {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            min-height: 100%;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            line-height: 1.8;
+            color: var(--text-color);
+            background-color: var(--bg-color);
+        }
+
+        .container {
+            width: 100%;
+            max-width: 100%;
+            box-sizing: border-box;
+            padding: 60px 8%;
+        }
+
+        h1, h2, h3, h4, h5 {
+            color: var(--primary-color);
+            margin-top: 2.5em;
+            margin-bottom: 1em;
+            font-weight: 700;
+        }
+
+        h1 {
+            font-size: 2.8em;
+            text-align: center;
+            border-bottom: 5px solid var(--accent-color);
+            padding-bottom: 25px;
+            margin-top: 0;
+            background: linear-gradient(to bottom, rgba(111, 66, 193, 0.1), transparent);
+        }
+
+        h2 {
+            font-size: 1.9em;
+            border-left: 6px solid var(--accent-color);
+            padding-left: 20px;
+            margin-top: 4em;
+            padding-top: 10px;
+            padding-bottom: 10px;
+            background: linear-gradient(to right, rgba(111, 66, 193, 0.05), transparent);
+        }
+
+        h3 {
+            font-size: 1.4em;
+            color: #34495e;
+            margin-top: 2.5em;
+            padding-bottom: 8px;
+            border-bottom: 2px solid #e0e0e0;
+        }
+
+        h4 {
+            font-size: 1.15em;
+            color: var(--accent-color);
+            margin-bottom: 0.8em;
+        }
+
+        p {
+            margin-bottom: 1.2em;
+            font-size: 1.05em;
+            color: #444;
+        }
+
+        strong {
+            color: var(--primary-color);
+            font-weight: 700;
+        }
+
+        ul, ol {
+            padding-left: 30px;
+            margin-bottom: 1.2em;
+        }
+
+        li {
+            margin-bottom: 0.6em;
+            font-size: 1.05em;
+            color: #555;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 2.5em 0;
+            font-size: 1em;
+            display: block;
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.06);
+            overflow: hidden;
+        }
+
+        th, td {
+            padding: 16px 24px;
+            text-align: left;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        th {
+            background: var(--primary-color);
+            color: #ffffff;
+            font-weight: 600;
+            text-transform: uppercase;
+            font-size: 0.85em;
+            letter-spacing: 0.5px;
+        }
+
+        tr:nth-child(even) {
+            background-color: #fafbfc;
+        }
+
+        tr:hover {
+            background-color: #eef2f5;
+        }
+
+        pre {
+            background-color: var(--code-bg);
+            color: var(--code-text);
+            padding: 25px;
+            border-radius: 8px;
+            overflow-x: auto;
+            font-family: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
+            font-size: 0.95em;
+            line-height: 1.7;
+            margin: 2em 0;
+            border: 1px solid #444;
+            box-shadow: inset 0 0 20px rgba(0,0,0,0.3);
+        }
+
+        code {
+            font-family: 'JetBrains Mono', 'Fuzzy', 'Consolas', monospace;
+            background: #eef2f5;
+            color: #c0392b;
+            padding: 4px 8px;
+            border-radius: 5px;
+            font-size: 0.9em;
+            border: 1px solid #dde4ea;
+        }
+
+        blockquote {
+            border-left: 6px solid var(--accent-color);
+            margin: 2em 0;
+            padding: 25px 35px;
+            background: linear-gradient(to right, #f5f3ff, #ffffff);
+            color: #444;
+            font-style: italic;
+            font-size: 1.2em;
+            border-radius: 0 10px 10px 0;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+        }
+
+        blockquote p {
+            margin: 0;
+        }
+
+        .alert {
+            padding: 22px 28px;
+            margin: 2.5em 0;
+            border-radius: 0 12px 12px 0;
+            font-size: 1.05em;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+        }
+
+        .alert-danger { background-color: var(--danger-bg); border-left: 6px solid var(--danger-border); }
+        .alert-success { background-color: var(--success-bg); border-left: 6px solid var(--success-border); }
+        .alert-warning { background-color: var(--warning-bg); border-left: 6px solid var(--warning-border); }
+        .alert-info { background-color: var(--info-bg); border-left: 6px var(--info-border); }
+
+        .tree {
+            font-family: 'JetBrains Mono', 'Fira Code', monospace;
+            background: #ffffff;
+            padding: 20px;
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+            white-space: pre;
+            line-height: 1.6;
+            margin: 1.5em 0;
+            font-size: 1em;
+            overflow-x: auto;
+            box-shadow: inset 0 0 0 0 0.0001;
+        }
+
+        .concept-card {
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            padding: 30px 35px;
+            border-radius: 16px;
+            margin: 2.5em 0;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.07);
+            border-left: 5px solid var(--accent-color);
+            transition: transform 0.2s ease;
+        }
+
+        .concept-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 12px 30px rgba(0,0,0,0.1);
+        }
+
+        .method-container {
+            display: flex;
+            gap: 30px;
+            margin: 3em 0;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        .method-box {
+            flex: 1;
+            min-width: 280px;
+            background: var(--card-bg);
+            padding: 30px;
+            border-radius: 16px;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.07);
+            border-top: 5px solid transparent;
+        }
+
+        .method-box.method-1 { border-top-color: var(--success-border); }
+        .method-box.method-2 { border-top-color: var(--info-border); }
+
+        .method-box h3 {
+            text-align: center;
+            margin-top: 0;
+            font-size: 1.3em;
+            color: var(--primary-color);
+        }
+
+        .method-box p {
+            text-align: center;
+            color: #666;
+            margin-bottom: 0;
+        }
+
+        .pros-cons-container {
+            display: flex;
+            gap: 30px;
+            margin-top: 2em;
+            flex-wrap: wrap;
+        }
+
+        .pros-cons-box {
+            flex: 1;
+            min-width: 280px;
+            background: var(--card-bg);
+            padding: 25px;
+            border-radius: 16px;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.07);
+        }
+
+        .pros-box.pros { border-top: 5px solid var(--success-border); }
+        .cons-box.cons { border-top: 5px solid var(--danger-border); }
+
+        .pros-cons-box h3 {
+            font-size: 1.2em;
+            margin-top: 0;
+            font-weight: 700;
+        }
+
+        .pros-cons-box ul {
+            padding-left: 20px;
+            margin: 0;
+            color: #555;
+        }
+
+        .pros-box li::marker { color: var(--success-border); font-weight: bold; }
+        .cons-box li::marker { color: var(--danger-border); font-weight: bold; }
+
+        .dataset-card {
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            padding: 30px;
+            border-radius: 16px;
+            margin: 3em 0;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.07);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .dataset-card::before {
+            content: "DATASET USED IN LECTURE";
+            position: absolute;
+            top: 0;
+            right: 0;
+            background: var(--primary-color);
+            color: white;
+            font-size: 0.8em;
+            letter-spacing: 1px;
+            padding: 8px 15px;
+            border-bottom-left-radius: 16px;
+            border-top-right-radius: 16px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        .dataset-card > *:not(:first-child) {
+            padding-top: 15px;
+        }
+
+        .summary-box {
+            background: linear-gradient(135deg, #f5f7fa 0%, #e8f4f8 100%);
+            border: 2px solid var(--accent-color);
+            padding: 40px 45px;
+            border-radius: 16px;
+            margin-top: 4em;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.05);
+        }
+
+        .summary-box h2 {
+            border-left: none;
+            padding-left: 0;
+            margin-top: 0;
+            color: var(--primary-color);
+            text-align: center;
+        }
+
+        .summary-box ul {
+            padding-left: 20px;
+            color: #444;
+        }
+
+        .summary-box li {
+            margin-bottom: 1em;
+        }
+
+        .next-topic {
+            margin-top: 4em;
+            text-align: center;
+            padding: 35px 40px;
+            background: linear-gradient(135deg, var(--primary-color), #2c3e50);
+            color: white;
+            border-radius: 16px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+        }
+
+        .next-topic h2 {
+            border: none;
+            margin: 0;
+            color: white;
+        }
+
+        @media (max-width: 768px) {
+            .container { padding: 30px 5%; }
+            h1 { font-size: 2.2em; }
+            h2 { font-size: 1.5em; }
+            th, td { padding: 12px 15px; }
+            .method-container, .pros-cons-container { flex-direction: column; }
+            .method-box, .pros-cons-box { min-width: 100%; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+
+    <h1>Day 35 — Handling Missing Data: Complete Case Analysis (CCA)</h1>
+    <p><strong>Feature Engineering (Complete Notes for Data Science Students)</strong></p>
+
+    <h2>Introduction</h2>
+    <p>In this lecture, we begin one of the most important topics in <strong>Feature Engineering</strong>:</p>
+    <blockquote>
+        <strong>Handling Missing Data (Missing Values)</strong>
+    </blockquote>
+    <p>Almost every real-world dataset contains missing values. Before training any machine learning model, a data scientist must decide how to deal with them.</p>
+
+    <h2>Why is Handling Missing Data Important?</h2>
+    <p>Most machine learning algorithms <strong>cannot handle missing values (NaN)</strong>. If you train a model using data containing missing values, many algorithms will throw an error, some models refuse to train, and others may produce poor results.</p>
+    <div class="alert alert-danger">
+        <strong>Handling missing values is one of the primary responsibilities of a Data Scientist before model training.</strong>
+    </div>
+
+    <h2>Two Ways to Handle Missing Data</h2>
+    <div class="method-container">
+        <div class="method-box method-1">
+            <h3>Method 1: Remove</h3>
+            <p>Instead of filling missing values, simply remove the rows (or columns) containing missing values. <em>(Today's topic)</em></p>
+        </div>
+        <div class="method-box method-2">
+            <h3>Method 2: Impute</h3>
+            <p>Instead of deleting rows, replace missing values with meaningful values. <em>(Covered in next lectures)</em></p>
+        </div>
+    </div>
+
+    <h2>Types of Imputation</h2>
+    <div class="concept-card">
+        <h3>1. Univariate Imputation</h3>
+        <p>Handle one column independently. Different techniques are used depending on the data type:</p>
+        <ul>
+            <li><strong>Numerical:</strong> Mean, Median, Random Value, End of Distribution Imputation.</li>
+            <li><strong>Categorical:</strong> Mode (Most Frequent Value), "Missing".</li>
+        </ul>
+        <div class="tree">Univariate Imputation
+│
+├── Numerical Columns
+│   ├── Mean Imputation
+│   ├── Median Imputation
+│   ├── Random Value Imputation
+│   └── End of Distribution Imputation
+│
+└── Categorical Columns
+    ├── Mode (Most Frequent Value)
+    └── Replace with "Missing"</div>
+        <h3>2. Multivariate Imputation</h3>
+        <p>Multiple columns are used together to predict the missing value using other features. E.g., <strong>KNN Imputer</strong> and <strong>Iterative Imputer</strong>.</p>
+    </div>
+
+    <h2>Roadmap of Missing Data Lectures</h2>
+    <div class="tree">Missing Data Lectures Roadmap
+│
+├── Day 35 → Complete Case Analysis (Today)
+│
+├── Day 36 → Simple Imputer
+│
+├── Day 37 → KNN Imputer
+│
+├── Day 38 → Iterative Imputer
+│
+└── Day 39 → Missing Indicator</div>
+
+    <h2>Today's Topic: Complete Case Analysis (CCA)</h2>
+    <div class="concept-card">
+        <h3>Definition of Complete Case Analysis</h3>
+        <p><strong>Complete Case Analysis means: Remove every row that contains at least one missing value.</strong></p>
+        <p><strong>Example:</strong></p>
+        <table>
+            <thead>
+                <tr><th>Age</th><th>Salary</th><th>Experience</th><th>Target</th></tr>
+            </thead>
+            <tbody>
+                <tr><td>25</td><td>50000</td><td>3</td><td>Yes</td></tr>
+                <td><strong>NaN</strong></td><td>40000</td><td>2</td><td>Yes</td></tr>
+                <td>40</td><td>70000</td><td>8</td><td>No</td></tr>
+            </tbody>
+        </table>
+        <p>The second row contains a missing value. After CCA, the entire second row is removed.</p>
+        <p><strong>Why is it called Complete Case Analysis?</strong> After deleting incomplete rows, only rows with complete information remain. The dataset contains only <strong>"complete cases"</strong>.</p>
+    </div>
+
+    <h2>The Assumption Behind CCA: MCAR</h2>
+    <div class="concept-card">
+        <h3>Crucial Assumption ⚠️</h3>
+        <p>CCA should <strong>only</strong> be applied when data is <strong>Missing Completely At Random (MCAR)</strong>. Missingness is purely random; it does not depend on any feature, target, or hidden variable. If missingness has a pattern (e.g., only females missing), CCA is <strong>wrong</strong> to use because it introduces bias.</p>
+    </div>
+
+    <h2>Advantages of Complete Case Analysis</h2>
+    <div class="pros-cons-container">
+        <div class="pros-box pros">
+            <h3>Pros</h3>
+            <ul>
+                <li><strong>Very Easy:</strong> Just one line of code: <code>df.dropna()</code>.</li>
+                <li><strong>No Data Manipulation:</strong> No need to calculate mean, median, or mode.</li>
+                <strong>Distribution Remains Similar:</strong> Statistical distribution stays almost unchanged if missingness is truly random.</li>
+            </ul>
+        </div>
+        <div class="cons-box cons">
+            <h3>Cons</h3>
+            <ul>
+                <li><strong>Data Loss:</strong> Biggest drawback. Deleting rows means losing valuable information.</li>
+                <strong>Distribution May Change:</strong> If missingness is not MCAR, removing rows changes the distribution and makes the model biased.</li>
+                <strong>Production Problem:</strong> If trained on clean data, the model fails when new missing data arrives.</li>
+            </ul>
+        </div>
+    </div>
+
+    <div class="alert alert-warning">
+        <strong>When Should You Use CCA?</strong><br>
+        <strong>Condition 1:</strong> Data must be Missing Completely At Random (MCAR).<br>
+        <strong>Condition 2:</strong> Missing percentage should be <strong>less than ~5%</strong>.<br>
+        <strong>High Missing %:</strong> (e.g., 90-98%) ➡ Remove the <strong>column</strong> itself.
+    </div>
+
+    <h2>What if Missing Percentage is Very High?</h2>
+    <div class="alert alert-info">
+        <strong>Rule of Thumb:</strong><br>
+        Small missing percentage ➡ Remove <strong>rows</strong>.<br>
+        Huge missing percentage ➡ Remove the <strong>column</strong> itself.
+    </div>
+
+    <h2>Practical Example: HR Analytics Dataset</h2>
+    <div class="dataset-card">
+        <p>The lecture uses the <strong>HR Analytics Job Change Dataset</strong> (Target: 0 = Not hired, 1 = Hired).</p>
+        
+        <h4>High Missing % (Not suitable for CCA)</h4>
+        <table>
+            <thead>
+                <tr><th>Column</th><th style="text-align:right;">Missing %</th></tr>
+            </thead>
+            <tbody>
+                <tr><td>Gender</td><td style="text-align:right;">~23%</td></tr>
+                <td>Major Discipline</td><td style="text-align:right;">Very High</td></tr>
+                <td>Company Size</td><td style="text-align:right;">~31%</td></tr>
+                <td>Company Type</td><td style="text-align:right;">~32%</td></tr>
+            </tbody>
+        </table>
+        
+        <h4>Low Missing % (Suitable for CCA)</h4>
+        <table>
+            <thead>
+                <tr><th>Column</th><th style="text-align:right;">Missing %</th></tr>
+            </thead>
+            <tbody>
+                <tr><td>City Development Index</td><td style="text-align:right;">~2%</td></tr>
+                <td>Enrolled University</td><td style="text-align:right;">~2%</td></tr>
+                <td>Education Level</td><td style="text-align:right;">~2%</td></tr>
+                <tr><td>Experience</td><td style="text-align:right;">0.3%</td></tr>
+                <td>Training Hours</td><td style="text-align:right;">~4%</td></tr>
+            </tbody>
+        </table>
+        <p>Because these are 5% or less, CCA is acceptable here.</p>
+    </div>
+
+    <h2>Selecting Columns Automatically</h2>
+    <p>Instead of checking manually, identify low-missing columns automatically:</p>
+    <pre><code>cols = [col for col in df.columns if df[col].isnull().mean() < 0.05]</code></pre>
+
+    <h2>Removing Rows</h2>
+    <pre><code>new_df = df.dropna(subset=cols)</code></pre>
+    <p>This removes rows having missing values only in the selected low-missing columns.</p>
+
+    <h2>Checking Data Loss</h2>
+    <pre><code>print(f"Data Retained: {len(new_df) / len(df) * 100:.2f}%")</code></pre>
+    <p>If around 94% of data is retained, CCA is acceptable.</p>
+
+    <h2>Verifying Numerical Columns</h2>
+    <pre><code>import matplotlib.pyplot as plt
+
+plt.hist(df["training_hours"], bins=30, alpha=0.5, label="Original")
+plt.hist(new_df["training_hours"], bins=30, alpha=0.5, label="After CCA")
+plt.legend()
+plt.show()</code></pre>
+
+    <h2>Verifying Categorical Columns</h2>
+    <p>Compare category proportions before and after CCA using <code>value_counts(normalize=True)</code>.</p>
+    <table>
+        <thead>
+            <tr><th>Category</th><th style="text-align:center;">Before</th><th style="text-align:center;">After</th></tr>
+        </thead>
+        <tbody>
+            <tr><td>No Enrollment</td><td style="text-align:center;">72.8%</td><td style="text-align:center;">72.7%</td></tr>
+            <tr><td>Full-Time</td><td style="text-align:center;">19.4%</td><td style="text-align:center;">19.3%</td></tr>
+            <tr><td>Part-Time</td><td style="text-align:center;">6.0%</td><td style="text-align:center;">6.0%</td></tr>
+        </tbody>
+    </table>
+    <p>Identical proportions indicate CCA did not distort the categorical distribution.</p>
+
+    <div class="alert alert-success">
+        <strong>Best Practices Before Applying CCA:</strong>
+        <ul>
+            <li>✅ Is the missingness likely MCAR?</li>
+            <li>✅ Is the missing percentage <5%?</li>
+            <li>✅ How many rows will remain?</li>
+            <li>✅ Do numerical distributions remain similar?</li>
+            <li>✅ Do categorical proportions remain similar?</li>
+        </ul>
+    </div>
+
+    <div class="summary-box">
+        <h2>Key Takeaways</h2>
+        <ul>
+            <li>Most ML algorithms cannot directly handle missing values.</li>
+            <li>Two strategies: <strong>Remove</strong> missing data or <strong>Impute</strong> it.</li>
+            <strong>CCA</strong> (Complete Case Analysis) removes every row with at least one missing value in selected columns.</li>
+            <strong>Use CCA only when:</strong> Missingness is <strong>MCAR</strong> AND percentage <strong>< 5%</strong>.</li>
+            <strong>Advantages:</strong> Simple, fast, preserves distribution if MCAR.</li>
+            <strong>Disadvantages:</strong> Huge data loss, bias if not MCAR, breaks in production.</li>
+            <strong>High missing %:</strong> Drop the <strong>column</strong> instead of rows.</li>
+            <strong>Always verify</strong> histograms/KDE (numerical) and category proportions (categorical) before and after CCA.</li>
+            <strong>In practice:</strong> Imputation is preferred over CCA for robust production models.</li>
+        </ul>
+    </div>
+
+    <div class="next-topic">
+        <h2>What's Next?</h2>
+        <p>The next lecture covers <strong>Simple Imputer</strong>, where missing values are filled instead of removed using: Mean, Median, Most Frequent, and Constant Value imputation.</p>
+    </div>
+
+</div>
+
+</body>
+</html>
