@@ -1,0 +1,1691 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Day 36 – Handling Missing Numerical Data</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['Inter', 'sans-serif'] },
+                }
+            }
+        }
+    </script>
+    <style>
+        body { background: #000; font-family: 'Inter', sans-serif; }
+
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(30px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .animate-in { animation: fadeInUp 0.8s ease-out forwards; opacity: 0; }
+        .delay-1 { animation-delay: 0.2s; }
+        .delay-2 { animation-delay: 0.4s; }
+        .delay-3 { animation-delay: 0.6s; }
+
+        @keyframes pulse-glow {
+            0%, 100% { box-shadow: 0 0 20px rgba(99,102,241,0.2); }
+            50% { box-shadow: 0 0 40px rgba(99,102,241,0.4); }
+        }
+        .glow-card:hover { animation: pulse-glow 2s ease-in-out infinite; }
+
+        @keyframes shimmer {
+            0% { background-position: -200% 0; }
+            100% { background-position: 200% 0; }
+        }
+        .shimmer-border {
+            background: linear-gradient(90deg, transparent, rgba(99,102,241,0.3), transparent);
+            background-size: 200% 100%;
+            animation: shimmer 3s linear infinite;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-10px); }
+        }
+        .float-anim { animation: float 4s ease-in-out infinite; }
+
+        .glass {
+            background: rgba(22, 22, 22, 0.6);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255,255,255,0.08);
+        }
+        .glass-light {
+            background: rgba(255,255,255,0.03);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255,255,255,0.06);
+        }
+
+        .gradient-text {
+            background: linear-gradient(to right, #FFFFFF, #FFFFFF, #A3A3A3);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        .accent-gradient {
+            background: linear-gradient(135deg, #6366F1, #8B5CF6);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        .green-gradient {
+            background: linear-gradient(135deg, #10B981, #4ADE80);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        .red-gradient {
+            background: linear-gradient(135deg, #EF4444, #F87171);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        .amber-gradient {
+            background: linear-gradient(135deg, #F59E0B, #FBBF24);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .code-block {
+            background: rgba(0,0,0,0.6);
+            border: 1px solid rgba(255,255,255,0.08);
+            border-radius: 12px;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            line-height: 1.7;
+            overflow-x: auto;
+        }
+        .code-block .keyword { color: #C084FC; }
+        .code-block .string { color: #4ADE80; }
+        .code-block .comment { color: #737373; }
+        .code-block .func { color: #60A5FA; }
+        .code-block .number { color: #FBBF24; }
+
+        .table-container {
+            background: rgba(255,255,255,0.02);
+            border: 1px solid rgba(255,255,255,0.06);
+            border-radius: 16px;
+            overflow: hidden;
+        }
+        .table-container table { width: 100%; border-collapse: collapse; }
+        .table-container th {
+            background: rgba(99,102,241,0.1);
+            padding: 12px 20px;
+            text-align: left;
+            font-weight: 500;
+            font-size: 13px;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: #A3A3A3;
+            border-bottom: 1px solid rgba(255,255,255,0.06);
+        }
+        .table-container td {
+            padding: 12px 20px;
+            border-bottom: 1px solid rgba(255,255,255,0.04);
+            font-size: 14px;
+            color: #E5E5E5;
+        }
+        .table-container tr:last-child td { border-bottom: none; }
+        .table-container tr:hover td { background: rgba(255,255,255,0.02); }
+        .nan-cell { color: #EF4444; font-style: italic; }
+
+        .dist-normal {
+            width: 200px; height: 80px;
+            border-left: 2px solid #525252;
+            border-bottom: 2px solid #525252;
+            position: relative;
+            margin: 0 auto;
+        }
+        .dist-skewed {
+            width: 200px; height: 80px;
+            border-left: 2px solid #525252;
+            border-bottom: 2px solid #525252;
+            position: relative;
+            margin: 0 auto;
+        }
+
+        .toc-link {
+            transition: all 0.3s ease;
+            border-left: 2px solid transparent;
+            padding-left: 12px;
+        }
+        .toc-link:hover {
+            color: #818CF8;
+            border-left-color: #6366F1;
+            padding-left: 16px;
+        }
+        .toc-link.active {
+            color: #818CF8;
+            border-left-color: #6366F1;
+        }
+
+        .check-card {
+            position: relative;
+            overflow: hidden;
+        }
+        .check-card::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0;
+            width: 4px; height: 100%;
+            border-radius: 4px 0 0 4px;
+        }
+        .check-card.check-1::before { background: #6366F1; }
+        .check-card.check-2::before { background: #8B5CF6; }
+        .check-card.check-3::before { background: #A78BFA; }
+        .check-card.check-4::before { background: #C4B5FD; }
+
+        .section-divider {
+            height: 1px;
+            background: linear-gradient(to right, transparent, rgba(99,102,241,0.3), transparent);
+        }
+
+        .scroll-progress {
+            position: fixed;
+            top: 0; left: 0;
+            height: 3px;
+            background: linear-gradient(to right, #6366F1, #8B5CF6);
+            z-index: 9999;
+            transition: width 0.1s linear;
+        }
+
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: #000; }
+        ::-webkit-scrollbar-thumb { background: #333; border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: #555; }
+
+        .nav-blur {
+            background: rgba(0,0,0,0.7);
+            backdrop-filter: blur(12px);
+            border-bottom: 1px solid rgba(255,255,255,0.06);
+        }
+
+        .warning-box {
+            background: rgba(245,158,11,0.08);
+            border: 1px solid rgba(245,158,11,0.2);
+            border-radius: 12px;
+        }
+        .danger-box {
+            background: rgba(239,68,68,0.08);
+            border: 1px solid rgba(239,68,68,0.2);
+            border-radius: 12px;
+        }
+        .success-box {
+            background: rgba(16,185,129,0.08);
+            border: 1px solid rgba(16,185,129,0.2);
+            border-radius: 12px;
+        }
+        .info-box {
+            background: rgba(99,102,241,0.08);
+            border: 1px solid rgba(99,102,241,0.2);
+            border-radius: 12px;
+        }
+    </style>
+</head>
+<body class="text-white antialiased">
+
+    <!-- Scroll Progress -->
+    <div class="scroll-progress" id="scrollProgress"></div>
+
+    <!-- Navigation -->
+    <nav class="fixed top-0 left-0 right-0 z-50 nav-blur h-16 flex items-center px-6">
+        <div class="max-w-7xl mx-auto w-full flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-indigo-500 to-purple-500 flex items-center justify-center text-sm font-semibold">36</div>
+                <span class="text-sm font-medium text-neutral-300 hidden sm:block">Handling Missing Numerical Data</span>
+            </div>
+            <div class="flex items-center gap-4">
+                <button id="tocToggle" class="flex items-center gap-2 text-sm text-neutral-400 hover:text-white transition-colors px-3 py-1.5 rounded-lg hover:bg-white/5">
+                    <i data-lucide="list" class="w-4 h-4"></i>
+                    <span class="hidden sm:inline">Contents</span>
+                </button>
+                <button id="backToTop" class="flex items-center gap-2 text-sm text-neutral-400 hover:text-white transition-colors px-3 py-1.5 rounded-lg hover:bg-white/5">
+                    <i data-lucide="arrow-up" class="w-4 h-4"></i>
+                    <span class="hidden sm:inline">Top</span>
+                </button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- TOC Sidebar -->
+    <div id="tocSidebar" class="fixed top-16 right-0 w-72 h-[calc(100vh-4rem)] z-40 glass transform translate-x-full transition-transform duration-300 overflow-y-auto p-6">
+        <div class="flex items-center justify-between mb-6">
+            <h3 class="text-sm font-semibold text-neutral-300 uppercase tracking-wider">Table of Contents</h3>
+            <button id="tocClose" class="text-neutral-500 hover:text-white transition-colors">
+                <i data-lucide="x" class="w-4 h-4"></i>
+            </button>
+        </div>
+        <div class="space-y-1" id="tocLinks">
+            <a href="#intro" class="toc-link block text-sm text-neutral-500 py-1.5">Introduction</a>
+            <a href="#types" class="toc-link block text-sm text-neutral-500 py-1.5">Types of Imputation</a>
+            <a href="#univariate" class="toc-link block text-sm text-neutral-500 py-1.5 pl-6">Univariate</a>
+            <a href="#multivariate" class="toc-link block text-sm text-neutral-500 py-1.5 pl-6">Multivariate</a>
+            <a href="#today" class="toc-link block text-sm text-neutral-500 py-1.5">Today's Lecture</a>
+            <a href="#mean-median" class="toc-link block text-sm text-neutral-500 py-1.5">Mean / Median Imputation</a>
+            <a href="#mean-vs-median" class="toc-link block text-sm text-neutral-500 py-1.5 pl-6">Mean vs Median</a>
+            <a href="#advantages-mm" class="toc-link block text-sm text-neutral-500 py-1.5">Advantages</a>
+            <a href="#disadvantages-mm" class="toc-link block text-sm text-neutral-500 py-1.5">Disadvantages</a>
+            <a href="#when-mm" class="toc-link block text-sm text-neutral-500 py-1.5">When to Use</a>
+            <a href="#practical" class="toc-link block text-sm text-neutral-500 py-1.5">Practical Example</a>
+            <a href="#train-test" class="toc-link block text-sm text-neutral-500 py-1.5">Train-Test Split</a>
+            <a href="#coding" class="toc-link block text-sm text-neutral-500 py-1.5">Coding Without SKlearn</a>
+            <a href="#checks" class="toc-link block text-sm text-neutral-500 py-1.5">Post-Imputation Checks</a>
+            <a href="#conclusion-practical" class="toc-link block text-sm text-neutral-500 py-1.5">Practical Conclusion</a>
+            <a href="#sklearn" class="toc-link block text-sm text-neutral-500 py-1.5">Scikit-Learn SimpleImputer</a>
+            <a href="#col-transformer" class="toc-link block text-sm text-neutral-500 py-1.5">ColumnTransformer</a>
+            <a href="#data-leakage" class="toc-link block text-sm text-neutral-500 py-1.5">Data Leakage Rule</a>
+            <a href="#arbitrary" class="toc-link block text-sm text-neutral-500 py-1.5">Arbitrary Value Imputation</a>
+            <a href="#end-dist" class="toc-link block text-sm text-neutral-500 py-1.5">End of Distribution</a>
+            <a href="#random-sample" class="toc-link block text-sm text-neutral-500 py-1.5">Random Sample (Preview)</a>
+            <a href="#choosing" class="toc-link block text-sm text-neutral-500 py-1.5">Choosing Best Technique</a>
+            <a href="#takeaways" class="toc-link block text-sm text-neutral-500 py-1.5">Key Takeaways</a>
+        </div>
+    </div>
+
+    <!-- Hero Section -->
+    <section class="relative min-h-screen flex items-center justify-center overflow-hidden pt-16">
+        <!-- Background Effects -->
+        <div class="absolute inset-0">
+            <div class="absolute top-1/4 left-1/4 w-[500px] h-[500px] bg-indigo-500/10 rounded-full blur-[120px]"></div>
+            <div class="absolute bottom-1/4 right-1/4 w-[400px] h-[400px] bg-purple-500/8 rounded-full blur-[100px]"></div>
+        </div>
+        <div class="absolute inset-0" style="background-image: linear-gradient(to right, rgba(255,255,255,0.03) 1px, transparent 1px), linear-gradient(to bottom, rgba(255,255,255,0.03) 1px, transparent 1px); background-size: 40px 40px; mask-image: radial-gradient(ellipse at center, black 30%, transparent 70%);"></div>
+
+        <div class="relative z-10 max-w-5xl mx-auto px-6 text-center">
+            <div class="animate-in">
+                <div class="inline-flex items-center gap-2 px-4 py-2 rounded-full glass-light text-xs font-medium text-indigo-400 mb-8 tracking-wide uppercase">
+                    <i data-lucide="book-open" class="w-3.5 h-3.5"></i>
+                    Day 36 — Data Science Notes
+                </div>
+            </div>
+
+            <h1 class="animate-in delay-1 text-4xl sm:text-5xl lg:text-6xl font-semibold tracking-tight leading-[1.1] mb-6">
+                <span class="gradient-text">Handling Missing</span><br>
+                <span class="accent-gradient">Numerical Data</span>
+            </h1>
+
+            <p class="animate-in delay-2 text-lg sm:text-xl font-light text-neutral-400 max-w-2xl mx-auto leading-relaxed mb-10">
+                Univariate Imputation — Part 1<br>
+                <span class="text-neutral-500 text-base">Mean · Median · Arbitrary Value · End of Distribution</span>
+            </p>
+
+            <div class="animate-in delay-3 flex flex-wrap items-center justify-center gap-4">
+                <a href="#intro" class="inline-flex items-center gap-2 px-8 py-3.5 bg-indigo-600 hover:bg-indigo-700 rounded-xl text-sm font-medium transition-all duration-300 hover:scale-105 hover:shadow-lg hover:shadow-indigo-500/20">
+                    Start Reading
+                    <i data-lucide="chevron-down" class="w-4 h-4"></i>
+                </a>
+                <a href="#takeaways" class="inline-flex items-center gap-2 px-8 py-3.5 glass rounded-xl text-sm font-medium text-neutral-300 hover:text-white hover:border-white/20 transition-all duration-300">
+                    Key Takeaways
+                    <i data-lucide="bookmark" class="w-4 h-4"></i>
+                </a>
+            </div>
+
+            <!-- Quick Stats -->
+            <div class="animate-in delay-3 grid grid-cols-2 sm:grid-cols-4 gap-4 mt-16 max-w-2xl mx-auto">
+                <div class="glass-light rounded-xl p-4 text-center">
+                    <div class="text-2xl font-semibold text-indigo-400">4</div>
+                    <div class="text-xs text-neutral-500 mt-1">Techniques</div>
+                </div>
+                <div class="glass-light rounded-xl p-4 text-center">
+                    <div class="text-2xl font-semibold text-purple-400">4</div>
+                    <div class="text-xs text-neutral-500 mt-1">Post-Checks</div>
+                </div>
+                <div class="glass-light rounded-xl p-4 text-center">
+                    <div class="text-2xl font-semibold text-green-400">2</div>
+                    <div class="text-xs text-neutral-500 mt-1">Categories</div>
+                </div>
+                <div class="glass-light rounded-xl p-4 text-center">
+                    <div class="text-2xl font-semibold text-amber-400">∞</div>
+                    <div class="text-xs text-neutral-500 mt-1">Insights</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Scroll Indicator -->
+        <div class="absolute bottom-8 left-1/2 -translate-x-1/2 float-anim">
+            <div class="w-6 h-10 rounded-full border-2 border-neutral-700 flex items-start justify-center p-1.5">
+                <div class="w-1 h-2.5 bg-neutral-500 rounded-full animate-bounce"></div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Main Content -->
+    <main class="max-w-5xl mx-auto px-6 pb-32">
+
+        <!-- Introduction -->
+        <section id="intro" class="pt-32 scroll-mt-24">
+            <div class="flex items-center gap-3 mb-6">
+                <div class="w-10 h-10 rounded-xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center">
+                    <i data-lucide="file-text" class="w-5 h-5 text-indigo-400"></i>
+                </div>
+                <h2 class="text-2xl sm:text-3xl font-semibold tracking-tight gradient-text">Introduction</h2>
+            </div>
+
+            <div class="glass rounded-2xl p-8 space-y-5">
+                <p class="text-neutral-300 font-light leading-relaxed">
+                    In the previous lecture, we learned that if a dataset contains missing values, one option is to <strong class="text-white font-medium">delete the rows</strong> containing missing data. However, deleting data is not always a good idea because it <strong class="text-white font-medium">reduces the dataset size</strong> and may <strong class="text-white font-medium">remove useful information</strong>.
+                </p>
+                <p class="text-neutral-300 font-light leading-relaxed">
+                    In this lecture, we begin studying <strong class="text-white font-medium">how to fill (impute) missing values</strong> instead of deleting them.
+                </p>
+                <div class="info-box p-5 flex items-start gap-3">
+                    <i data-lucide="info" class="w-5 h-5 text-indigo-400 mt-0.5 flex-shrink-0"></i>
+                    <div>
+                        <p class="text-sm text-indigo-300 font-medium mb-1">Important Scope</p>
+                        <p class="text-sm text-neutral-400">Today's lecture is completely focused on <strong class="text-neutral-200">Numerical Features</strong>. Categorical missing data will be discussed separately.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <div class="section-divider my-20"></div>
+
+        <!-- Types of Missing Value Imputation -->
+        <section id="types" class="pt-8 scroll-mt-24">
+            <div class="flex items-center gap-3 mb-6">
+                <div class="w-10 h-10 rounded-xl bg-purple-500/10 border border-purple-500/20 flex items-center justify-center">
+                    <i data-lucide="git-branch" class="w-5 h-5 text-purple-400"></i>
+                </div>
+                <h2 class="text-2xl sm:text-3xl font-semibold tracking-tight gradient-text">Types of Missing Value Imputation</h2>
+            </div>
+
+            <p class="text-neutral-400 font-light mb-10 leading-relaxed">There are two broad categories of imputation:</p>
+
+            <!-- Univariate -->
+            <div id="univariate" class="scroll-mt-24 mb-8">
+                <div class="glass rounded-2xl p-8 glow-card transition-all duration-500">
+                    <div class="flex items-center gap-3 mb-2">
+                        <span class="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-indigo-500/20 text-indigo-400 text-sm font-semibold">1</span>
+                        <h3 class="text-xl font-semibold text-white">Univariate Imputation</h3>
+                    </div>
+                    <p class="text-neutral-400 font-light leading-relaxed mb-6">
+                        Only the values of <strong class="text-white font-medium">the same feature (column)</strong> are used to fill missing values.
+                    </p>
+
+                    <div class="table-container mb-6">
+                        <table>
+                            <thead>
+                                <tr><th>Age</th></tr>
+                            </thead>
+                            <tbody>
+                                <tr><td>20</td></tr>
+                                <tr><td>25</td></tr>
+                                <tr><td class="nan-cell">NaN</td></tr>
+                                <tr><td>30</td></tr>
+                                <tr><td>35</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <p class="text-sm text-neutral-400 mb-4">The missing <code class="text-indigo-400 bg-indigo-500/10 px-1.5 py-0.5 rounded">Age</code> is filled using only the Age column.</p>
+
+                    <div class="glass-light rounded-xl p-5">
+                        <p class="text-xs text-neutral-500 uppercase tracking-wider font-medium mb-3">Possible Methods</p>
+                        <div class="flex flex-wrap gap-2">
+                            <span class="px-3 py-1.5 rounded-lg bg-indigo-500/10 text-indigo-400 text-sm border border-indigo-500/20">Mean</span>
+                            <span class="px-3 py-1.5 rounded-lg bg-purple-500/10 text-purple-400 text-sm border border-purple-500/20">Median</span>
+                            <span class="px-3 py-1.5 rounded-lg bg-violet-500/10 text-violet-400 text-sm border border-violet-500/20">Mode</span>
+                            <span class="px-3 py-1.5 rounded-lg bg-fuchsia-500/10 text-fuchsia-400 text-sm border border-fuchsia-500/20">Random Sample</span>
+                        </div>
+                        <p class="text-sm text-neutral-500 mt-3">No other columns are used.</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Multivariate -->
+            <div id="multivariate" class="scroll-mt-24">
+                <div class="glass rounded-2xl p-8 glow-card transition-all duration-500">
+                    <div class="flex items-center gap-3 mb-2">
+                        <span class="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-purple-500/20 text-purple-400 text-sm font-semibold">2</span>
+                        <h3 class="text-xl font-semibold text-white">Multivariate Imputation</h3>
+                    </div>
+                    <p class="text-neutral-400 font-light leading-relaxed mb-6">
+                        Missing values are filled using <strong class="text-white font-medium">other columns</strong>.
+                    </p>
+
+                    <div class="table-container mb-6">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Age</th>
+                                    <th>Salary</th>
+                                    <th>Experience</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr><td>25</td><td>50,000</td><td>2</td></tr>
+                                <tr><td>30</td><td>60,000</td><td>5</td></tr>
+                                <tr><td class="nan-cell">NaN</td><td>70,000</td><td>7</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <p class="text-sm text-neutral-400 mb-4"><code class="text-purple-400 bg-purple-500/10 px-1.5 py-0.5 rounded">Age</code> may be predicted using <code class="text-purple-400 bg-purple-500/10 px-1.5 py-0.5 rounded">Salary</code> and <code class="text-purple-400 bg-purple-500/10 px-1.5 py-0.5 rounded">Experience</code>.</p>
+
+                    <div class="glass-light rounded-xl p-5">
+                        <p class="text-xs text-neutral-500 uppercase tracking-wider font-medium mb-3">Examples</p>
+                        <div class="flex flex-wrap gap-2">
+                            <span class="px-3 py-1.5 rounded-lg bg-purple-500/10 text-purple-400 text-sm border border-purple-500/20">KNN Imputer</span>
+                            <span class="px-3 py-1.5 rounded-lg bg-violet-500/10 text-violet-400 text-sm border border-violet-500/20">Iterative Imputer (MICE)</span>
+                        </div>
+                        <p class="text-sm text-neutral-500 mt-3">These are more advanced techniques and will be discussed later.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <div class="section-divider my-20"></div>
+
+        <!-- Today's Lecture Covers -->
+        <section id="today" class="pt-8 scroll-mt-24">
+            <div class="flex items-center gap-3 mb-6">
+                <div class="w-10 h-10 rounded-xl bg-green-500/10 border border-green-500/20 flex items-center justify-center">
+                    <i data-lucide="target" class="w-5 h-5 text-green-400"></i>
+                </div>
+                <h2 class="text-2xl sm:text-3xl font-semibold tracking-tight gradient-text">Today's Lecture Covers</h2>
+            </div>
+
+            <div class="glass rounded-2xl p-8">
+                <p class="text-neutral-300 font-light leading-relaxed mb-6">
+                    Only <strong class="text-white font-medium">Numerical Data</strong> using <strong class="text-white font-medium">Univariate Imputation</strong>.
+                </p>
+
+                <p class="text-xs text-neutral-500 uppercase tracking-wider font-medium mb-4">Four techniques are introduced:</p>
+
+                <div class="space-y-3 mb-8">
+                    <div class="flex items-center gap-4 p-4 rounded-xl glass-light">
+                        <span class="w-8 h-8 rounded-lg bg-indigo-500/15 flex items-center justify-center text-indigo-400 text-sm font-semibold">1</span>
+                        <span class="text-neutral-200">Mean / Median Imputation</span>
+                    </div>
+                    <div class="flex items-center gap-4 p-4 rounded-xl glass-light">
+                        <span class="w-8 h-8 rounded-lg bg-purple-500/15 flex items-center justify-center text-purple-400 text-sm font-semibold">2</span>
+                        <span class="text-neutral-200">Arbitrary Value Imputation</span>
+                    </div>
+                    <div class="flex items-center gap-4 p-4 rounded-xl glass-light">
+                        <span class="w-8 h-8 rounded-lg bg-violet-500/15 flex items-center justify-center text-violet-400 text-sm font-semibold">3</span>
+                        <span class="text-neutral-200">End of Distribution Imputation</span>
+                    </div>
+                    <div class="flex items-center gap-4 p-4 rounded-xl glass-light">
+                        <span class="w-8 h-8 rounded-lg bg-fuchsia-500/15 flex items-center justify-center text-fuchsia-400 text-sm font-semibold">4</span>
+                        <span class="text-neutral-200">Random Sample Imputation <span class="text-neutral-500 text-sm">(next lecture)</span></span>
+                    </div>
+                </div>
+
+                <div class="success-box p-4 flex items-center gap-3">
+                    <i data-lucide="sparkles" class="w-5 h-5 text-green-400 flex-shrink-0"></i>
+                    <p class="text-sm text-neutral-300">Finally: <strong class="text-white">How to automatically choose the best imputation technique.</strong></p>
+                </div>
+            </div>
+        </section>
+
+        <div class="section-divider my-20"></div>
+
+        <!-- 1. Mean / Median Imputation -->
+        <section id="mean-median" class="pt-8 scroll-mt-24">
+            <div class="flex items-center gap-3 mb-6">
+                <div class="w-10 h-10 rounded-xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center">
+                    <span class="text-indigo-400 font-semibold text-lg">1</span>
+                </div>
+                <h2 class="text-2xl sm:text-3xl font-semibold tracking-tight gradient-text">Mean / Median Imputation</h2>
+            </div>
+
+            <div class="glass rounded-2xl p-8 space-y-6">
+                <p class="text-neutral-300 font-light leading-relaxed">
+                    This is the <strong class="text-white font-medium">simplest</strong> and one of the most <strong class="text-white font-medium">commonly used</strong> methods.
+                </p>
+
+                <p class="text-neutral-400 font-light leading-relaxed">Suppose we have:</p>
+
+                <div class="table-container">
+                    <table>
+                        <thead><tr><th>Age</th></tr></thead>
+                        <tbody>
+                            <tr><td>22</td></tr>
+                            <tr><td>25</td></tr>
+                            <tr><td class="nan-cell">NaN</td></tr>
+                            <tr><td>30</td></tr>
+                            <tr><td>35</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <p class="text-neutral-400 font-light leading-relaxed">Compute the <strong class="text-indigo-400">Mean</strong> or <strong class="text-purple-400">Median</strong>, then replace every missing value with that number.</p>
+            </div>
+        </section>
+
+        <!-- Mean vs Median -->
+        <section id="mean-vs-median" class="pt-16 scroll-mt-24">
+            <div class="flex items-center gap-3 mb-8">
+                <div class="w-10 h-10 rounded-xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center">
+                    <i data-lucide="scale" class="w-5 h-5 text-indigo-400"></i>
+                </div>
+                <h2 class="text-2xl sm:text-3xl font-semibold tracking-tight gradient-text">Mean vs Median</h2>
+            </div>
+
+            <div class="grid md:grid-cols-2 gap-6">
+                <!-- Use Mean -->
+                <div class="glass rounded-2xl p-8">
+                    <div class="flex items-center gap-2 mb-4">
+                        <i data-lucide="trending-up" class="w-5 h-5 text-indigo-400"></i>
+                        <h3 class="text-lg font-semibold text-white">Use Mean when</h3>
+                    </div>
+                    <p class="text-neutral-400 font-light leading-relaxed mb-6">
+                        The data is approximately <strong class="text-white font-medium">Normally Distributed</strong>.
+                    </p>
+
+                    <!-- Normal Distribution SVG -->
+                    <div class="flex justify-center mb-6">
+                        <svg width="200" height="100" viewBox="0 0 200 100" class="opacity-80">
+                            <line x1="20" y1="85" x2="180" y2="85" stroke="#525252" stroke-width="1.5"/>
+                            <line x1="20" y1="15" x2="20" y2="85" stroke="#525252" stroke-width="1.5"/>
+                            <path d="M20 85 Q50 85 70 70 Q90 40 100 20 Q110 40 130 70 Q150 85 180 85" fill="none" stroke="#6366F1" stroke-width="2"/>
+                            <path d="M20 85 Q50 85 70 70 Q90 40 100 20 Q110 40 130 70 Q150 85 180 85 Z" fill="rgba(99,102,241,0.1)"/>
+                            <line x1="100" y1="20" x2="100" y2="85" stroke="#818CF8" stroke-width="1" stroke-dasharray="4,3"/>
+                            <circle cx="100" cy="20" r="3" fill="#818CF8"/>
+                            <text x="100" y="98" text-anchor="middle" fill="#818CF8" font-size="10" font-family="Inter">Mean</text>
+                        </svg>
+                    </div>
+
+                    <div class="glass-light rounded-xl p-4">
+                        <p class="text-sm text-neutral-400">In a normal distribution:</p>
+                        <p class="text-sm text-white font-medium mt-1">Mean ≈ Median ≈ Mode</p>
+                        <p class="text-sm text-neutral-500 mt-1">Therefore using Mean is acceptable.</p>
+                    </div>
+                </div>
+
+                <!-- Use Median -->
+                <div class="glass rounded-2xl p-8">
+                    <div class="flex items-center gap-2 mb-4">
+                        <i data-lucide="trending-down" class="w-5 h-5 text-purple-400"></i>
+                        <h3 class="text-lg font-semibold text-white">Use Median when</h3>
+                    </div>
+                    <p class="text-neutral-400 font-light leading-relaxed mb-6">
+                        The distribution is <strong class="text-white font-medium">Skewed</strong>.
+                    </p>
+
+                    <!-- Skewed Distribution SVG -->
+                    <div class="flex justify-center mb-6">
+                        <svg width="200" height="100" viewBox="0 0 200 100" class="opacity-80">
+                            <line x1="20" y1="85" x2="180" y2="85" stroke="#525252" stroke-width="1.5"/>
+                            <line x1="20" y1="15" x2="20" y2="85" stroke="#525252" stroke-width="1.5"/>
+                            <path d="M20 85 Q40 85 60 80 Q80 70 100 35 Q110 25 115 22 Q120 25 125 35 Q140 70 160 80 Q175 85 180 85" fill="none" stroke="#A855F7" stroke-width="2"/>
+                            <path d="M20 85 Q40 85 60 80 Q80 70 100 35 Q110 25 115 22 Q120 25 125 35 Q140 70 160 80 Q175 85 180 85 Z" fill="rgba(168,85,247,0.1)"/>
+                            <line x1="70" y1="78" x2="70" y2="85" stroke="#C084FC" stroke-width="1" stroke-dasharray="4,3"/>
+                            <circle cx="70" cy="78" r="3" fill="#C084FC"/>
+                            <text x="70" y="98" text-anchor="middle" fill="#C084FC" font-size="10" font-family="Inter">Median</text>
+                        </svg>
+                    </div>
+
+                    <div class="glass-light rounded-xl p-4">
+                        <p class="text-sm text-neutral-400">Since Mean is pulled toward outliers:</p>
+                        <p class="text-sm text-white font-medium mt-1">Median becomes a better representative.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <div class="section-divider my-20"></div>
+
+        <!-- Advantages -->
+        <section id="advantages-mm" class="pt-8 scroll-mt-24">
+            <div class="flex items-center gap-3 mb-6">
+                <div class="w-10 h-10 rounded-xl bg-green-500/10 border border-green-500/20 flex items-center justify-center">
+                    <i data-lucide="thumbs-up" class="w-5 h-5 text-green-400"></i>
+                </div>
+                <h2 class="text-2xl sm:text-3xl font-semibold tracking-tight green-gradient">Advantages of Mean/Median Imputation</h2>
+            </div>
+
+            <div class="grid md:grid-cols-3 gap-6">
+                <div class="glass rounded-2xl p-8 hover:border-green-500/20 transition-colors duration-500">
+                    <div class="w-12 h-12 rounded-xl bg-green-500/10 flex items-center justify-center mb-5">
+                        <i data-lucide="zap" class="w-6 h-6 text-green-400"></i>
+                    </div>
+                    <h3 class="text-lg font-semibold text-white mb-3">Very Simple</h3>
+                    <ul class="space-y-2 text-sm text-neutral-400 font-light">
+                        <li class="flex items-start gap-2"><i data-lucide="check" class="w-4 h-4 text-green-400 mt-0.5 flex-shrink-0"></i>Easy to understand</li>
+                        <li class="flex items-start gap-2"><i data-lucide="check" class="w-4 h-4 text-green-400 mt-0.5 flex-shrink-0"></i>Easy to implement</li>
+                        <li class="flex items-start gap-2"><i data-lucide="check" class="w-4 h-4 text-green-400 mt-0.5 flex-shrink-0"></i>Only one line of code</li>
+                    </ul>
+                </div>
+
+                <div class="glass rounded-2xl p-8 hover:border-green-500/20 transition-colors duration-500">
+                    <div class="w-12 h-12 rounded-xl bg-green-500/10 flex items-center justify-center mb-5">
+                        <i data-lucide="rocket" class="w-6 h-6 text-green-400"></i>
+                    </div>
+                    <h3 class="text-lg font-semibold text-white mb-3">Easy in Production</h3>
+                    <p class="text-sm text-neutral-400 font-light leading-relaxed mb-3">Deploying ML models becomes easier because only <strong class="text-white font-medium">one statistic</strong> needs to be stored.</p>
+                    <div class="code-block p-3 text-xs">
+                        <span class="comment"># Store</span><br>
+                        Age Median = <span class="number">28</span><br><br>
+                        <span class="comment"># Whenever new user has missing Age,</span><br>
+                        <span class="comment"># replace with 28</span>
+                    </div>
+                </div>
+
+                <div class="glass rounded-2xl p-8 hover:border-green-500/20 transition-colors duration-500">
+                    <div class="w-12 h-12 rounded-xl bg-green-500/10 flex items-center justify-center mb-5">
+                        <i data-lucide="check-circle" class="w-6 h-6 text-green-400"></i>
+                    </div>
+                    <h3 class="text-lg font-semibold text-white mb-3">Works Well When Missing Values Are Few</h3>
+                    <p class="text-sm text-neutral-400 font-light leading-relaxed">Generally works reasonably well if:</p>
+                    <div class="mt-3 px-4 py-3 rounded-lg bg-green-500/10 border border-green-500/20 text-center">
+                        <span class="text-green-400 font-semibold text-lg">Missing &lt; 5%</span>
+                    </div>
+                    <p class="text-xs text-neutral-500 mt-2">This is an important rule.</p>
+                </div>
+            </div>
+        </section>
+
+        <div class="section-divider my-20"></div>
+
+        <!-- Disadvantages -->
+        <section id="disadvantages-mm" class="pt-8 scroll-mt-24">
+            <div class="flex items-center gap-3 mb-6">
+                <div class="w-10 h-10 rounded-xl bg-red-500/10 border border-red-500/20 flex items-center justify-center">
+                    <i data-lucide="thumbs-down" class="w-5 h-5 text-red-400"></i>
+                </div>
+                <h2 class="text-2xl sm:text-3xl font-semibold tracking-tight red-gradient">Disadvantages</h2>
+            </div>
+
+            <p class="text-neutral-400 font-light mb-8 leading-relaxed">Although simple, it changes important statistical properties.</p>
+
+            <div class="grid md:grid-cols-2 gap-6">
+                <div class="glass rounded-2xl p-8 hover:border-red-500/20 transition-colors duration-500">
+                    <div class="flex items-center gap-3 mb-4">
+                        <span class="w-8 h-8 rounded-lg bg-red-500/15 flex items-center justify-center text-red-400 text-sm font-semibold">1</span>
+                        <h3 class="text-lg font-semibold text-white">Changes Distribution</h3>
+                    </div>
+                    <div class="flex justify-center gap-6 my-4">
+                        <div class="text-center">
+                            <svg width="80" height="50" viewBox="0 0 80 50">
+                                <path d="M5 45 Q20 45 30 35 Q40 15 45 8 Q50 15 60 35 Q70 45 75 45" fill="none" stroke="#6366F1" stroke-width="1.5"/>
+                                <path d="M5 45 Q20 45 30 35 Q40 15 45 8 Q50 15 60 35 Q70 45 75 45 Z" fill="rgba(99,102,241,0.1)"/>
+                            </svg>
+                            <p class="text-[10px] text-neutral-500 mt-1">Original</p>
+                        </div>
+                        <div class="text-center">
+                            <svg width="80" height="50" viewBox="0 0 80 50">
+                                <path d="M5 45 Q20 45 30 35 Q40 15 45 8 Q50 15 60 35 Q70 45 75 45" fill="none" stroke="#6366F1" stroke-width="1.5"/>
+                                <path d="M5 45 Q20 45 30 35 Q40 15 45 8 Q50 15 60 35 Q70 45 75 45 Z" fill="rgba(99,102,241,0.1)"/>
+                                <line x1="45" y1="8" x2="45" y2="45" stroke="#EF4444" stroke-width="2.5" opacity="0.6"/>
+                            </svg>
+                            <p class="text-[10px] text-neutral-500 mt-1">After Mean</p>
+                        </div>
+                    </div>
+                    <p class="text-sm text-neutral-400 font-light">Many observations pile up around Mean. <strong class="text-red-400">Distribution shape changes.</strong></p>
+                </div>
+
+                <div class="glass rounded-2xl p-8 hover:border-red-500/20 transition-colors duration-500">
+                    <div class="flex items-center gap-3 mb-4">
+                        <span class="w-8 h-8 rounded-lg bg-red-500/15 flex items-center justify-center text-red-400 text-sm font-semibold">2</span>
+                        <h3 class="text-lg font-semibold text-white">Reduces Variance</h3>
+                    </div>
+                    <p class="text-sm text-neutral-400 font-light leading-relaxed mb-3">Variance measures spread. Since many observations become identical, spread decreases.</p>
+                    <div class="flex items-center gap-3 p-3 rounded-lg bg-red-500/5 border border-red-500/10">
+                        <i data-lucide="arrow-down" class="w-5 h-5 text-red-400"></i>
+                        <span class="text-red-400 font-medium text-sm">Variance decreases</span>
+                    </div>
+                </div>
+
+                <div class="glass rounded-2xl p-8 hover:border-red-500/20 transition-colors duration-500">
+                    <div class="flex items-center gap-3 mb-4">
+                        <span class="w-8 h-8 rounded-lg bg-red-500/15 flex items-center justify-center text-red-400 text-sm font-semibold">3</span>
+                        <h3 class="text-lg font-semibold text-white">Alters Covariance / Correlation</h3>
+                    </div>
+                    <p class="text-sm text-neutral-400 font-light leading-relaxed">Suppose Age is strongly related to Salary. Replacing Age with a constant <strong class="text-red-400">breaks this relationship</strong>.</p>
+                    <div class="mt-3 space-y-1.5">
+                        <p class="text-sm text-red-400 flex items-center gap-2"><i data-lucide="x" class="w-3.5 h-3.5"></i> Correlation changes</p>
+                        <p class="text-sm text-red-400 flex items-center gap-2"><i data-lucide="x" class="w-3.5 h-3.5"></i> Covariance changes</p>
+                    </div>
+                </div>
+
+                <div class="glass rounded-2xl p-8 hover:border-red-500/20 transition-colors duration-500">
+                    <div class="flex items-center gap-3 mb-4">
+                        <span class="w-8 h-8 rounded-lg bg-red-500/15 flex items-center justify-center text-red-400 text-sm font-semibold">4</span>
+                        <h3 class="text-lg font-semibold text-white">Affects Outliers</h3>
+                    </div>
+                    <p class="text-sm text-neutral-400 font-light leading-relaxed">Because <strong class="text-white">IQR changes</strong>, boxplot outliers may increase or decrease.</p>
+                    <div class="mt-3 flex justify-center">
+                        <svg width="120" height="50" viewBox="0 0 120 50">
+                            <line x1="10" y1="25" x2="110" y2="25" stroke="#525252" stroke-width="1"/>
+                            <rect x="30" y="15" width="40" height="20" fill="rgba(239,68,68,0.1)" stroke="#EF4444" stroke-width="1.5" rx="2"/>
+                            <line x1="50" y1="15" x2="50" y2="35" stroke="#EF4444" stroke-width="2"/>
+                            <line x1="30" y1="25" x2="15" y2="25" stroke="#525252" stroke-width="1"/>
+                            <line x1="70" y1="25" x2="95" y2="25" stroke="#525252" stroke-width="1"/>
+                            <circle cx="100" cy="25" r="3" fill="#F87171"/>
+                            <text x="100" y="45" text-anchor="middle" fill="#F87171" font-size="8" font-family="Inter">outlier?</text>
+                        </svg>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <div class="section-divider my-20"></div>
+
+        <!-- When Should Mean/Median Be Used -->
+        <section id="when-mm" class="pt-8 scroll-mt-24">
+            <div class="flex items-center gap-3 mb-6">
+                <div class="w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center">
+                    <i data-lucide="help-circle" class="w-5 h-5 text-amber-400"></i>
+                </div>
+                <h2 class="text-2xl sm:text-3xl font-semibold tracking-tight amber-gradient">When Should Mean/Median Be Used?</h2>
+            </div>
+
+            <div class="glass rounded-2xl p-8">
+                <p class="text-neutral-400 font-light mb-6">Use when <strong class="text-white">both</strong> conditions are met:</p>
+
+                <div class="grid sm:grid-cols-2 gap-4 mb-6">
+                    <div class="success-box p-5 flex items-start gap-3">
+                        <i data-lucide="check-circle" class="w-5 h-5 text-green-400 mt-0.5 flex-shrink-0"></i>
+                        <div>
+                            <p class="text-sm text-green-300 font-medium">Missing Completely At Random (MCAR)</p>
+                            <p class="text-xs text-neutral-500 mt-1">No pattern in missingness</p>
+                        </div>
+                    </div>
+                    <div class="success-box p-5 flex items-start gap-3">
+                        <i data-lucide="check-circle" class="w-5 h-5 text-green-400 mt-0.5 flex-shrink-0"></i>
+                        <div>
+                            <p class="text-sm text-green-300 font-medium">Missing percentage is small</p>
+                            <p class="text-xs text-neutral-500 mt-1">Preferably below 5%</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="warning-box p-4 flex items-start gap-3">
+                    <i data-lucide="alert-triangle" class="w-5 h-5 text-amber-400 mt-0.5 flex-shrink-0"></i>
+                    <p class="text-sm text-neutral-300">Although people use Mean Imputation frequently, there are <strong class="text-amber-300">more sophisticated methods</strong> that often perform better.</p>
+                </div>
+            </div>
+        </section>
+
+        <div class="section-divider my-20"></div>
+
+        <!-- Practical Example -->
+        <section id="practical" class="pt-8 scroll-mt-24">
+            <div class="flex items-center gap-3 mb-6">
+                <div class="w-10 h-10 rounded-xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center">
+                    <i data-lucide="anchor" class="w-5 h-5 text-indigo-400"></i>
+                </div>
+                <h2 class="text-2xl sm:text-3xl font-semibold tracking-tight gradient-text">Practical Example — Titanic Dataset</h2>
+            </div>
+
+            <div class="glass rounded-2xl p-8 space-y-6">
+                <div>
+                    <p class="text-xs text-neutral-500 uppercase tracking-wider font-medium mb-3">Features</p>
+                    <div class="flex flex-wrap gap-2">
+                        <span class="px-3 py-1.5 rounded-lg bg-indigo-500/10 text-indigo-400 text-sm border border-indigo-500/20">Age</span>
+                        <span class="px-3 py-1.5 rounded-lg bg-purple-500/10 text-purple-400 text-sm border border-purple-500/20">Fare</span>
+                        <span class="px-3 py-1.5 rounded-lg bg-violet-500/10 text-violet-400 text-sm border border-violet-500/20">Family</span>
+                        <span class="px-3 py-1.5 rounded-lg bg-fuchsia-500/10 text-fuchsia-400 text-sm border border-fuchsia-500/20">Survived</span>
+                    </div>
+                </div>
+
+                <div class="section-divider"></div>
+
+                <div>
+                    <p class="text-xs text-neutral-500 uppercase tracking-wider font-medium mb-3">Missing Values Setup</p>
+                    <ul class="space-y-2 text-sm text-neutral-400 font-light">
+                        <li class="flex items-start gap-2">
+                            <i data-lucide="minus" class="w-4 h-4 text-neutral-600 mt-0.5 flex-shrink-0"></i>
+                            <span><strong class="text-neutral-200">Age</strong> already had missing values</span>
+                        </li>
+                        <li class="flex items-start gap-2">
+                            <i data-lucide="minus" class="w-4 h-4 text-neutral-600 mt-0.5 flex-shrink-0"></i>
+                            <span><strong class="text-neutral-200">Fare</strong> — artificially introduced <span class="text-amber-400 font-medium">5% missing values</span></span>
+                        </li>
+                    </ul>
+                </div>
+
+                <div class="section-divider"></div>
+
+                <div>
+                    <p class="text-xs text-neutral-500 uppercase tracking-wider font-medium mb-3">Goal</p>
+                    <p class="text-neutral-300 font-light">Fill <code class="text-indigo-400 bg-indigo-500/10 px-1.5 py-0.5 rounded">Age</code> and <code class="text-purple-400 bg-purple-500/10 px-1.5 py-0.5 rounded">Fare</code> using Mean and Median.</p>
+                </div>
+            </div>
+        </section>
+
+        <div class="section-divider my-20"></div>
+
+        <!-- Train-Test Split -->
+        <section id="train-test" class="pt-8 scroll-mt-24">
+            <div class="flex items-center gap-3 mb-6">
+                <div class="w-10 h-10 rounded-xl bg-red-500/10 border border-red-500/20 flex items-center justify-center">
+                    <i data-lucide="shield-alert" class="w-5 h-5 text-red-400"></i>
+                </div>
+                <h2 class="text-2xl sm:text-3xl font-semibold tracking-tight red-gradient">Train-Test Split — Critical Rule</h2>
+            </div>
+
+            <div class="glass rounded-2xl p-8 space-y-6">
+                <p class="text-neutral-300 font-light leading-relaxed">
+                    <strong class="text-white font-medium">Always split data first.</strong> Never calculate Mean or Median using the entire dataset.
+                </p>
+
+                <!-- Correct Process -->
+                <div>
+                    <p class="text-xs text-green-400 uppercase tracking-wider font-medium mb-4">✓ Correct Process</p>
+                    <div class="flex flex-col sm:flex-row items-center gap-3">
+                        <div class="px-5 py-3 rounded-xl bg-green-500/10 border border-green-500/20 text-green-400 text-sm font-medium w-full sm:w-auto text-center">Train</div>
+                        <i data-lucide="arrow-down" class="w-5 h-5 text-green-400 rotate-90 sm:rotate-0 flex-shrink-0"></i>
+                        <div class="px-5 py-3 rounded-xl bg-green-500/10 border border-green-500/20 text-green-400 text-sm font-medium w-full sm:w-auto text-center">Calculate Mean</div>
+                        <i data-lucide="arrow-down" class="w-5 h-5 text-green-400 rotate-90 sm:rotate-0 flex-shrink-0"></i>
+                        <div class="px-5 py-3 rounded-xl bg-green-500/10 border border-green-500/20 text-green-400 text-sm font-medium w-full sm:w-auto text-center">Store Mean</div>
+                        <i data-lucide="arrow-down" class="w-5 h-5 text-green-400 rotate-90 sm:rotate-0 flex-shrink-0"></i>
+                        <div class="px-5 py-3 rounded-xl bg-green-500/10 border border-green-500/20 text-green-400 text-sm font-medium w-full sm:w-auto text-center">Apply to Train & Test</div>
+                    </div>
+                </div>
+
+                <!-- Wrong Process -->
+                <div>
+                    <p class="text-xs text-red-400 uppercase tracking-wider font-medium mb-4">✗ Wrong Process</p>
+                    <p class="text-sm text-red-400 font-light">Never calculate Mean separately on Test data.</p>
+                </div>
+
+                <div class="danger-box p-5 flex items-start gap-3">
+                    <i data-lucide="alert-octagon" class="w-5 h-5 text-red-400 mt-0.5 flex-shrink-0"></i>
+                    <div>
+                        <p class="text-sm text-red-300 font-medium mb-1">⚠ Data Leakage</p>
+                        <p class="text-sm text-neutral-400">Calculating statistics on test data causes <strong class="text-red-400">Data Leakage</strong> — this is a <strong class="text-white">very important interview question</strong>.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <div class="section-divider my-20"></div>
+
+        <!-- Coding Without Scikit-Learn -->
+        <section id="coding" class="pt-8 scroll-mt-24">
+            <div class="flex items-center gap-3 mb-6">
+                <div class="w-10 h-10 rounded-xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center">
+                    <i data-lucide="code" class="w-5 h-5 text-indigo-400"></i>
+                </div>
+                <h2 class="text-2xl sm:text-3xl font-semibold tracking-tight gradient-text">Coding — Without Scikit-Learn</h2>
+            </div>
+
+            <div class="glass rounded-2xl p-8 space-y-6">
+                <p class="text-neutral-400 font-light">Calculate the statistics, then use <code class="text-indigo-400 bg-indigo-500/10 px-1.5 py-0.5 rounded">fillna()</code>:</p>
+
+                <div class="code-block p-6">
+                    <span class="comment"># Calculate</span><br>
+                    age_median = df[<span class="string">'Age'</span>].<span class="func">median</span>()<br>
+                    age_mean = df[<span class="string">'Age'</span>].<span class="func">mean</span>()<br>
+                    fare_median = df[<span class="string">'Fare'</span>].<span class="func">median</span>()<br>
+                    fare_mean = df[<span class="string">'Fare'</span>].<span class="func">mean</span>()<br><br>
+                    <span class="comment"># Fill missing values</span><br>
+                    df[<span class="string">'Age_median'</span>] = df[<span class="string">'Age'</span>].<span class="func">fillna</span>(age_median)<br>
+                    df[<span class="string">'Age_mean'</span>] = df[<span class="string">'Age'</span>].<span class="func">fillna</span>(age_mean)<br>
+                    df[<span class="string">'Fare_median'</span>] = df[<span class="string">'Fare'</span>].<span class="func">fillna</span>(fare_median)<br>
+                    df[<span class="string">'Fare_mean'</span>] = df[<span class="string">'Fare'</span>].<span class="func">fillna</span>(fare_mean)
+                </div>
+
+                <div class="info-box p-4 flex items-start gap-3">
+                    <i data-lucide="lightbulb" class="w-5 h-5 text-indigo-400 mt-0.5 flex-shrink-0"></i>
+                    <p class="text-sm text-neutral-400">Create <strong class="text-white">separate columns</strong> to compare results: <code class="text-indigo-400 bg-indigo-500/10 px-1 py-0.5 rounded text-xs">Age_original</code>, <code class="text-indigo-400 bg-indigo-500/10 px-1 py-0.5 rounded text-xs">Age_mean</code>, <code class="text-indigo-400 bg-indigo-500/10 px-1 py-0.5 rounded text-xs">Age_median</code>, etc.</p>
+                </div>
+            </div>
+        </section>
+
+        <div class="section-divider my-20"></div>
+
+        <!-- Post-Imputation Checks -->
+        <section id="checks" class="pt-8 scroll-mt-24">
+            <div class="flex items-center gap-3 mb-6">
+                <div class="w-10 h-10 rounded-xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center">
+                    <i data-lucide="clipboard-check" class="w-5 h-5 text-indigo-400"></i>
+                </div>
+                <h2 class="text-2xl sm:text-3xl font-semibold tracking-tight gradient-text">What Should Be Checked After Imputation?</h2>
+            </div>
+
+            <div class="warning-box p-5 mb-8 flex items-start gap-3">
+                <i data-lucide="alert-triangle" class="w-5 h-5 text-amber-400 mt-0.5 flex-shrink-0"></i>
+                <p class="text-sm text-neutral-300">Imputation is <strong class="text-amber-300">not finished after filling missing values</strong>. You must evaluate whether important statistical properties changed.</p>
+            </div>
+
+            <!-- Check 1 -->
+            <div class="check-card check-1 glass rounded-2xl p-8 mb-6">
+                <div class="flex items-center gap-3 mb-4">
+                    <span class="w-8 h-8 rounded-lg bg-indigo-500/20 flex items-center justify-center text-indigo-400 text-sm font-semibold">1</span>
+                    <h3 class="text-lg font-semibold text-white">Variance</h3>
+                </div>
+
+                <div class="grid sm:grid-cols-3 gap-4 mb-4">
+                    <div class="glass-light rounded-xl p-4 text-center">
+                        <p class="text-xs text-neutral-500 mb-1">Original</p>
+                        <p class="text-xl font-semibold text-white">204</p>
+                    </div>
+                    <div class="glass-light rounded-xl p-4 text-center">
+                        <p class="text-xs text-neutral-500 mb-1">After Median</p>
+                        <p class="text-xl font-semibold text-amber-400">161.92</p>
+                    </div>
+                    <div class="glass-light rounded-xl p-4 text-center">
+                        <p class="text-xs text-neutral-500 mb-1">After Mean</p>
+                        <p class="text-xl font-semibold text-amber-400">161.82</p>
+                    </div>
+                </div>
+
+                <p class="text-sm text-neutral-400 font-light"><i data-lucide="arrow-down" class="w-3.5 h-3.5 text-amber-400 inline mr-1"></i> Variance reduced. <strong class="text-amber-400">This always happens</strong> with Mean/Median Imputation.</p>
+            </div>
+
+            <!-- Check 2 -->
+            <div class="check-card check-2 glass rounded-2xl p-8 mb-6">
+                <div class="flex items-center gap-3 mb-4">
+                    <span class="w-8 h-8 rounded-lg bg-purple-500/20 flex items-center justify-center text-purple-400 text-sm font-semibold">2</span>
+                    <h3 class="text-lg font-semibold text-white">Distribution</h3>
+                </div>
+                <p class="text-sm text-neutral-400 font-light mb-4">Plot distributions. If distributions overlap closely → Good. If shape changes significantly → Bad.</p>
+
+                <div class="grid sm:grid-cols-2 gap-4">
+                    <div class="glass-light rounded-xl p-4">
+                        <p class="text-sm font-medium text-amber-400 mb-1">Age</p>
+                        <p class="text-xs text-neutral-500">Distribution changed noticeably. Imputation is <strong class="text-amber-400">questionable</strong>.</p>
+                    </div>
+                    <div class="glass-light rounded-xl p-4">
+                        <p class="text-sm font-medium text-green-400 mb-1">Fare</p>
+                        <p class="text-xs text-neutral-500">Almost unchanged because only 5% values were missing. Imputation is <strong class="text-green-400">acceptable</strong>.</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Check 3 -->
+            <div class="check-card check-3 glass rounded-2xl p-8 mb-6">
+                <div class="flex items-center gap-3 mb-4">
+                    <span class="w-8 h-8 rounded-lg bg-violet-500/20 flex items-center justify-center text-violet-400 text-sm font-semibold">3</span>
+                    <h3 class="text-lg font-semibold text-white">Covariance / Correlation</h3>
+                </div>
+                <p class="text-sm text-neutral-400 font-light">Compare before and after imputation. If relationships between variables change significantly → <strong class="text-red-400">not good</strong>. Small changes are acceptable. Large changes indicate <strong class="text-red-400">information loss</strong>.</p>
+            </div>
+
+            <!-- Check 4 -->
+            <div class="check-card check-4 glass rounded-2xl p-8">
+                <div class="flex items-center gap-3 mb-4">
+                    <span class="w-8 h-8 rounded-lg bg-fuchsia-500/20 flex items-center justify-center text-fuchsia-400 text-sm font-semibold">4</span>
+                    <h3 class="text-lg font-semibold text-white">Boxplot</h3>
+                </div>
+                <p class="text-sm text-neutral-400 font-light">Compare original vs. after imputation. Sometimes <strong class="text-white">Interquartile Range (IQR)</strong> shrinks. This changes outlier detection.</p>
+                <div class="grid sm:grid-cols-2 gap-4 mt-4">
+                    <div class="glass-light rounded-xl p-4">
+                        <p class="text-sm font-medium text-amber-400 mb-1">Age</p>
+                        <p class="text-xs text-neutral-500">Noticeable changes</p>
+                    </div>
+                    <div class="glass-light rounded-xl p-4">
+                        <p class="text-sm font-medium text-green-400 mb-1">Fare</p>
+                        <p class="text-xs text-neutral-500">Almost no changes</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <div class="section-divider my-20"></div>
+
+        <!-- Conclusion from Practical -->
+        <section id="conclusion-practical" class="pt-8 scroll-mt-24">
+            <div class="flex items-center gap-3 mb-6">
+                <div class="w-10 h-10 rounded-xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center">
+                    <i data-lucide="file-check" class="w-5 h-5 text-indigo-400"></i>
+                </div>
+                <h2 class="text-2xl sm:text-3xl font-semibold tracking-tight gradient-text">Conclusion from Practical</h2>
+            </div>
+
+            <div class="grid md:grid-cols-2 gap-6">
+                <div class="glass rounded-2xl p-8 border-green-500/20">
+                    <div class="flex items-center gap-2 mb-4">
+                        <i data-lucide="check-circle" class="w-5 h-5 text-green-400"></i>
+                        <h3 class="text-lg font-semibold text-green-400">Fare — Acceptable</h3>
+                    </div>
+                    <ul class="space-y-2 text-sm text-neutral-400 font-light">
+                        <li class="flex items-start gap-2"><i data-lucide="check" class="w-4 h-4 text-green-400 mt-0.5 flex-shrink-0"></i>Only 5% missing</li>
+                        <li class="flex items-start gap-2"><i data-lucide="check" class="w-4 h-4 text-green-400 mt-0.5 flex-shrink-0"></i>Very little change in all checks</li>
+                        <li class="flex items-start gap-2"><i data-lucide="check" class="w-4 h-4 text-green-400 mt-0.5 flex-shrink-0"></i>Mean/Median Imputation is acceptable</li>
+                    </ul>
+                </div>
+
+                <div class="glass rounded-2xl p-8 border-red-500/20">
+                    <div class="flex items-center gap-2 mb-4">
+                        <i data-lucide="x-circle" class="w-5 h-5 text-red-400"></i>
+                        <h3 class="text-lg font-semibold text-red-400">Age — Not Recommended</h3>
+                    </div>
+                    <ul class="space-y-2 text-sm text-neutral-400 font-light">
+                        <li class="flex items-start gap-2"><i data-lucide="x" class="w-4 h-4 text-red-400 mt-0.5 flex-shrink-0"></i>Many missing values</li>
+                        <li class="flex items-start gap-2"><i data-lucide="x" class="w-4 h-4 text-red-400 mt-0.5 flex-shrink-0"></i>Variance reduced</li>
+                        <li class="flex items-start gap-2"><i data-lucide="x" class="w-4 h-4 text-red-400 mt-0.5 flex-shrink-0"></i>Distribution changed</li>
+                        <li class="flex items-start gap-2"><i data-lucide="x" class="w-4 h-4 text-red-400 mt-0.5 flex-shrink-0"></i>Correlation changed</li>
+                        <li class="flex items-start gap-2"><i data-lucide="x" class="w-4 h-4 text-red-400 mt-0.5 flex-shrink-0"></i>Outliers changed</li>
+                        <li class="flex items-start gap-2"><i data-lucide="x" class="w-4 h-4 text-red-400 mt-0.5 flex-shrink-0"></i>Mean/Median Imputation is <strong class="text-red-400 font-medium">not recommended</strong></li>
+                    </ul>
+                </div>
+            </div>
+        </section>
+
+        <div class="section-divider my-20"></div>
+
+        <!-- Scikit-Learn SimpleImputer -->
+        <section id="sklearn" class="pt-8 scroll-mt-24">
+            <div class="flex items-center gap-3 mb-6">
+                <div class="w-10 h-10 rounded-xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center">
+                    <i data-lucide="cpu" class="w-5 h-5 text-indigo-400"></i>
+                </div>
+                <h2 class="text-2xl sm:text-3xl font-semibold tracking-tight gradient-text">Mean/Median Using Scikit-Learn</h2>
+            </div>
+
+            <div class="glass rounded-2xl p-8 space-y-6">
+                <p class="text-neutral-400 font-light">Instead of <code class="text-neutral-300 bg-white/5 px-1.5 py-0.5 rounded">fillna()</code>, Scikit-Learn provides:</p>
+
+                <div class="code-block p-6">
+                    <span class="keyword">from</span> sklearn.impute <span class="keyword">import</span> SimpleImputer<br><br>
+                    imputer = <span class="func">SimpleImputer</span>(strategy=<span class="string">'mean'</span>)
+                </div>
+
+                <div>
+                    <p class="text-xs text-neutral-500 uppercase tracking-wider font-medium mb-4">Available Strategies</p>
+                    <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                        <div class="glass-light rounded-xl p-4 text-center">
+                            <code class="text-indigo-400 text-sm">mean</code>
+                        </div>
+                        <div class="glass-light rounded-xl p-4 text-center">
+                            <code class="text-purple-400 text-sm">median</code>
+                        </div>
+                        <div class="glass-light rounded-xl p-4 text-center">
+                            <code class="text-green-400 text-sm">most_frequent</code>
+                            <p class="text-[10px] text-neutral-500 mt-1">= Mode</p>
+                        </div>
+                        <div class="glass-light rounded-xl p-4 text-center">
+                            <code class="text-amber-400 text-sm">constant</code>
+                            <p class="text-[10px] text-neutral-500 mt-1">e.g., 0, -1, 999</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="section-divider"></div>
+
+                <div>
+                    <p class="text-xs text-neutral-500 uppercase tracking-wider font-medium mb-3">Most Frequent</p>
+                    <p class="text-sm text-neutral-400 font-light">Used mainly for <strong class="text-white">Categorical Features</strong>. Equivalent to <strong class="text-green-400">Mode</strong>.</p>
+                </div>
+
+                <div>
+                    <p class="text-xs text-neutral-500 uppercase tracking-wider font-medium mb-3">Constant</p>
+                    <p class="text-sm text-neutral-400 font-light">Replace every missing value with a fixed number:</p>
+                    <div class="flex flex-wrap gap-2 mt-2">
+                        <span class="px-3 py-1 rounded bg-amber-500/10 text-amber-400 text-sm font-mono">0</span>
+                        <span class="px-3 py-1 rounded bg-amber-500/10 text-amber-400 text-sm font-mono">-1</span>
+                        <span class="px-3 py-1 rounded bg-amber-500/10 text-amber-400 text-sm font-mono">999</span>
+                        <span class="px-3 py-1 rounded bg-amber-500/10 text-amber-400 text-sm font-mono">Unknown</span>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <div class="section-divider my-20"></div>
+
+        <!-- ColumnTransformer -->
+        <section id="col-transformer" class="pt-8 scroll-mt-24">
+            <div class="flex items-center gap-3 mb-6">
+                <div class="w-10 h-10 rounded-xl bg-purple-500/10 border border-purple-500/20 flex items-center justify-center">
+                    <i data-lucide="layers" class="w-5 h-5 text-purple-400"></i>
+                </div>
+                <h2 class="text-2xl sm:text-3xl font-semibold tracking-tight gradient-text">Different Strategies for Different Columns</h2>
+            </div>
+
+            <div class="glass rounded-2xl p-8 space-y-6">
+                <p class="text-neutral-400 font-light">Suppose you want: <code class="text-indigo-400 bg-indigo-500/10 px-1.5 py-0.5 rounded">Age → Median</code> and <code class="text-purple-400 bg-purple-500/10 px-1.5 py-0.5 rounded">Fare → Mean</code>.</p>
+
+                <!-- Visual Flow -->
+                <div class="flex flex-col sm:flex-row items-center gap-4 justify-center py-4">
+                    <div class="px-5 py-3 rounded-xl bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 text-sm font-medium">Age</div>
+                    <i data-lucide="arrow-down" class="w-5 h-5 text-indigo-400 rotate-90 sm:rotate-0 flex-shrink-0"></i>
+                    <div class="px-5 py-3 rounded-xl bg-indigo-500/20 border border-indigo-500/30 text-indigo-300 text-sm font-medium">Median</div>
+                </div>
+                <div class="flex flex-col sm:flex-row items-center gap-4 justify-center py-4">
+                    <div class="px-5 py-3 rounded-xl bg-purple-500/10 border border-purple-500/20 text-purple-400 text-sm font-medium">Fare</div>
+                    <i data-lucide="arrow-down" class="w-5 h-5 text-purple-400 rotate-90 sm:rotate-0 flex-shrink-0"></i>
+                    <div class="px-5 py-3 rounded-xl bg-purple-500/20 border border-purple-500/30 text-purple-300 text-sm font-medium">Mean</div>
+                </div>
+
+                <div class="code-block p-6">
+                    <span class="keyword">from</span> sklearn.compose <span class="keyword">import</span> ColumnTransformer<br><br>
+                    transformer = <span class="func">ColumnTransformer</span>(<br>
+                    &nbsp;&nbsp;transformers=[<br>
+                    &nbsp;&nbsp;&nbsp;&nbsp;(<span class="string">'age_imputer'</span>, SimpleImputer(strategy=<span class="string">'median'</span>), [<span class="string">'Age'</span>]),<br>
+                    &nbsp;&nbsp;&nbsp;&nbsp;(<span class="string">'fare_imputer'</span>, SimpleImputer(strategy=<span class="string">'mean'</span>), [<span class="string">'Fare'</span>])<br>
+                    &nbsp;&nbsp;]<br>
+                    )
+                </div>
+
+                <p class="text-sm text-neutral-400 font-light">Everything is transformed together.</p>
+            </div>
+        </section>
+
+        <div class="section-divider my-20"></div>
+
+        <!-- Data Leakage Rule -->
+        <section id="data-leakage" class="pt-8 scroll-mt-24">
+            <div class="flex items-center gap-3 mb-6">
+                <div class="w-10 h-10 rounded-xl bg-red-500/10 border border-red-500/20 flex items-center justify-center">
+                    <i data-lucide="shield-off" class="w-5 h-5 text-red-400"></i>
+                </div>
+                <h2 class="text-2xl sm:text-3xl font-semibold tracking-tight red-gradient">Important Rule — Preventing Data Leakage</h2>
+            </div>
+
+            <div class="glass rounded-2xl p-8">
+                <div class="grid md:grid-cols-2 gap-6">
+                    <!-- Correct -->
+                    <div class="success-box p-6">
+                        <p class="text-xs text-green-400 uppercase tracking-wider font-medium mb-4">✓ Always Do This</p>
+                        <div class="space-y-3">
+                            <div class="flex items-center gap-3 p-3 rounded-lg bg-green-500/5">
+                                <span class="w-6 h-6 rounded bg-green-500/20 flex items-center justify-center text-green-400 text-xs font-bold">1</span>
+                                <span class="text-sm text-neutral-300"><strong class="text-white">Fit</strong> on Training Data</span>
+                            </div>
+                            <div class="flex items-center gap-3 p-3 rounded-lg bg-green-500/5">
+                                <span class="w-6 h-6 rounded bg-green-500/20 flex items-center justify-center text-green-400 text-xs font-bold">2</span>
+                                <span class="text-sm text-neutral-300"><strong class="text-white">Transform</strong> Training Data</span>
+                            </div>
+                            <div class="flex items-center gap-3 p-3 rounded-lg bg-green-500/5">
+                                <span class="w-6 h-6 rounded bg-green-500/20 flex items-center justify-center text-green-400 text-xs font-bold">3</span>
+                                <span class="text-sm text-neutral-300"><strong class="text-white">Transform</strong> Test Data</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Wrong -->
+                    <div class="danger-box p-6">
+                        <p class="text-xs text-red-400 uppercase tracking-wider font-medium mb-4">✗ Never Do This</p>
+                        <div class="flex items-center gap-3 p-4 rounded-lg bg-red-500/5 border border-red-500/10 mb-3">
+                            <i data-lucide="x" class="w-5 h-5 text-red-400 flex-shrink-0"></i>
+                            <span class="text-sm text-neutral-300"><strong class="text-red-400">Fit</strong> on Test Data</span>
+                        </div>
+                        <p class="text-sm text-neutral-500 font-light">This causes <strong class="text-red-400">Data Leakage</strong> — your model sees information from the test set during training.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <div class="section-divider my-20"></div>
+
+        <!-- 2. Arbitrary Value Imputation -->
+        <section id="arbitrary" class="pt-8 scroll-mt-24">
+            <div class="flex items-center gap-3 mb-6">
+                <div class="w-10 h-10 rounded-xl bg-purple-500/10 border border-purple-500/20 flex items-center justify-center">
+                    <span class="text-purple-400 font-semibold text-lg">2</span>
+                </div>
+                <h2 class="text-2xl sm:text-3xl font-semibold tracking-tight gradient-text">Arbitrary Value Imputation</h2>
+            </div>
+
+            <div class="glass rounded-2xl p-8 space-y-6">
+                <p class="text-neutral-300 font-light leading-relaxed">
+                    Instead of Mean or Median, replace every missing value with a <strong class="text-white font-medium">fixed number</strong>.
+                </p>
+
+                <div class="flex flex-wrap gap-3 justify-center">
+                    <span class="px-4 py-2 rounded-xl bg-purple-500/10 text-purple-400 text-lg font-mono border border-purple-500/20">-1</span>
+                    <span class="px-4 py-2 rounded-xl bg-purple-500/10 text-purple-400 text-lg font-mono border border-purple-500/20">999</span>
+                    <span class="px-4 py-2 rounded-xl bg-purple-500/10 text-purple-400 text-lg font-mono border border-purple-500/20">10000</span>
+                    <span class="px-4 py-2 rounded-xl bg-purple-500/10 text-purple-400 text-lg font-mono border border-purple-500/20">-999</span>
+                </div>
+
+                <p class="text-sm text-neutral-500 text-center">The chosen value should ideally <strong class="text-neutral-300">not already exist</strong> in the data.</p>
+
+                <div class="section-divider"></div>
+
+                <div>
+                    <p class="text-xs text-neutral-500 uppercase tracking-wider font-medium mb-3">Why Use It?</p>
+                    <div class="info-box p-5 flex items-start gap-3">
+                        <i data-lucide="message-circle" class="w-5 h-5 text-indigo-400 mt-0.5 flex-shrink-0"></i>
+                        <div>
+                            <p class="text-sm text-neutral-300 italic">"The goal is to tell the Machine Learning model: <strong class="text-indigo-400">This observation originally had missing data.</strong>"</p>
+                            <p class="text-sm text-neutral-500 mt-2">The model may learn useful patterns from the missingness itself.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="section-divider"></div>
+
+                <!-- Advantages -->
+                <div>
+                    <p class="text-xs text-green-400 uppercase tracking-wider font-medium mb-3">Advantages</p>
+                    <div class="grid sm:grid-cols-3 gap-3">
+                        <div class="glass-light rounded-xl p-3 text-center text-sm text-neutral-400">Very easy</div>
+                        <div class="glass-light rounded-xl p-3 text-center text-sm text-neutral-400">Simple</div>
+                        <div class="glass-light rounded-xl p-3 text-center text-sm text-neutral-400">Works for numerical & categorical</div>
+                    </div>
+                </div>
+
+                <!-- Disadvantages -->
+                <div>
+                    <p class="text-xs text-red-400 uppercase tracking-wider font-medium mb-3">Disadvantages</p>
+                    <p class="text-sm text-neutral-400 font-light mb-3">Same issues as Mean Imputation, plus:</p>
+                    <ul class="space-y-2 text-sm text-neutral-400 font-light">
+                        <li class="flex items-start gap-2"><i data-lucide="x" class="w-4 h-4 text-red-400 mt-0.5 flex-shrink-0"></i>Distribution changes</li>
+                        <li class="flex items-start gap-2"><i data-lucide="x" class="w-4 h-4 text-red-400 mt-0.5 flex-shrink-0"></i>Variance changes <span class="text-amber-400">(sometimes increases due to extreme values)</span></li>
+                        <li class="flex items-start gap-2"><i data-lucide="x" class="w-4 h-4 text-red-400 mt-0.5 flex-shrink-0"></i>Correlation changes</li>
+                    </ul>
+                </div>
+
+                <div class="section-divider"></div>
+
+                <!-- Practical Observation -->
+                <div>
+                    <p class="text-xs text-neutral-500 uppercase tracking-wider font-medium mb-3">Practical Observation</p>
+                    <div class="grid sm:grid-cols-2 gap-4">
+                        <div class="glass-light rounded-xl p-4 text-center">
+                            <p class="text-xs text-neutral-500 mb-1">Age Variance (Original)</p>
+                            <p class="text-xl font-semibold text-white">204</p>
+                        </div>
+                        <div class="glass-light rounded-xl p-4 text-center">
+                            <p class="text-xs text-neutral-500 mb-1">After replacing with 999</p>
+                            <p class="text-xl font-semibold text-red-400">Much Larger ↑</p>
+                        </div>
+                    </div>
+                    <p class="text-sm text-neutral-500 mt-2 text-center">Distribution developed a new spike.</p>
+                </div>
+
+                <div class="section-divider"></div>
+
+                <!-- When to Use -->
+                <div>
+                    <p class="text-xs text-amber-400 uppercase tracking-wider font-medium mb-3">When Should It Be Used?</p>
+                    <div class="warning-box p-5 flex items-start gap-3">
+                        <i data-lucide="alert-triangle" class="w-5 h-5 text-amber-400 mt-0.5 flex-shrink-0"></i>
+                        <div>
+                            <p class="text-sm text-amber-300 font-medium">When data is Not Missing At Random (NMAR)</p>
+                            <p class="text-sm text-neutral-400 mt-1">Example: People with very high income intentionally do not reveal salary. Missingness itself contains information. Instead of hiding it, <strong class="text-white">preserve it</strong> by using an arbitrary value.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <div class="section-divider my-20"></div>
+
+        <!-- 3. End of Distribution Imputation -->
+        <section id="end-dist" class="pt-8 scroll-mt-24">
+            <div class="flex items-center gap-3 mb-6">
+                <div class="w-10 h-10 rounded-xl bg-violet-500/10 border border-violet-500/20 flex items-center justify-center">
+                    <span class="text-violet-400 font-semibold text-lg">3</span>
+                </div>
+                <h2 class="text-2xl sm:text-3xl font-semibold tracking-tight gradient-text">End of Distribution Imputation</h2>
+            </div>
+
+            <div class="glass rounded-2xl p-8 space-y-6">
+                <p class="text-neutral-300 font-light leading-relaxed">
+                    This is an <strong class="text-white font-medium">improvement over Arbitrary Value Imputation</strong>. Instead of choosing <code class="text-amber-400 bg-amber-500/10 px-1.5 py-0.5 rounded">999</code> or <code class="text-amber-400 bg-amber-500/10 px-1.5 py-0.5 rounded">-999</code>, choose a value from the <strong class="text-violet-400">extreme end of the distribution</strong>.
+                </p>
+
+                <div class="grid md:grid-cols-2 gap-6">
+                    <!-- Normal Distribution -->
+                    <div class="glass-light rounded-2xl p-6">
+                        <div class="flex items-center gap-2 mb-4">
+                            <i data-lucide="activity" class="w-4 h-4 text-indigo-400"></i>
+                            <h3 class="text-sm font-semibold text-white uppercase tracking-wider">Normal Distribution</h3>
+                        </div>
+                        <div class="flex justify-center mb-4">
+                            <svg width="200" height="80" viewBox="0 0 200 80">
+                                <line x1="10" y1="65" x2="190" y2="65" stroke="#525252" stroke-width="1"/>
+                                <path d="M10 65 Q40 65 60 55 Q80 30 100 12 Q120 30 140 55 Q160 65 190 65" fill="none" stroke="#6366F1" stroke-width="1.5"/>
+                                <path d="M10 65 Q40 65 60 55 Q80 30 100 12 Q120 30 140 55 Q160 65 190 65 Z" fill="rgba(99,102,241,0.08)"/>
+                                <circle cx="35" cy="64" r="4" fill="#EF4444" opacity="0.7"/>
+                                <circle cx="165" cy="64" r="4" fill="#EF4444" opacity="0.7"/>
+                                <text x="35" y="78" text-anchor="middle" fill="#EF4444" font-size="7" font-family="Inter">-3σ</text>
+                                <text x="165" y="78" text-anchor="middle" fill="#EF4444" font-size="7" font-family="Inter">+3σ</text>
+                            </svg>
+                        </div>
+                        <div class="code-block p-4 text-xs text-center space-y-1">
+                            <p>Mean + <span class="number">3</span> × Std Deviation</p>
+                            <p class="text-neutral-500">or</p>
+                            <p>Mean − <span class="number">3</span> × Std Deviation</p>
+                        </div>
+                        <p class="text-xs text-neutral-500 mt-3 text-center">Values lie beyond almost all observations (extreme tail/outlier region)</p>
+                    </div>
+
+                    <!-- Skewed Distribution -->
+                    <div class="glass-light rounded-2xl p-6">
+                        <div class="flex items-center gap-2 mb-4">
+                            <i data-lucide="trending-up" class="w-4 h-4 text-purple-400"></i>
+                            <h3 class="text-sm font-semibold text-white uppercase tracking-wider">Skewed Distribution</h3>
+                        </div>
+                        <div class="flex justify-center mb-4">
+                            <svg width="200" height="80" viewBox="0 0 200 80">
+                                <line x1="10" y1="65" x2="190" y2="65" stroke="#525252" stroke-width="1"/>
+                                <path d="M10 65 Q30 65 50 60 Q70 50 90 20 Q100 12 110 15 Q130 40 150 58 Q170 64 190 65" fill="none" stroke="#A855F7" stroke-width="1.5"/>
+                                <path d="M10 65 Q30 65 50 60 Q70 50 90 20 Q100 12 110 15 Q130 40 150 58 Q170 64 190 65 Z" fill="rgba(168,85,247,0.08)"/>
+                                <circle cx="15" cy="64" r="4" fill="#EF4444" opacity="0.7"/>
+                                <circle cx="185" cy="64" r="4" fill="#EF4444" opacity="0.7"/>
+                                <text x="15" y="78" text-anchor="middle" fill="#EF4444" font-size="7" font-family="Inter">Q1-1.5IQR</text>
+                                <text x="185" y="78" text-anchor="middle" fill="#EF4444" font-size="7" font-family="Inter">Q3+1.5IQR</text>
+                            </svg>
+                        </div>
+                        <div class="code-block p-4 text-xs text-center space-y-1">
+                            <p>Upper: Q3 + <span class="number">1.5</span> × IQR</p>
+                            <p>Lower: Q1 − <span class="number">1.5</span> × IQR</p>
+                            <p class="text-neutral-500 mt-1">where IQR = Q3 − Q1</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="section-divider"></div>
+
+                <!-- Why This Method -->
+                <div>
+                    <p class="text-xs text-indigo-400 uppercase tracking-wider font-medium mb-3">Why This Method?</p>
+                    <p class="text-sm text-neutral-400 font-light leading-relaxed">Instead of inventing <code class="text-amber-400 bg-amber-500/10 px-1 py-0.5 rounded text-xs">999</code>, choose an extreme value <strong class="text-white">based on the actual distribution</strong>. This keeps the replacement more realistic while still signaling that the value was originally missing.</p>
+                </div>
+
+                <div class="section-divider"></div>
+
+                <!-- Advantages -->
+                <div>
+                    <p class="text-xs text-green-400 uppercase tracking-wider font-medium mb-3">Advantages</p>
+                    <ul class="space-y-2 text-sm text-neutral-400 font-light">
+                        <li class="flex items-start gap-2"><i data-lucide="check" class="w-4 h-4 text-green-400 mt-0.5 flex-shrink-0"></i>Easy to implement</li>
+                        <li class="flex items-start gap-2"><i data-lucide="check" class="w-4 h-4 text-green-400 mt-0.5 flex-shrink-0"></i>Uses statistics derived from the data rather than completely arbitrary constants</li>
+                        <li class="flex items-start gap-2"><i data-lucide="check" class="w-4 h-4 text-green-400 mt-0.5 flex-shrink-0"></i>Preserves the "missingness signal" by placing imputed values at the distribution's edge</li>
+                    </ul>
+                </div>
+
+                <!-- Disadvantages -->
+                <div>
+                    <p class="text-xs text-red-400 uppercase tracking-wider font-medium mb-3">Disadvantages</p>
+                    <ul class="space-y-2 text-sm text-neutral-400 font-light">
+                        <li class="flex items-start gap-2"><i data-lucide="x" class="w-4 h-4 text-red-400 mt-0.5 flex-shrink-0"></i>Distribution changes</li>
+                        <li class="flex items-start gap-2"><i data-lucide="x" class="w-4 h-4 text-red-400 mt-0.5 flex-shrink-0"></i>Variance may increase</li>
+                        <li class="flex items-start gap-2"><i data-lucide="x" class="w-4 h-4 text-red-400 mt-0.5 flex-shrink-0"></i>Correlation/Covariance changes</li>
+                        <li class="flex items-start gap-2"><i data-lucide="x" class="w-4 h-4 text-red-400 mt-0.5 flex-shrink-0"></i>Introduces artificial extreme values (outliers)</li>
+                    </ul>
+                </div>
+
+                <div class="section-divider"></div>
+
+                <!-- When to Use -->
+                <div>
+                    <p class="text-xs text-amber-400 uppercase tracking-wider font-medium mb-3">When Should It Be Used?</p>
+                    <div class="warning-box p-5 flex items-start gap-3">
+                        <i data-lucide="alert-triangle" class="w-5 h-5 text-amber-400 mt-0.5 flex-shrink-0"></i>
+                        <p class="text-sm text-neutral-300">Primarily when the data is <strong class="text-amber-300">Not Missing At Random (NMAR)</strong> and you want the model to recognize that the value was missing.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <div class="section-divider my-20"></div>
+
+        <!-- 4. Random Sample Imputation Preview -->
+        <section id="random-sample" class="pt-8 scroll-mt-24">
+            <div class="flex items-center gap-3 mb-6">
+                <div class="w-10 h-10 rounded-xl bg-fuchsia-500/10 border border-fuchsia-500/20 flex items-center justify-center">
+                    <span class="text-fuchsia-400 font-semibold text-lg">4</span>
+                </div>
+                <h2 class="text-2xl sm:text-3xl font-semibold tracking-tight gradient-text">Random Sample Imputation</h2>
+                <span class="px-3 py-1 rounded-full bg-fuchsia-500/10 text-fuchsia-400 text-xs font-medium border border-fuchsia-500/20">Next Lecture</span>
+            </div>
+
+            <div class="glass rounded-2xl p-8">
+                <p class="text-neutral-400 font-light leading-relaxed mb-4">
+                    The instructor briefly introduces this method but covers it in the next video.
+                </p>
+                <div class="info-box p-5 flex items-start gap-3">
+                    <i data-lucide="shuffle" class="w-5 h-5 text-indigo-400 mt-0.5 flex-shrink-0"></i>
+                    <div>
+                        <p class="text-sm text-indigo-300 font-medium mb-1">Core Idea</p>
+                        <p class="text-sm text-neutral-400">Randomly select an existing value from the <strong class="text-white">same feature</strong> and use it to replace each missing value.</p>
+                        <p class="text-sm text-neutral-500 mt-2">This often <strong class="text-neutral-200">preserves the original distribution better</strong> than Mean/Median imputation.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <div class="section-divider my-20"></div>
+
+        <!-- Choosing the Best Technique -->
+        <section id="choosing" class="pt-8 scroll-mt-24">
+            <div class="flex items-center gap-3 mb-6">
+                <div class="w-10 h-10 rounded-xl bg-green-500/10 border border-green-500/20 flex items-center justify-center">
+                    <i data-lucide="trophy" class="w-5 h-5 text-green-400"></i>
+                </div>
+                <h2 class="text-2xl sm:text-3xl font-semibold tracking-tight green-gradient">Choosing the Best Imputation Technique</h2>
+            </div>
+
+            <div class="glass rounded-2xl p-8 space-y-6">
+                <div class="warning-box p-5 flex items-start gap-3">
+                    <i data-lucide="alert-triangle" class="w-5 h-5 text-amber-400 mt-0.5 flex-shrink-0"></i>
+                    <p class="text-sm text-neutral-300">There is <strong class="text-amber-300">no single best method</strong> for every dataset.</p>
+                </div>
+
+                <p class="text-xs text-neutral-500 uppercase tracking-wider font-medium">Recommended Workflow</p>
+
+                <div class="space-y-4">
+                    <div class="flex items-start gap-4 p-4 rounded-xl glass-light">
+                        <span class="w-8 h-8 rounded-lg bg-indigo-500/15 flex items-center justify-center text-indigo-400 text-sm font-semibold flex-shrink-0">1</span>
+                        <div>
+                            <p class="text-sm text-white font-medium">Try multiple imputation methods</p>
+                        </div>
+                    </div>
+                    <div class="flex items-start gap-4 p-4 rounded-xl glass-light">
+                        <span class="w-8 h-8 rounded-lg bg-purple-500/15 flex items-center justify-center text-purple-400 text-sm font-semibold flex-shrink-0">2</span>
+                        <div>
+                            <p class="text-sm text-white font-medium mb-2">Compare their impact on:</p>
+                            <div class="grid grid-cols-2 gap-2">
+                                <span class="text-sm text-neutral-400 flex items-center gap-1.5"><i data-lucide="bar-chart-3" class="w-3.5 h-3.5 text-purple-400"></i>Variance</span>
+                                <span class="text-sm text-neutral-400 flex items-center gap-1.5"><i data-lucide="bar-chart" class="w-3.5 h-3.5 text-purple-400"></i>Distribution</span>
+                                <span class="text-sm text-neutral-400 flex items-center gap-1.5"><i data-lucide="link" class="w-3.5 h-3.5 text-purple-400"></i>Correlation/Covariance</span>
+                                <span class="text-sm text-neutral-400 flex items-center gap-1.5"><i data-lucide="box" class="w-3.5 h-3.5 text-purple-400"></i>Outliers (Boxplots)</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="flex items-start gap-4 p-4 rounded-xl glass-light">
+                        <span class="w-8 h-8 rounded-lg bg-violet-500/15 flex items-center justify-center text-violet-400 text-sm font-semibold flex-shrink-0">3</span>
+                        <div>
+                            <p class="text-sm text-white font-medium">Evaluate model performance using <strong class="text-violet-400">cross-validation</strong></p>
+                        </div>
+                    </div>
+                    <div class="flex items-start gap-4 p-4 rounded-xl glass-light">
+                        <span class="w-8 h-8 rounded-lg bg-green-500/15 flex items-center justify-center text-green-400 text-sm font-semibold flex-shrink-0">4</span>
+                        <div>
+                            <p class="text-sm text-white font-medium">Select the technique that produces the <strong class="text-green-400">best predictive performance</strong> while preserving statistical properties</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <div class="section-divider my-20"></div>
+
+        <!-- Key Takeaways -->
+        <section id="takeaways" class="pt-8 scroll-mt-24">
+            <div class="flex items-center gap-3 mb-8">
+                <div class="w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center">
+                    <i data-lucide="bookmark" class="w-5 h-5 text-amber-400"></i>
+                </div>
+                <h2 class="text-2xl sm:text-3xl font-semibold tracking-tight amber-gradient">Key Takeaways</h2>
+            </div>
+
+            <div class="space-y-4">
+                <div class="glass rounded-2xl p-6 flex items-start gap-4 hover:border-amber-500/20 transition-colors duration-500">
+                    <div class="w-8 h-8 rounded-lg bg-amber-500/10 flex items-center justify-center flex-shrink-0 mt-0.5">
+                        <span class="text-amber-400 text-sm font-bold">1</span>
+                    </div>
+                    <p class="text-sm text-neutral-300 font-light leading-relaxed">Missing values can be handled either by <strong class="text-white">deleting rows</strong> or by <strong class="text-white">imputing values</strong>.</p>
+                </div>
+
+                <div class="glass rounded-2xl p-6 flex items-start gap-4 hover:border-amber-500/20 transition-colors duration-500">
+                    <div class="w-8 h-8 rounded-lg bg-amber-500/10 flex items-center justify-center flex-shrink-0 mt-0.5">
+                        <span class="text-amber-400 text-sm font-bold">2</span>
+                    </div>
+                    <p class="text-sm text-neutral-300 font-light leading-relaxed">Imputation is divided into <strong class="text-indigo-400">Univariate</strong> (same feature) and <strong class="text-purple-400">Multivariate</strong> (other features) approaches.</p>
+                </div>
+
+                <div class="glass rounded-2xl p-6 flex items-start gap-4 hover:border-amber-500/20 transition-colors duration-500">
+                    <div class="w-8 h-8 rounded-lg bg-amber-500/10 flex items-center justify-center flex-shrink-0 mt-0.5">
+                        <span class="text-amber-400 text-sm font-bold">3</span>
+                    </div>
+                    <p class="text-sm text-neutral-300 font-light leading-relaxed"><strong class="text-white">Mean</strong> works best for approximately normal distributions; <strong class="text-white">Median</strong> is preferred for skewed distributions.</p>
+                </div>
+
+                <div class="glass rounded-2xl p-6 flex items-start gap-4 hover:border-amber-500/20 transition-colors duration-500">
+                    <div class="w-8 h-8 rounded-lg bg-amber-500/10 flex items-center justify-center flex-shrink-0 mt-0.5">
+                        <span class="text-amber-400 text-sm font-bold">4</span>
+                    </div>
+                    <p class="text-sm text-neutral-300 font-light leading-relaxed">Mean/Median imputation is suitable when data is <strong class="text-green-400">Missing Completely At Random (MCAR)</strong> and the missing percentage is low (typically <strong class="text-amber-400">&lt;5%</strong>).</p>
+                </div>
+
+                <div class="glass rounded-2xl p-6 flex items-start gap-4 hover:border-amber-500/20 transition-colors duration-500">
+                    <div class="w-8 h-8 rounded-lg bg-amber-500/10 flex items-center justify-center flex-shrink-0 mt-0.5">
+                        <span class="text-amber-400 text-sm font-bold">5</span>
+                    </div>
+                    <p class="text-sm text-neutral-300 font-light leading-relaxed">Mean/Median imputation <strong class="text-red-400">changes the distribution, reduces variance, alters correlations</strong>, and may affect outlier detection.</p>
+                </div>
+
+                <div class="glass rounded-2xl p-6 flex items-start gap-4 hover:border-amber-500/20 transition-colors duration-500">
+                    <div class="w-8 h-8 rounded-lg bg-amber-500/10 flex items-center justify-center flex-shrink-0 mt-0.5">
+                        <span class="text-amber-400 text-sm font-bold">6</span>
+                    </div>
+                    <p class="text-sm text-neutral-300 font-light leading-relaxed">Always evaluate <strong class="text-white">variance, distribution plots, correlation/covariance, and boxplots</strong> after imputation.</p>
+                </div>
+
+                <div class="glass rounded-2xl p-6 flex items-start gap-4 hover:border-amber-500/20 transition-colors duration-500">
+                    <div class="w-8 h-8 rounded-lg bg-amber-500/10 flex items-center justify-center flex-shrink-0 mt-0.5">
+                        <span class="text-amber-400 text-sm font-bold">7</span>
+                    </div>
+                    <p class="text-sm text-neutral-300 font-light leading-relaxed">Fit imputers <strong class="text-red-400">only on the training data</strong>, then transform both training and test data to avoid <strong class="text-red-400">data leakage</strong>.</p>
+                </div>
+
+                <div class="glass rounded-2xl p-6 flex items-start gap-4 hover:border-amber-500/20 transition-colors duration-500">
+                    <div class="w-8 h-8 rounded-lg bg-amber-500/10 flex items-center justify-center flex-shrink-0 mt-0.5">
+                        <span class="text-amber-400 text-sm font-bold">8</span>
+                    </div>
+                    <p class="text-sm text-neutral-300 font-light leading-relaxed"><code class="text-indigo-400 bg-indigo-500/10 px-1.5 py-0.5 rounded text-xs">SimpleImputer</code> supports <code class="text-xs text-neutral-300 bg-white/5 px-1 py-0.5 rounded">mean</code>, <code class="text-xs text-neutral-300 bg-white/5 px-1 py-0.5 rounded">median</code>, <code class="text-xs text-neutral-300 bg-white/5 px-1 py-0.5 rounded">most_frequent</code>, and <code class="text-xs text-neutral-300 bg-white/5 px-1 py-0.5 rounded">constant</code> strategies.</p>
+                </div>
+
+                <div class="glass rounded-2xl p-6 flex items-start gap-4 hover:border-amber-500/20 transition-colors duration-500">
+                    <div class="w-8 h-8 rounded-lg bg-amber-500/10 flex items-center justify-center flex-shrink-0 mt-0.5">
+                        <span class="text-amber-400 text-sm font-bold">9</span>
+                    </div>
+                    <p class="text-sm text-neutral-300 font-light leading-relaxed"><code class="text-purple-400 bg-purple-500/10 px-1.5 py-0.5 rounded text-xs">ColumnTransformer</code> allows different imputation strategies for different columns.</p>
+                </div>
+
+                <div class="glass rounded-2xl p-6 flex items-start gap-4 hover:border-amber-500/20 transition-colors duration-500">
+                    <div class="w-8 h-8 rounded-lg bg-amber-500/10 flex items-center justify-center flex-shrink-0 mt-0.5">
+                        <span class="text-amber-400 text-sm font-bold">10</span>
+                    </div>
+                    <p class="text-sm text-neutral-300 font-light leading-relaxed"><strong class="text-white">Arbitrary Value Imputation</strong> uses a fixed value (e.g., -1 or 999) to preserve the information that data was missing, especially useful when missingness is informative (<strong class="text-amber-400">NMAR</strong>).</p>
+                </div>
+
+                <div class="glass rounded-2xl p-6 flex items-start gap-4 hover:border-amber-500/20 transition-colors duration-500">
+                    <div class="w-8 h-8 rounded-lg bg-amber-500/10 flex items-center justify-center flex-shrink-0 mt-0.5">
+                        <span class="text-amber-400 text-sm font-bold">11</span>
+                    </div>
+                    <p class="text-sm text-neutral-300 font-light leading-relaxed"><strong class="text-white">End of Distribution Imputation</strong> replaces missing values with statistically extreme values (e.g., Mean ± 3σ or Q3 + 1.5×IQR), providing a more data-driven alternative to arbitrary constants.</p>
+                </div>
+
+                <div class="glass rounded-2xl p-6 flex items-start gap-4 hover:border-amber-500/20 transition-colors duration-500">
+                    <div class="w-8 h-8 rounded-lg bg-amber-500/10 flex items-center justify-center flex-shrink-0 mt-0.5">
+                        <span class="text-amber-400 text-sm font-bold">12</span>
+                    </div>
+                    <p class="text-sm text-neutral-300 font-light leading-relaxed"><strong class="text-white">Random Sample Imputation</strong> and automatic technique selection are covered in the following lecture.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Footer -->
+        <footer class="mt-32 pt-12 border-t border-white/5">
+            <div class="flex flex-col sm:flex-row items-center justify-between gap-4">
+                <div class="flex items-center gap-3">
+                    <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-indigo-500 to-purple-500 flex items-center justify-center text-sm font-semibold">36</div>
+                    <span class="text-sm text-neutral-500">Day 36 — Data Science Study Notes</span>
+                </div>
+                <p class="text-xs text-neutral-600">Complete notes for study, revision, interviews, and real-world ML workflows.</p>
+            </div>
+        </footer>
+
+    </main>
+
+    <script>
+        // Initialize Lucide icons
+        lucide.createIcons();
+
+        // Scroll Progress Bar
+        window.addEventListener('scroll', () => {
+            const scrollTop = window.scrollY;
+            const docHeight = document.documentElement.scrollHeight - window.innerHeight;
+            const progress = (scrollTop / docHeight) * 100;
+            document.getElementById('scrollProgress').style.width = progress + '%';
+        });
+
+        // TOC Toggle
+        const tocToggle = document.getElementById('tocToggle');
+        const tocSidebar = document.getElementById('tocSidebar');
+        const tocClose = document.getElementById('tocClose');
+        let tocOpen = false;
+
+        tocToggle.addEventListener('click', () => {
+            tocOpen = !tocOpen;
+            tocSidebar.style.transform = tocOpen ? 'translateX(0)' : 'translateX(100%)';
+        });
+
+        tocClose.addEventListener('click', () => {
+            tocOpen = false;
+            tocSidebar.style.transform = 'translateX(100%)';
+        });
+
+        // Close TOC when clicking a link
+        document.querySelectorAll('.toc-link').forEach(link => {
+            link.addEventListener('click', () => {
+                tocOpen = false;
+                tocSidebar.style.transform = 'translateX(100%)';
+            });
+        });
+
+        // Back to Top
+        document.getElementById('backToTop').addEventListener('click', () => {
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        });
+
+        // Intersection Observer for fade-in animations
+        const observerOptions = {
+            root: null,
+            rootMargin: '0px 0px -80px 0px',
+            threshold: 0.1
+        };
+
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.style.opacity = '1';
+                    entry.target.style.transform = 'translateY(0)';
+                }
+            });
+        }, observerOptions);
+
+        // Apply to all sections
+        document.querySelectorAll('section').forEach(section => {
+            section.style.opacity = '0';
+            section.style.transform = 'translateY(20px)';
+            section.style.transition = 'opacity 0.6s ease-out, transform 0.6s ease-out';
+            observer.observe(section);
+        });
+
+        // Active TOC link highlighting
+        const sections = document.querySelectorAll('section[id]');
+        const tocLinksAll = document.querySelectorAll('.toc-link');
+
+        const highlightObserver = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    const id = entry.target.getAttribute('id');
+                    tocLinksAll.forEach(link => {
+                        link.classList.toggle('active', link.getAttribute('href') === '#' + id);
+                    });
+                }
+            });
+        }, { rootMargin: '-20% 0px -70% 0px' });
+
+        sections.forEach(section => highlightObserver.observe(section));
+    </script>
+
+</body>
+</html>
