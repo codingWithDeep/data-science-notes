@@ -1,0 +1,944 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Day 39 – KNN Imputation</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = { theme: { extend: { fontFamily: { sans: ['Inter', 'sans-serif'] } } } }
+    </script>
+    <style>
+        body{background:#000;font-family:'Inter',sans-serif}
+        @keyframes fadeInUp{from{opacity:0;transform:translateY(30px)}to{opacity:1;transform:translateY(0)}}
+        .animate-in{animation:fadeInUp .8s ease-out forwards;opacity:0}
+        .delay-1{animation-delay:.2s}.delay-2{animation-delay:.4s}.delay-3{animation-delay:.6s}
+        @keyframes pulse-glow{0%,100%{box-shadow:0 0 20px rgba(56,189,248,.15)}50%{box-shadow:0 0 40px rgba(56,189,248,.35)}}
+        .glow-card:hover{animation:pulse-glow 2s ease-in-out infinite}
+        @keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-10px)}}
+        .float-anim{animation:float 4s ease-in-out infinite}
+        @keyframes barGrow{from{width:0}}.bar-animate{animation:barGrow 1s ease-out forwards}
+        @keyframes dotPulse{0%,100%{opacity:.3;transform:scale(.8)}50%{opacity:1;transform:scale(1.2)}}
+        .dot-pulse{animation:dotPulse 2s ease-in-out infinite}
+        .glass{background:rgba(22,22,22,.6);backdrop-filter:blur(20px);border:1px solid rgba(255,255,255,.08)}
+        .glass-light{background:rgba(255,255,255,.03);backdrop-filter:blur(12px);border:1px solid rgba(255,255,255,.06)}
+        .gradient-text{background:linear-gradient(to right,#FFF,#FFF,#A3A3A3);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+        .sky-gradient{background:linear-gradient(135deg,#38BDF8,#818CF8);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+        .green-gradient{background:linear-gradient(135deg,#10B981,#4ADE80);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+        .red-gradient{background:linear-gradient(135deg,#EF4444,#F87171);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+        .amber-gradient{background:linear-gradient(135deg,#F59E0B,#FBBF24);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+        .teal-gradient{background:linear-gradient(135deg,#14B8A6,#5EEAD4);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+        .rose-gradient{background:linear-gradient(135deg,#F43F5E,#FB7185);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+        .code-block{background:rgba(0,0,0,.6);border:1px solid rgba(255,255,255,.08);border-radius:12px;font-family:'Courier New',monospace;font-size:14px;line-height:1.7;overflow-x:auto}
+        .code-block .keyword{color:#C084FC}.code-block .string{color:#4ADE80}.code-block .comment{color:#737373}.code-block .func{color:#60A5FA}.code-block .number{color:#FBBF24}.code-block .bool{color:#F87171}
+        .table-container{background:rgba(255,255,255,.02);border:1px solid rgba(255,255,255,.06);border-radius:16px;overflow:hidden}
+        .table-container table{width:100%;border-collapse:collapse}
+        .table-container th{background:rgba(56,189,248,.1);padding:12px 20px;text-align:left;font-weight:500;font-size:13px;text-transform:uppercase;letter-spacing:.05em;color:#A3A3A3;border-bottom:1px solid rgba(255,255,255,.06)}
+        .table-container td{padding:12px 20px;border-bottom:1px solid rgba(255,255,255,.04);font-size:14px;color:#E5E5E5}
+        .table-container tr:last-child td{border-bottom:none}
+        .table-container tr:hover td{background:rgba(255,255,255,.02)}
+        .nan-cell{color:#EF4444;font-style:italic}
+        .true-cell{color:#4ADE80;font-weight:500}.false-cell{color:#737373}
+        .toc-link{transition:all .3s ease;border-left:2px solid transparent;padding-left:12px}
+        .toc-link:hover{color:#38BDF8;border-left-color:#38BDF8;padding-left:16px}
+        .toc-link.active{color:#38BDF8;border-left-color:#38BDF8}
+        .section-divider{height:1px;background:linear-gradient(to right,transparent,rgba(56,189,248,.3),transparent)}
+        .scroll-progress{position:fixed;top:0;left:0;height:3px;background:linear-gradient(to right,#38BDF8,#818CF8);z-index:9999;transition:width .1s linear}
+        ::-webkit-scrollbar{width:6px}::-webkit-scrollbar-track{background:#000}::-webkit-scrollbar-thumb{background:#333;border-radius:3px}::-webkit-scrollbar-thumb:hover{background:#555}
+        .nav-blur{background:rgba(0,0,0,.7);backdrop-filter:blur(12px);border-bottom:1px solid rgba(255,255,255,.06)}
+        .warning-box{background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.2);border-radius:12px}
+        .danger-box{background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.2);border-radius:12px}
+        .success-box{background:rgba(16,185,129,.08);border:1px solid rgba(16,185,129,.2);border-radius:12px}
+        .info-box{background:rgba(56,189,248,.08);border:1px solid rgba(56,189,248,.2);border-radius:12px}
+        .star-box{background:rgba(251,191,36,.06);border:1px solid rgba(251,191,36,.15);border-radius:12px}
+        .formula-box{background:rgba(139,92,246,.06);border:1px solid rgba(139,92,246,.15);border-radius:12px;font-family:'Courier New',monospace}
+        .step-num{width:32px;height:32px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:600;flex-shrink:0}
+        .point-dot{width:8px;height:8px;border-radius:50%;position:absolute}
+        .axis-label{font-size:10px;fill:#737373;font-family:Inter,sans-serif}
+        .dim-label{font-size:9px;fill:#38BDF8;font-family:'Courier New',monospace}
+    </style>
+</head>
+<body class="text-white antialiased">
+
+<div class="scroll-progress" id="scrollProgress"></div>
+
+<nav class="fixed top-0 left-0 right-0 z-50 nav-blur h-16 flex items-center px-6">
+    <div class="max-w-7xl mx-auto w-full flex items-center justify-between">
+        <div class="flex items-center gap-3">
+            <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-sky-500 to-indigo-500 flex items-center justify-center text-sm font-semibold">39</div>
+            <span class="text-sm font-medium text-neutral-300 hidden sm:block">KNN Imputation</span>
+        </div>
+        <div class="flex items-center gap-4">
+            <button id="tocToggle" class="flex items-center gap-2 text-sm text-neutral-400 hover:text-white transition-colors px-3 py-1.5 rounded-lg hover:bg-white/5"><i data-lucide="list" class="w-4 h-4"></i><span class="hidden sm:inline">Contents</span></button>
+            <button id="backToTop" class="flex items-center gap-2 text-sm text-neutral-400 hover:text-white transition-colors px-3 py-1.5 rounded-lg hover:bg-white/5"><i data-lucide="arrow-up" class="w-4 h-4"></i><span class="hidden sm:inline">Top</span></button>
+        </div>
+    </div>
+</nav>
+
+<div id="tocSidebar" class="fixed top-16 right-0 w-72 h-[calc(100vh-4rem)] z-40 glass transform translate-x-full transition-transform duration-300 overflow-y-auto p-6">
+    <div class="flex items-center justify-between mb-6">
+        <h3 class="text-sm font-semibold text-neutral-300 uppercase tracking-wider">Contents</h3>
+        <button id="tocClose" class="text-neutral-500 hover:text-white transition-colors"><i data-lucide="x" class="w-4 h-4"></i></button>
+    </div>
+    <div class="space-y-1" id="tocLinks">
+        <a href="#intro" class="toc-link block text-sm text-neutral-500 py-1.5">Introduction</a>
+        <a href="#recap" class="toc-link block text-sm text-neutral-500 py-1.5">Recap: Univariate vs Multivariate</a>
+        <a href="#what-is-knn" class="toc-link block text-sm text-neutral-500 py-1.5">What is KNN Imputer?</a>
+        <a href="#core-idea" class="toc-link block text-sm text-neutral-500 py-1.5">Core Idea</a>
+        <a href="#similarity" class="toc-link block text-sm text-neutral-500 py-1.5">Measuring Similarity</a>
+        <a href="#rows-points" class="toc-link block text-sm text-neutral-500 py-1.5">Rows as Points in Space</a>
+        <a href="#euclidean" class="toc-link block text-sm text-neutral-500 py-1.5">Euclidean Distance Formula</a>
+        <a href="#nan-problem" class="toc-link block text-sm text-neutral-500 py-1.5">Problem with Missing Values</a>
+        <a href="#nan-solution" class="toc-link block text-sm text-neutral-500 py-1.5">NaN Euclidean Distance</a>
+        <a href="#weight" class="toc-link block text-sm text-neutral-500 py-1.5">Why Weight is Needed</a>
+        <a href="#examples" class="toc-link block text-sm text-neutral-500 py-1.5">Examples (1 & 2)</a>
+        <a href="#finding-k" class="toc-link block text-sm text-neutral-500 py-1.5">Finding Nearest Neighbors</a>
+        <a href="#what-k" class="toc-link block text-sm text-neutral-500 py-1.5">What Does "K" Mean?</a>
+        <a href="#algorithm" class="toc-link block text-sm text-neutral-500 py-1.5">Complete Algorithm</a>
+        <a href="#advantages" class="toc-link block text-sm text-neutral-500 py-1.5">Advantages</a>
+        <a href="#disadvantages" class="toc-link block text-sm text-neutral-500 py-1.5">Disadvantages</a>
+        <a href="#code" class="toc-link block text-sm text-neutral-500 py-1.5">Code: Titanic Dataset</a>
+        <a href="#params" class="toc-link block text-sm text-neutral-500 py-1.5">Important Parameters</a>
+        <a href="#experimenting" class="toc-link block text-sm text-neutral-500 py-1.5">Experimenting with K</a>
+        <a href="#weights" class="toc-link block text-sm text-neutral-500 py-1.5">Uniform vs Distance Weighting</a>
+        <a href="#comparison" class="toc-link block text-sm text-neutral-500 py-1.5">Comparison with Mean Imputation</a>
+        <a href="#best-practices" class="toc-link block text-sm text-neutral-500 py-1.5">Best Practices</a>
+        <a href="#interview" class="toc-link block text-sm text-neutral-500 py-1.5">Interview Questions</a>
+        <a href="#takeaways" class="toc-link block text-sm text-neutral-500 py-1.5">Key Takeaways</a>
+    </div>
+</div>
+
+<!-- Hero -->
+<section class="relative min-h-screen flex items-center justify-center overflow-hidden pt-16">
+    <div class="absolute inset-0">
+        <div class="absolute top-1/4 left-1/4 w-[500px] h-[500px] bg-sky-500/8 rounded-full blur-[120px]"></div>
+        <div class="absolute bottom-1/4 right-1/4 w-[400px] h-[400px] bg-indigo-500/6 rounded-full blur-[100px]"></div>
+    </div>
+    <div class="absolute inset-0" style="background-image:linear-gradient(to right,rgba(255,255,255,.03) 1px,transparent 1px),linear-gradient(to bottom,rgba(255,255,255,.03) 1px,transparent 1px);background-size:40px 40px;mask-image:radial-gradient(ellipse at center,black 30%,transparent 70%)"></div>
+    <div class="relative z-10 max-w-5xl mx-auto px-6 text-center">
+        <div class="animate-in">
+            <div class="inline-flex items-center gap-2 px-4 py-2 rounded-full glass-light text-xs font-medium text-sky-400 mb-8 tracking-wide uppercase">
+                <i data-lucide="book-open" class="w-3.5 h-3.5"></i> Day 39 — Feature Engineering
+            </div>
+        </div>
+        <h1 class="animate-in delay-1 text-4xl sm:text-5xl lg:text-6xl font-semibold tracking-tight leading-[1.1] mb-6">
+            <span class="gradient-text">KNN Imputation</span><br>
+            <span class="sky-gradient">K-Nearest Neighbors Imputer</span>
+        </h1>
+        <p class="animate-in delay-2 text-lg sm:text-xl font-light text-neutral-400 max-w-2xl mx-auto leading-relaxed mb-4">Multivariate Missing Value Imputation</p>
+        <p class="animate-in delay-2 text-sm font-light text-neutral-500 max-w-xl mx-auto leading-relaxed mb-10">Your first multivariate technique — using similar rows to fill missing values</p>
+        <div class="animate-in delay-3 flex flex-wrap items-center justify-center gap-4">
+            <a href="#intro" class="inline-flex items-center gap-2 px-8 py-3.5 bg-sky-600 hover:bg-sky-700 rounded-xl text-sm font-medium transition-all duration-300 hover:scale-105 hover:shadow-lg hover:shadow-sky-500/20">Start Reading <i data-lucide="chevron-down" class="w-4 h-4"></i></a>
+            <a href="#takeaways" class="inline-flex items-center gap-2 px-8 py-3.5 glass rounded-xl text-sm font-medium text-neutral-300 hover:text-white hover:border-white/20 transition-all duration-300">Key Takeaways <i data-lucide="bookmark" class="w-4 h-4"></i></a>
+        </div>
+        <div class="animate-in delay-3 grid grid-cols-3 gap-4 mt-16 max-w-md mx-auto">
+            <div class="glass-light rounded-xl p-4 text-center">
+                <div class="text-2xl font-semibold text-sky-400">K</div>
+                <div class="text-xs text-neutral-500 mt-1">Neighbors</div>
+            </div>
+            <div class="glass-light rounded-xl p-4 text-center">
+                <div class="text-2xl font-semibold text-indigo-400">nD</div>
+                <div class="text-xs text-neutral-500 mt-1">Dimensions</div>
+            </div>
+            <div class="glass-light rounded-xl p-4 text-center">
+                <div class="text-2xl font-semibold text-purple-400">d̂</div>
+                <div class="text-xs text-neutral-500 mt-1">Distance</div>
+            </div>
+        </div>
+    </div>
+    <div class="absolute bottom-8 left-1/2 -translate-x-1/2 float-anim">
+        <div class="w-6 h-10 rounded-full border-2 border-neutral-700 flex items-start justify-center p-1.5"><div class="w-1 h-2.5 bg-neutral-500 rounded-full animate-bounce"></div></div>
+    </div>
+</section>
+
+<main class="max-w-5xl mx-auto px-6 pb-32">
+
+<!-- Introduction -->
+<section id="intro" class="pt-32 scroll-mt-24">
+    <div class="flex items-center gap-3 mb-6">
+        <div class="w-10 h-10 rounded-xl bg-sky-500/10 border border-sky-500/20 flex items-center justify-center"><i data-lucide="file-text" class="w-5 h-5 text-sky-400"></i></div>
+        <h2 class="text-2xl sm:text-3xl font-semibold tracking-tight gradient-text">Introduction</h2>
+    </div>
+    <div class="glass rounded-2xl p-8 space-y-5">
+        <p class="text-neutral-300 font-light leading-relaxed">Until now, we have studied <strong class="text-white font-medium">Univariate Imputation Techniques</strong>, where each feature (column) is treated independently while filling missing values.</p>
+        <p class="text-neutral-300 font-light leading-relaxed">In this lecture, we learn our <strong class="text-sky-400 font-medium">first Multivariate Imputation Technique</strong>, called:</p>
+        <div class="flex justify-center py-2">
+            <span class="px-6 py-3 rounded-xl bg-sky-500/15 text-sky-400 text-xl font-semibold border border-sky-500/30">KNN Imputer</span>
+        </div>
+        <p class="text-sm text-neutral-400 text-center">K-Nearest Neighbors Imputer — one of the most powerful and commonly used techniques for handling missing values.</p>
+    </div>
+</section>
+
+<div class="section-divider my-20"></div>
+
+<!-- Recap -->
+<section id="recap" class="pt-8 scroll-mt-24">
+    <div class="flex items-center gap-3 mb-6">
+        <div class="w-10 h-10 rounded-xl bg-neutral-500/10 border border-neutral-500/20 flex items-center justify-center"><i data-lucide="rotate-ccw" class="w-5 h-5 text-neutral-400"></i></div>
+        <h2 class="text-2xl sm:text-3xl font-semibold tracking-tight gradient-text">Recap: Types of Missing Value Imputation</h2>
+    </div>
+    <div class="grid md:grid-cols-2 gap-6">
+        <div class="glass rounded-2xl p-8">
+            <div class="flex items-center gap-2 mb-4">
+                <span class="w-7 h-7 rounded-lg bg-neutral-500/15 flex items-center justify-center text-neutral-400 text-xs font-bold">1</span>
+                <h3 class="text-lg font-semibold text-white">Univariate Imputation</h3>
+            </div>
+            <p class="text-sm text-neutral-400 font-light mb-4">Each feature is treated independently.</p>
+            <div class="table-container mb-4">
+                <table>
+                    <thead><tr><th>Age</th><th>Salary</th></tr></thead>
+                    <tbody>
+                        <tr><td>22</td><td>50,000</td></tr>
+                        <tr><td>25</td><td>60,000</td></tr>
+                        <tr><td class="nan-cell">NaN</td><td>55,000</td></tr>
+                        <tr><td>28</td><td>70,000</td></tr>
+                    </tbody>
+                </table>
+            </div>
+            <p class="text-sm text-neutral-400 font-light mb-3">To fill missing Age, we only use the <strong class="text-white">Age column</strong>.</p>
+            <div class="flex flex-wrap gap-1.5">
+                <span class="px-2 py-1 rounded bg-neutral-500/10 text-neutral-400 text-xs">Mean</span>
+                <span class="px-2 py-1 rounded bg-neutral-500/10 text-neutral-400 text-xs">Median</span>
+                <span class="px-2 py-1 rounded bg-neutral-500/10 text-neutral-400 text-xs">Most Frequent</span>
+                <span class="px-2 py-1 rounded bg-neutral-500/10 text-neutral-400 text-xs">Random Sample</span>
+            </div>
+            <p class="text-xs text-red-400 mt-3">The Salary column is ignored.</p>
+        </div>
+        <div class="glass rounded-2xl p-8 border-sky-500/20">
+            <div class="flex items-center gap-2 mb-4">
+                <span class="w-7 h-7 rounded-lg bg-sky-500/15 flex items-center justify-center text-sky-400 text-xs font-bold">2</span>
+                <h3 class="text-lg font-semibold text-sky-400">Multivariate Imputation</h3>
+            </div>
+            <p class="text-sm text-neutral-400 font-light mb-4">Here we use <strong class="text-white">multiple columns</strong> together.</p>
+            <p class="text-sm text-neutral-400 font-light mb-4">Instead of using only the Age column, we also consider:</p>
+            <div class="flex flex-wrap gap-2 mb-4">
+                <span class="px-2.5 py-1 rounded-lg bg-sky-500/10 text-sky-400 text-xs border border-sky-500/20">Salary</span>
+                <span class="px-2.5 py-1 rounded-lg bg-sky-500/10 text-sky-400 text-xs border border-sky-500/20">Gender</span>
+                <span class="px-2.5 py-1 rounded-lg bg-sky-500/10 text-sky-400 text-xs border border-sky-500/20">Pclass</span>
+                <span class="px-2.5 py-1 rounded-lg bg-sky-500/10 text-sky-400 text-xs border border-sky-500/20">Fare</span>
+                <span class="px-2.5 py-1 rounded-lg bg-sky-500/10 text-sky-400 text-xs border border-sky-500/20">Family Size</span>
+                <span class="px-2.5 py-1 rounded-lg bg-sky-500/10 text-sky-400 text-xs border border-sky-500/20">Other features</span>
+            </div>
+            <div class="success-box p-4 flex items-start gap-3">
+                <i data-lucide="check-circle" class="w-4 h-4 text-green-400 mt-0.5 flex-shrink-0"></i>
+                <p class="text-sm text-neutral-400">These columns help estimate the missing value <strong class="text-green-400">much more accurately</strong>. This is the main difference.</p>
+            </div>
+        </div>
+    </div>
+    <div class="glass-light rounded-xl p-4 mt-6 text-center">
+        <p class="text-sm text-neutral-400">This playlist covers: <strong class="text-sky-400">KNN Imputer</strong> (today) · <strong class="text-indigo-400">Iterative Imputer / MICE</strong> (next lecture)</p>
+    </div>
+</section>
+
+<div class="section-divider my-20"></div>
+
+<!-- What is KNN Imputer -->
+<section id="what-is-knn" class="pt-8 scroll-mt-24">
+    <div class="flex items-center gap-3 mb-6">
+        <div class="w-10 h-10 rounded-xl bg-sky-500/10 border border-sky-500/20 flex items-center justify-center"><span class="text-sky-400 font-semibold text-lg">?</span></div>
+        <h2 class="text-2xl sm:text-3xl font-semibold tracking-tight sky-gradient">What is KNN Imputer?</h2>
+    </div>
+    <div class="glass rounded-2xl p-8 space-y-5">
+        <p class="text-neutral-300 font-light leading-relaxed">KNN stands for <strong class="text-sky-400">K-Nearest Neighbors</strong>.</p>
+        <p class="text-neutral-300 font-light leading-relaxed">It fills a missing value by <strong class="text-white">finding rows that are most similar</strong> to the row containing the missing value.</p>
+        <div class="info-box p-5 flex items-start gap-3">
+            <i data-lucide="quote" class="w-5 h-5 text-sky-400 mt-0.5 flex-shrink-0"></i>
+            <p class="text-neutral-200 italic">Instead of calculating a mean or median, it asks: <strong class="text-sky-400">"Which rows look most similar to this row?"</strong> Then it uses those similar rows to estimate the missing value.</p>
+        </div>
+    </div>
+</section>
+
+<!-- Core Idea -->
+<section id="core-idea" class="pt-16 scroll-mt-24">
+    <div class="glass rounded-2xl p-8 space-y-6 glow-card transition-all duration-500">
+        <h3 class="text-lg font-semibold text-white">Core Idea Behind KNN Imputer</h3>
+        <div class="table-container">
+            <table>
+                <thead><tr><th>Feature1</th><th>Feature2</th><th>Feature3</th><th>Feature4</th></tr></thead>
+                <tbody>
+                    <tr><td>30</td><td>55</td><td>68</td><td>2</td></tr>
+                    <tr><td class="nan-cell">NaN</td><td>55</td><td>61</td><td>2</td></tr>
+                    <tr><td>35</td><td>50</td><td>60</td><td>10</td></tr>
+                    <tr><td>33</td><td>80</td><td class="nan-cell">NaN</td><td>5</td></tr>
+                </tbody>
+            </table>
+        </div>
+        <p class="text-sm text-neutral-400 font-light">Suppose Feature1 is missing in <strong class="text-white">Row 2</strong>. Instead of taking the mean, KNN:</p>
+        <div class="grid sm:grid-cols-2 gap-4">
+            <div class="glass-light rounded-xl p-4 flex items-start gap-3">
+                <span class="step-num bg-sky-500/15 text-sky-400">1</span>
+                <p class="text-sm text-neutral-300">Calculates <strong class="text-white">similarity</strong> between Row 2 and every other row</p>
+            </div>
+            <div class="glass-light rounded-xl p-4 flex items-start gap-3">
+                <span class="step-num bg-sky-500/15 text-sky-400">2</span>
+                <p class="text-sm text-neutral-300">Finds the <strong class="text-white">nearest rows</strong></p>
+            </div>
+            <div class="glass-light rounded-xl p-4 flex items-start gap-3">
+                <span class="step-num bg-sky-500/15 text-sky-400">3</span>
+                <p class="text-sm text-neutral-300">Uses <strong class="text-white">Feature1 values</strong> from those rows</p>
+            </div>
+            <div class="glass-light rounded-xl p-4 flex items-start gap-3">
+                <span class="step-num bg-sky-500/15 text-sky-400">4</span>
+                <p class="text-sm text-neutral-300"><strong class="text-white">Averages</strong> them (or uses weighted average)</p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<div class="section-divider my-20"></div>
+
+<!-- Measuring Similarity -->
+<section id="similarity" class="pt-8 scroll-mt-24">
+    <div class="flex items-center gap-3 mb-6">
+        <div class="w-10 h-10 rounded-xl bg-sky-500/10 border border-sky-500/20 flex items-center justify-center"><i data-lucide="ruler" class="w-5 h-5 text-sky-400"></i></div>
+        <h2 class="text-2xl sm:text-3xl font-semibold tracking-tight gradient-text">How Does KNN Measure Similarity?</h2>
+    </div>
+    <div class="glass rounded-2xl p-8 space-y-4">
+        <p class="text-neutral-300 font-light leading-relaxed">Similarity is measured using <strong class="text-white">Distance</strong>. Usually:</p>
+        <div class="flex justify-center py-2"><span class="px-5 py-2.5 rounded-xl bg-sky-500/15 text-sky-400 text-lg font-semibold border border-sky-500/30">Euclidean Distance</span></div>
+        <p class="text-sm text-neutral-400 text-center">Rows that are <strong class="text-white">closer in distance</strong> are considered <strong class="text-sky-400">more similar</strong>.</p>
+    </div>
+</section>
+
+<!-- Rows as Points -->
+<section id="rows-points" class="pt-16 scroll-mt-24">
+    <div class="flex items-center gap-3 mb-6">
+        <div class="w-10 h-10 rounded-xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center"><i data-lucide="box" class="w-5 h-5 text-indigo-400"></i></div>
+        <h2 class="text-xl sm:text-2xl font-semibold tracking-tight gradient-text">Understanding Rows as Points</h2>
+    </div>
+    <div class="glass rounded-2xl p-8">
+        <p class="text-sm text-neutral-400 font-light leading-relaxed mb-6">Imagine every row is a point in space.</p>
+        <div class="grid grid-cols-3 gap-4 mb-6">
+            <div class="glass-light rounded-xl p-4 text-center">
+                <svg width="100" height="80" viewBox="0 0 100 80" class="mx-auto mb-2">
+                    <line x1="15" y1="65" x2="85" y2="65" stroke="#525252" stroke-width="1"/>
+                    <line x1="15" y1="15" x2="15" y2="65" stroke="#525252" stroke-width="1"/>
+                    <line x1="15" y1="35" x2="85" y2="35" stroke="#333" stroke-width=".5" stroke-dasharray="2,2"/>
+                    <circle cx="40" cy="30" r="4" fill="#38BDF8"/>
+                    <circle cx="65" cy="50" r="4" fill="#818CF8"/>
+                    <circle cx="55" cy="25" r="4" fill="#A78BFA"/>
+                    <text x="15" y="78" class="axis-label" text-anchor="middle">F1</text>
+                    <text x="8" y="40" class="axis-label" text-anchor="middle" transform="rotate(-90,8,40)">F2</text>
+                    <text x="50" y="12" class="dim-label" text-anchor="middle">3D → 2D view</text>
+                </svg>
+                <p class="text-xs text-neutral-500">3 features = <strong class="text-sky-400">3D</strong></p>
+            </div>
+            <div class="glass-light rounded-xl p-4 text-center">
+                <svg width="100" height="80" viewBox="0 0 100 80" class="mx-auto mb-2">
+                    <line x1="15" y1="65" x2="85" y2="65" stroke="#525252" stroke-width="1"/>
+                    <line x1="15" y1="15" x2="15" y2="65" stroke="#525252" stroke-width="1"/>
+                    <circle cx="30" cy="28" r="4" fill="#38BDF8"/>
+                    <circle cx="70" cy="45" r="4" fill="#818CF8"/>
+                    <circle cx="50" cy="55" r="4" fill="#A78BFA"/>
+                    <circle cx="60" cy="20" r="4" fill="#C084FC"/>
+                    <text x="50" y="12" class="dim-label" text-anchor="middle">4D → 2D view</text>
+                </svg>
+                <p class="text-xs text-neutral-500">4 features = <strong class="text-indigo-400">4D</strong></p>
+            </div>
+            <div class="glass-light rounded-xl p-4 text-center">
+                <svg width="100" height="80" viewBox="0 0 100 80" class="mx-auto mb-2">
+                    <line x1="15" y1="65" x2="85" y2="65" stroke="#525252" stroke-width="1"/>
+                    <line x1="15" y1="15" x2="15" y2="65" stroke="#525252" stroke-width="1"/>
+                    <circle cx="35" cy="35" r="3" fill="#38BDF8"/>
+                    <circle cx="60" cy="25" r="3" fill="#818CF8"/>
+                    <circle cx="45" cy="50" r="3" fill="#A78BFA"/>
+                    <circle cx="75" cy="40" r="3" fill="#C084FC"/>
+                    <circle cx="25" cy="55" r="3" fill="#E879F9"/>
+                    <text x="50" y="12" class="dim-label" text-anchor="middle">5D → 2D view</text>
+                </svg>
+                <p class="text-xs text-neutral-500">5 features = <strong class="text-purple-400">5D</strong></p>
+            </div>
+        </div>
+        <p class="text-sm text-neutral-500 text-center font-light">Although we cannot visualize dimensions beyond three, <strong class="text-white">mathematically it works exactly the same</strong>.</p>
+    </div>
+</section>
+
+<!-- Euclidean Distance Formula -->
+<section id="euclidean" class="pt-16 scroll-mt-24">
+    <div class="flex items-center gap-3 mb-6">
+        <div class="w-10 h-10 rounded-xl bg-purple-500/10 border border-purple-500/20 flex items-center justify-center"><i data-lucide="sigma" class="w-5 h-5 text-purple-400"></i></div>
+        <h2 class="text-xl sm:text-2xl font-semibold tracking-tight gradient-text">Euclidean Distance Formula</h2>
+    </div>
+    <div class="glass rounded-2xl p-8 space-y-5">
+        <p class="text-sm text-neutral-400 font-light">For two points <span class="text-purple-300">(x₁, y₁)</span> and <span class="text-purple-300">(x₂, y₂)</span>:</p>
+        <div class="formula-box p-5 text-center text-lg text-purple-300">
+            d = √(x₂−x₁)² + (y₂−y₁)²
+        </div>
+        <p class="text-sm text-neutral-400 font-light">For three dimensions:</p>
+        <div class="formula-box p-5 text-center text-base text-purple-300">
+            d = √(x₂−x₁)² + (y₂−y₁)² + (z₂−z₁)²
+        </div>
+        <p class="text-sm text-neutral-400 font-light">For <em>n</em> dimensions, we continue adding squared differences.</p>
+    </div>
+</section>
+
+<div class="section-divider my-20"></div>
+
+<!-- Problem with Missing Values -->
+<section id="nan-problem" class="pt-8 scroll-mt-24">
+    <div class="flex items-center gap-3 mb-6">
+        <div class="w-10 h-10 rounded-xl bg-red-500/10 border border-red-500/20 flex items-center justify-center"><i data-lucide="x-circle" class="w-5 h-5 text-red-400"></i></div>
+        <h2 class="text-2xl sm:text-3xl font-semibold tracking-tight red-gradient">Problem with Missing Values</h2>
+    </div>
+    <div class="glass rounded-2xl p-8 space-y-5">
+        <p class="text-neutral-300 font-light leading-relaxed"><strong class="text-red-400">Normal Euclidean Distance cannot handle missing values.</strong></p>
+        <div class="table-container max-w-xs mx-auto">
+            <table>
+                <thead><tr><th>A</th><th>B</th><th>C</th></tr></thead>
+                <tbody>
+                    <tr><td>10</td><td>20</td><td>30</td></tr>
+                    <tr><td class="nan-cell">NaN</td><td>20</td><td>35</td></tr>
+                </tbody>
+            </table>
+        </div>
+        <p class="text-sm text-neutral-400 text-center">Difference for the first feature <strong class="text-red-400">cannot be calculated</strong>.</p>
+        <div class="danger-box p-4 flex items-start gap-3">
+            <i data-lucide="alert-octagon" class="w-4 h-4 text-red-400 mt-0.5 flex-shrink-0"></i>
+            <p class="text-sm text-neutral-300">Therefore, ordinary Euclidean Distance <strong class="text-red-400">fails</strong>.</p>
+        </div>
+    </div>
+</section>
+
+<!-- NaN Euclidean Distance -->
+<section id="nan-solution" class="pt-16 scroll-mt-24">
+    <div class="flex items-center gap-3 mb-6">
+        <div class="w-10 h-10 rounded-xl bg-green-500/10 border border-green-500/20 flex items-center justify-center"><i data-lucide="check-circle" class="w-5 h-5 text-green-400"></i></div>
+        <h2 class="text-2xl sm:text-3xl font-semibold tracking-tight green-gradient">NaN Euclidean Distance</h2>
+    </div>
+    <div class="glass rounded-2xl p-8 space-y-6">
+        <p class="text-neutral-300 font-light leading-relaxed">Scikit-Learn uses a <strong class="text-green-400">modified version</strong> of Euclidean Distance specifically designed for missing values.</p>
+        <div class="success-box p-5 flex items-start gap-3">
+            <i data-lucide="lightbulb" class="w-5 h-5 text-green-400 mt-0.5 flex-shrink-0"></i>
+            <p class="text-sm text-neutral-300">Instead of using every feature, it only compares dimensions where <strong class="text-green-400">both rows have values</strong>. Missing dimensions are <strong class="text-white">ignored</strong>.</p>
+        </div>
+        <div class="section-divider"></div>
+        <p class="text-xs text-purple-400 uppercase tracking-wider font-medium mb-3">Formula (Concept)</p>
+        <div class="formula-box p-5 space-y-3 text-sm">
+            <p class="text-purple-300">Distance = √( Weight × Σ(squared differences) )</p>
+            <p class="text-neutral-400 mt-2">Where:</p>
+            <p class="text-sky-300">Weight = Total features / Common (non-missing) features</p>
+        </div>
+    </div>
+</section>
+
+<!-- Why Weight -->
+<section id="weight" class="pt-16 scroll-mt-24">
+    <div class="flex items-center gap-3 mb-6">
+        <div class="w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center"><i data-lucide="help-circle" class="w-5 h-5 text-amber-400"></i></div>
+        <h2 class="text-xl sm:text-2xl font-semibold tracking-tight amber-gradient">Why is Weight Needed?</h2>
+    </div>
+    <div class="glass rounded-2xl p-8 space-y-5">
+        <p class="text-sm text-neutral-400 font-light">Suppose we have <strong class="text-white">4 features</strong> but only <strong class="text-white">2 are available</strong>.</p>
+        <div class="flex items-center justify-center gap-4 py-3">
+            <span class="px-4 py-2 rounded-xl bg-amber-500/10 text-amber-400 text-sm border border-amber-500/20">Total = 4</span>
+            <span class="text-neutral-600">/</span>
+            <span class="px-4 py-2 rounded-xl bg-amber-500/10 text-amber-400 text-sm border border-amber-500/20">Common = 2</span>
+            <span class="text-neutral-600">=</span>
+            <span class="px-4 py-2 rounded-xl bg-amber-500/20 text-amber-300 text-lg font-bold border border-amber-500/30">2</span>
+        </div>
+        <p class="text-sm text-neutral-400 font-light text-center">The distance is multiplied by this weight to <strong class="text-amber-300">compensate for ignored dimensions</strong>.</p>
+    </div>
+</section>
+
+<!-- Examples -->
+<section id="examples" class="pt-16 scroll-mt-24">
+    <div class="flex items-center gap-3 mb-6">
+        <div class="w-10 h-10 rounded-xl bg-purple-500/10 border border-purple-500/20 flex items-center justify-center"><i data-lucide="calculator" class="w-5 h-5 text-purple-400"></i></div>
+        <h2 class="text-xl sm:text-2xl font-semibold tracking-tight gradient-text">Worked Examples</h2>
+    </div>
+    <div class="grid md:grid-cols-2 gap-6">
+        <div class="glass rounded-2xl p-8 space-y-4">
+            <div class="flex items-center gap-2"><span class="w-7 h-7 rounded-lg bg-purple-500/15 flex items-center justify-center text-purple-400 text-xs font-bold">1</span><h4 class="text-sm font-semibold text-white">Partial Missing</h4></div>
+            <div class="grid grid-cols-2 gap-3 text-sm">
+                <div class="glass-light rounded-xl p-3 text-center">
+                    <p class="text-xs text-neutral-500 mb-1">Row1</p>
+                    <p class="font-mono text-neutral-300">55, 68, 16</p>
+                </div>
+                <div class="glass-light rounded-xl p-3 text-center">
+                    <p class="text-xs text-neutral-500 mb-1">Row2</p>
+                    <p class="font-mono"><span class="text-red-400">NaN</span>, 67, 61</p>
+                </div>
+            </div>
+            <p class="text-xs text-neutral-500">First feature skipped. Remaining used:</p>
+            <div class="formula-box p-4 text-xs text-purple-300">
+                (68−67)² + (16−61)²
+            </div>
+            <p class="text-xs text-neutral-500">Weight = 3/2 = <strong class="text-amber-300">1.5</strong></p>
+            <div class="formula-box p-4 text-xs text-sky-300">
+                d = √(1.5 × ((68−67)² + (16−61)²))
+            </div>
+        </div>
+        <div class="glass rounded-2xl p-8 space-y-4">
+            <div class="flex items-center gap-2"><span class="w-7 h-7 rounded-lg bg-green-500/15 flex items-center justify-center text-green-400 text-xs font-bold">2</span><h4 class="text-sm font-semibold text-white">No Missing</h4></div>
+            <p class="text-sm text-neutral-400 font-light">Suppose every feature exists.</p>
+            <div class="formula-box p-4 text-xs text-green-300">
+                Weight = 3/3 = <strong>1</strong>
+            </div>
+            <div class="success-box p-4 flex items-start gap-3">
+                <i data-lucide="check-circle" class="w-4 h-4 text-green-400 mt-0.5 flex-shrink-0"></i>
+                <p class="text-sm text-neutral-400">Distance becomes <strong class="text-green-400">ordinary Euclidean Distance</strong>.</p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Finding Nearest Neighbors -->
+<section id="finding-k" class="pt-16 scroll-mt-24">
+    <div class="flex items-center gap-3 mb-6">
+        <div class="w-10 h-10 rounded-xl bg-sky-500/10 border border-sky-500/20 flex items-center justify-center"><i data-lucide="search" class="w-5 h-5 text-sky-400"></i></div>
+        <h2 class="text-xl sm:text-2xl font-semibold tracking-tight gradient-text">Finding Nearest Neighbors</h2>
+    </div>
+    <div class="glass rounded-2xl p-8">
+        <p class="text-xs text-neutral-500 uppercase tracking-wider font-medium mb-4">Suppose distances are:</p>
+        <div class="table-container max-w-sm mx-auto mb-4">
+            <table>
+                <thead><tr><th>Row</th><th>Distance</th></tr></thead>
+                <tbody>
+                    <tr><td>1</td><td>11.29</td></tr>
+                    <tr><td>3</td><td>8.40</td></tr>
+                    <tr><td class="text-sky-400 font-medium">4</td><td class="text-sky-400 font-medium">5.19 ← nearest</td></tr>
+                    <tr><td>5</td><td>15.78</td></tr>
+                </tbody>
+            </table>
+        </div>
+        <p class="text-sm text-neutral-400 text-center">Nearest rows: <strong class="text-sky-400">Row 4</strong>, then <strong class="text-indigo-400">Row 3</strong></p>
+    </div>
+</section>
+
+<!-- What Does K Mean -->
+<section id="what-k" class="pt-16 scroll-mt-24">
+    <div class="flex items-center gap-3 mb-6">
+        <div class="w-10 h-10 rounded-xl bg-sky-500/10 border border-sky-500/20 flex items-center justify-center"><span class="text-sky-400 font-semibold text-lg">K</span></div>
+        <h2 class="text-2xl sm:text-3xl font-semibold tracking-tight sky-gradient">What Does "K" Mean?</h2>
+    </div>
+    <p class="text-neutral-400 font-light mb-8">K represents the <strong class="text-white">number of nearest neighbors used</strong>.</p>
+    <div class="grid md:grid-cols-3 gap-6">
+        <div class="glass rounded-2xl p-6 text-center hover:border-sky-500/20 transition-colors duration-500">
+            <div class="w-12 h-12 rounded-xl bg-sky-500/10 flex items-center justify-center mx-auto mb-3"><span class="text-sky-400 text-xl font-bold">K=1</span></div>
+            <p class="text-sm text-neutral-400">Use only the <strong class="text-white">nearest row</strong></p>
+        </div>
+        <div class="glass rounded-2xl p-6 text-center hover:border-sky-500/20 transition-colors duration-500">
+            <div class="w-12 h-12 rounded-xl bg-sky-500/10 flex items-center justify-center mx-auto mb-3"><span class="text-sky-400 text-xl font-bold">K=2</span></div>
+            <p class="text-sm text-neutral-400 mb-2">Use two nearest rows</p>
+            <div class="formula-box p-3 text-xs text-sky-300">
+                (33 + 30) / 2 = <strong>31.5</strong>
+            </div>
+        </div>
+        <div class="glass rounded-2xl p-6 text-center hover:border-sky-500/20 transition-colors duration-500">
+            <div class="w-12 h-12 rounded-xl bg-sky-500/10 flex items-center justify-center mx-auto mb-3"><span class="text-sky-400 text-xl font-bold">K=3</span></div>
+            <p class="text-sm text-neutral-400 mb-2">Use three nearest rows</p>
+            <div class="formula-box p-3 text-xs text-sky-300">
+                (33+30+35) / 3
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Complete Algorithm -->
+<section id="algorithm" class="pt-16 scroll-mt-24">
+    <div class="flex items-center gap-3 mb-6">
+        <div class="w-10 h-10 rounded-xl bg-sky-500/10 border border-sky-500/20 flex items-center justify-center"><i data-lucide="list-ordered" class="w-5 h-5 text-sky-400"></i></div>
+        <h2 class="text-2xl sm:text-3xl font-semibold tracking-tight gradient-text">Complete KNN Imputation Algorithm</h2>
+    </div>
+    <div class="glass rounded-2xl p-8">
+        <div class="space-y-0">
+            <div class="flex items-start gap-4 p-4 rounded-xl hover:bg-white/[0.02] transition-colors">
+                <span class="step-num bg-sky-500/15 text-sky-400">1</span>
+                <p class="text-sm text-neutral-300">Identify missing value</p>
+            </div>
+            <div class="w-0.5 h-3 bg-white/5 ml-[15px]"></div>
+            <div class="flex items-start gap-4 p-4 rounded-xl hover:bg-white/[0.02] transition-colors">
+                <span class="step-num bg-sky-500/15 text-sky-400">2</span>
+                <p class="text-sm text-neutral-300">Calculate distance from that row to every other row</p>
+            </div>
+            <div class="w-0.5 h-3 bg-white/5 ml-[15px]"></div>
+            <div class="flex items-start gap-4 p-4 rounded-xl hover:bg-white/[0.02] transition-colors">
+                <span class="step-num bg-sky-500/15 text-sky-400">3</span>
+                <p class="text-sm text-neutral-300">Ignore missing dimensions while calculating distance</p>
+            </div>
+            <div class="w-0.5 h-3 bg-white/5 ml-[15px]"></div>
+            <div class="flex items-start gap-4 p-4 rounded-xl hover:bg-white/[0.02] transition-colors">
+                <span class="step-num bg-sky-500/15 text-sky-400">4</span>
+                <p class="text-sm text-neutral-300">Use <strong class="text-sky-400">NaN Euclidean Distance</strong></p>
+            </div>
+            <div class="w-0.5 h-3 bg-white/5 ml-[15px]"></div>
+            <div class="flex items-start gap-4 p-4 rounded-xl hover:bg-white/[0.02] transition-colors">
+                <span class="step-num bg-sky-500/15 text-sky-400">5</span>
+                <p class="text-sm text-neutral-300">Find <strong class="text-sky-400">K nearest neighbors</strong></p>
+            </div>
+            <div class="w-0.5 h-3 bg-white/5 ml-[15px]"></div>
+            <div class="flex items-start gap-4 p-4 rounded-xl hover:bg-white/[0.02] transition-colors">
+                <span class="step-num bg-sky-500/15 text-sky-400">6</span>
+                <p class="text-sm text-neutral-300">Take the corresponding feature values</p>
+            </div>
+            <div class="w-0.5 h-3 bg-white/5 ml-[15px]"></div>
+            <div class="flex items-start gap-4 p-4 rounded-xl hover:bg-white/[0.02] transition-colors">
+                <span class="step-num bg-green-500/15 text-green-400">7</span>
+                <p class="text-sm text-neutral-300"><strong class="text-green-400">Average them</strong> (or use weighted average)</p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<div class="section-divider my-20"></div>
+
+<!-- Advantages -->
+<section id="advantages" class="pt-8 scroll-mt-24">
+    <div class="flex items-center gap-3 mb-6">
+        <div class="w-10 h-10 rounded-xl bg-green-500/10 border border-green-500/20 flex items-center justify-center"><i data-lucide="thumbs-up" class="w-5 h-5 text-green-400"></i></div>
+        <h2 class="text-2xl sm:text-3xl font-semibold tracking-tight green-gradient">Advantages of KNN Imputer</h2>
+    </div>
+    <div class="grid md:grid-cols-2 gap-6">
+        <div class="glass rounded-2xl p-8 hover:border-green-500/20 transition-colors duration-500">
+            <div class="w-12 h-12 rounded-xl bg-green-500/10 flex items-center justify-center mb-4"><i data-lucide="target" class="w-6 h-6 text-green-400"></i></div>
+            <h3 class="text-lg font-semibold text-white mb-2">Better Accuracy</h3>
+            <p class="text-sm text-neutral-400 font-light">Usually performs better than Mean, Median, and Mode imputation because it uses <strong class="text-white">information from multiple features</strong>.</p>
+        </div>
+        <div class="glass rounded-2xl p-8 hover:border-green-500/20 transition-colors duration-500">
+            <div class="w-12 h-12 rounded-xl bg-green-500/10 flex items-center justify-center mb-4"><i data-lucide="link" class="w-6 h-6 text-green-400"></i></div>
+            <h3 class="text-lg font-semibold text-white mb-2">Preserves Relationships</h3>
+            <p class="text-sm text-neutral-400 font-light">Mean imputation destroys relationships between variables. KNN <strong class="text-green-400">preserves feature interactions</strong>.</p>
+        </div>
+        <div class="glass rounded-2xl p-8 hover:border-green-500/20 transition-colors duration-500">
+            <div class="w-12 h-12 rounded-xl bg-green-500/10 flex items-center justify-center mb-4"><i data-lucide="database" class="w-6 h-6 text-green-400"></i></div>
+            <h3 class="text-lg font-semibold text-white mb-2">Data-Driven</h3>
+            <p class="text-sm text-neutral-400 font-light">Instead of inserting one fixed number, it uses <strong class="text-white">actual nearby observations</strong>.</p>
+        </div>
+        <div class="glass rounded-2xl p-8 hover:border-green-500/20 transition-colors duration-500">
+            <div class="w-12 h-12 rounded-xl bg-green-500/10 flex items-center justify-center mb-4"><i data-lucide="hard-drive" class="w-6 h-6 text-green-400"></i></div>
+            <h3 class="text-lg font-semibold text-white mb-2">Works Well for Small/Medium Datasets</h3>
+            <p class="text-sm text-neutral-400 font-light">Especially useful when the dataset is <strong class="text-white">not extremely large</strong>.</p>
+        </div>
+    </div>
+</section>
+
+<div class="section-divider my-20"></div>
+
+<!-- Disadvantages -->
+<section id="disadvantages" class="pt-8 scroll-mt-24">
+    <div class="flex items-center gap-3 mb-6">
+        <div class="w-10 h-10 rounded-xl bg-red-500/10 border border-red-500/20 flex items-center justify-center"><i data-lucide="thumbs-down" class="w-5 h-5 text-red-400"></i></div>
+        <h2 class="text-2xl sm:text-3xl font-semibold tracking-tight red-gradient">Disadvantages</h2>
+    </div>
+    <div class="space-y-6">
+        <div class="glass rounded-2xl p-8">
+            <div class="flex items-center gap-3 mb-3"><span class="w-8 h-8 rounded-lg bg-red-500/15 flex items-center justify-center text-red-400 text-sm font-semibold">1</span><h3 class="text-lg font-semibold text-white">Computationally Expensive</h3></div>
+            <p class="text-sm text-neutral-400 font-light">For every missing value, distance to <strong class="text-red-400">every row</strong> must be calculated. Complexity increases rapidly with dataset size.</p>
+        </div>
+        <div class="glass rounded-2xl p-8">
+            <div class="flex items-center gap-3 mb-3"><span class="w-8 h-8 rounded-lg bg-red-500/15 flex items-center justify-center text-red-400 text-sm font-semibold">2</span><h3 class="text-lg font-semibold text-white">Slow</h3></div>
+            <p class="text-sm text-neutral-400 font-light">Large datasets require many calculations. Training becomes <strong class="text-red-400">slow</strong>.</p>
+        </div>
+        <div class="glass rounded-2xl p-8">
+            <div class="flex items-center gap-3 mb-3"><span class="w-8 h-8 rounded-lg bg-red-500/15 flex items-center justify-center text-red-400 text-sm font-semibold">3</span><h3 class="text-lg font-semibold text-white">High Memory Usage</h3></div>
+            <p class="text-sm text-neutral-400 font-light">During prediction, the <strong class="text-red-400">entire training dataset must be stored</strong>. Unlike Mean Imputation, KNN cannot simply remember one average.</p>
+        </div>
+        <div class="glass rounded-2xl p-8">
+            <div class="flex items-center gap-3 mb-3"><span class="w-8 h-8 rounded-lg bg-red-500/15 flex items-center justify-center text-red-400 text-sm font-semibold">4</span><h3 class="text-lg font-semibold text-white">Production Deployment</h3></div>
+            <p class="text-sm text-neutral-400 font-light mb-3">Incoming samples must be compared with the entire training data. Therefore:</p>
+            <div class="flex flex-wrap gap-2">
+                <span class="px-3 py-1.5 rounded-lg bg-red-500/10 text-red-400 text-sm border border-red-500/20 flex items-center gap-1.5"><i data-lucide="cpu" class="w-3.5 h-3.5"></i>More RAM</span>
+                <span class="px-3 py-1.5 rounded-lg bg-red-500/10 text-red-400 text-sm border border-red-500/20 flex items-center gap-1.5"><i data-lucide="gauge" class="w-3.5 h-3.5"></i>More CPU</span>
+                <span class="px-3 py-1.5 rounded-lg bg-red-500/10 text-red-400 text-sm border border-red-500/20 flex items-center gap-1.5"><i data-lucide="clock" class="w-3.5 h-3.5"></i>Slower inference</span>
+            </div>
+        </div>
+    </div>
+</section>
+
+<div class="section-divider my-20"></div>
+
+<!-- Code -->
+<section id="code" class="pt-8 scroll-mt-24">
+    <div class="flex items-center gap-3 mb-6">
+        <div class="w-10 h-10 rounded-xl bg-sky-500/10 border border-sky-500/20 flex items-center justify-center"><i data-lucide="code" class="w-5 h-5 text-sky-400"></i></div>
+        <h2 class="text-2xl sm:text-3xl font-semibold tracking-tight gradient-text">Code — Titanic Dataset</h2>
+    </div>
+    <div class="glass rounded-2xl p-8 space-y-6">
+        <div class="flex flex-wrap gap-3">
+            <div class="glass-light rounded-xl px-4 py-2 flex items-center gap-2"><i data-lucide="hash" class="w-3.5 h-3.5 text-sky-400"></i><span class="text-sm text-neutral-300">Age</span><span class="text-[10px] px-1.5 py-0.5 rounded bg-red-500/10 text-red-400">missing</span></div>
+            <div class="glass-light rounded-xl px-4 py-2 flex items-center gap-2"><i data-lucide="hash" class="w-3.5 h-3.5 text-indigo-400"></i><span class="text-sm text-neutral-300">Pclass</span></div>
+            <div class="glass-light rounded-xl px-4 py-2 flex items-center gap-2"><i data-lucide="hash" class="w-3.5 h-3.5 text-purple-400"></i><span class="text-sm text-neutral-300">Fare</span></div>
+            <div class="glass-light rounded-xl px-4 py-2 flex items-center gap-2"><i data-lucide="hash" class="w-3.5 h-3.5 text-teal-400"></i><span class="text-sm text-neutral-300">Family</span></div>
+            <div class="glass-light rounded-xl px-4 py-2 flex items-center gap-2"><i data-lucide="target" class="w-3.5 h-3.5 text-green-400"></i><span class="text-sm text-neutral-300">Survived</span><span class="text-[10px] px-1.5 py-0.5 rounded bg-green-500/10 text-green-400">Target</span></div>
+        </div>
+        <div class="section-divider"></div>
+        <div class="code-block p-6">
+            <span class="keyword">from</span> sklearn.impute <span class="keyword">import</span> KNNImputer<br><br>
+            <span class="comment"># Fit</span><br>
+            imputer.<span class="func">fit</span>(X_train)<br><br>
+            <span class="comment"># Transform train</span><br>
+            X_train = imputer.<span class="func">transform</span>(X_train)<br><br>
+            <span class="comment"># Transform test</span><br>
+            X_test = imputer.<span class="func">transform</span>(X_test)
+        </div>
+        <p class="text-sm text-neutral-500">Model: <code class="text-sky-400 bg-sky-500/10 px-1.5 py-0.5 rounded text-xs">LogisticRegression()</code> — Accuracy ≈ <strong class="text-white">70%</strong></p>
+    </div>
+</section>
+
+<!-- Parameters -->
+<section id="params" class="pt-16 scroll-mt-24">
+    <div class="flex items-center gap-3 mb-6">
+        <div class="w-10 h-10 rounded-xl bg-sky-500/10 border border-sky-500/20 flex items-center justify-center"><i data-lucide="sliders" class="w-5 h-5 text-sky-400"></i></div>
+        <h2 class="text-2xl sm:text-3xl font-semibold tracking-tight gradient-text">Important Parameters</h2>
+    </div>
+    <div class="space-y-4">
+        <div class="glass rounded-2xl p-6 flex items-start gap-4">
+            <code class="text-sky-400 bg-sky-500/10 px-2.5 py-1 rounded-lg text-sm font-mono flex-shrink-0">missing_values</code>
+            <div><p class="text-sm text-neutral-300">Default: <code class="text-neutral-400 bg-white/5 px-1 py-0.5 rounded text-xs">np.nan</code></p><p class="text-xs text-neutral-500 mt-1">No need to change.</p></div>
+        </div>
+        <div class="glass rounded-2xl p-6 flex items-start gap-4">
+            <code class="text-sky-400 bg-sky-500/10 px-2.5 py-1 rounded-lg text-sm font-mono flex-shrink-0">n_neighbors</code>
+            <div><p class="text-sm text-neutral-300">Default: <code class="text-amber-400 bg-amber-500/10 px-1 py-0.5 rounded text-xs">5</code> — Number of nearest neighbors.</p><div class="code-block p-3 mt-2 text-xs"><span class="func">KNNImputer</span>(n_neighbors=<span class="number">5</span>)</div><p class="text-xs text-amber-400 mt-2">Should be tuned using experiments or cross-validation.</p></div>
+        </div>
+        <div class="glass rounded-2xl p-6 flex items-start gap-4">
+            <code class="text-sky-400 bg-sky-500/10 px-2.5 py-1 rounded-lg text-sm font-mono flex-shrink-0">weights</code>
+            <div><p class="text-sm text-neutral-300 mb-2">Options: <code class="text-neutral-400 bg-white/5 px-1 py-0.5 rounded text-xs">'uniform'</code> or <code class="text-neutral-400 bg-white/5 px-1 py-0.5 rounded text-xs">'distance'</code></p><p class="text-xs text-neutral-500">Default: <code class="text-neutral-400 bg-white/5 px-1 py-0.5 rounded text-xs">'uniform'</code></p></div>
+        </div>
+        <div class="glass rounded-2xl p-6 flex items-start gap-4">
+            <code class="text-sky-400 bg-sky-500/10 px-2.5 py-1 rounded-lg text-sm font-mono flex-shrink-0">metric</code>
+            <div><p class="text-sm text-neutral-300">Default: <code class="text-green-400 bg-green-500/10 px-1 py-0.5 rounded text-xs">'nan_euclidean'</code></p><p class="text-xs text-neutral-500 mt-1">Should usually remain unchanged.</p></div>
+        </div>
+        <div class="glass rounded-2xl p-6 flex items-start gap-4">
+            <code class="text-sky-400 bg-sky-500/10 px-2.5 py-1 rounded-lg text-sm font-mono flex-shrink-0">add_indicator</code>
+            <div><p class="text-sm text-neutral-300 mb-2">If <code class="text-green-400 bg-green-500/10 px-1 py-0.5 rounded text-xs">True</code>, extra binary columns are added indicating which entries were originally missing.</p>
+                <div class="table-container max-w-xs mt-3">
+                    <table>
+                        <thead><tr><th>Age</th><th>Age_missing</th></tr></thead>
+                        <tbody>
+                            <tr><td>22</td><td class="false-cell">False</td></tr>
+                            <tr><td class="nan-cell">NaN</td><td class="true-cell">True</td></tr>
+                            <tr><td>35</td><td class="false-cell">False</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+                <p class="text-xs text-neutral-500 mt-2">Sometimes this improves model performance because the missingness itself can carry information.</p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Experimenting with K -->
+<section id="experimenting" class="pt-16 scroll-mt-24">
+    <div class="glass rounded-2xl p-8 space-y-4">
+        <h3 class="text-lg font-semibold text-white">Experimenting with K</h3>
+        <p class="text-sm text-neutral-400 font-light">The instructor tried K = 1, 3, 4, 5. Results changed only slightly. Default <code class="text-amber-400 bg-amber-500/10 px-1.5 py-0.5 rounded text-xs">5</code> worked well.</p>
+        <div class="warning-box p-4 flex items-start gap-3">
+            <i data-lucide="alert-triangle" class="w-4 h-4 text-amber-400 mt-0.5 flex-shrink-0"></i>
+            <p class="text-sm text-neutral-300">In real projects, always <strong class="text-amber-300">tune <code class="text-amber-300 bg-amber-500/10 px-1 py-0.5 rounded text-xs">n_neighbors</code></strong> rather than relying blindly on the default.</p>
+        </div>
+    </div>
+</section>
+
+<div class="section-divider my-20"></div>
+
+<!-- Uniform vs Distance Weighting -->
+<section id="weights" class="pt-8 scroll-mt-24">
+    <div class="flex items-center gap-3 mb-6">
+        <div class="w-10 h-10 rounded-xl bg-purple-500/10 border border-purple-500/20 flex items-center justify-center"><i data-lucide="scale" class="w-5 h-5 text-purple-400"></i></div>
+        <h2 class="text-2xl sm:text-3xl font-semibold tracking-tight gradient-text">Uniform vs Distance Weighting</h2>
+    </div>
+    <div class="star-box p-5 mb-6 flex items-start gap-3">
+        <i data-lucide="star" class="w-5 h-5 text-amber-400 mt-0.5 flex-shrink-0"></i>
+        <p class="text-sm text-amber-300 font-medium">This is an important concept.</p>
+    </div>
+    <div class="glass rounded-2xl p-8 space-y-6 mb-6">
+        <p class="text-sm text-neutral-400 font-light">Suppose two nearest neighbors are:</p>
+        <div class="grid sm:grid-cols-2 gap-4">
+            <div class="glass-light rounded-xl p-4 text-center">
+                <p class="text-xs text-neutral-500 mb-1">Neighbor 1</p>
+                <p class="text-lg font-semibold text-white">Distance: <span class="text-sky-400">10</span></p>
+                <p class="text-lg font-semibold text-white">Value: <span class="text-green-400">70</span></p>
+            </div>
+            <div class="glass-light rounded-xl p-4 text-center">
+                <p class="text-xs text-neutral-500 mb-1">Neighbor 2</p>
+                <p class="text-lg font-semibold text-white">Distance: <span class="text-red-400">50</span></p>
+                <p class="text-lg font-semibold text-white">Value: <span class="text-green-400">50</span></p>
+            </div>
+        </div>
+    </div>
+    <div class="grid md:grid-cols-2 gap-6">
+        <div class="glass rounded-2xl p-8">
+            <h4 class="text-sm font-semibold text-indigo-400 uppercase tracking-wider mb-4">Uniform Weighting</h4>
+            <p class="text-sm text-neutral-400 font-light mb-3">Both neighbors contribute <strong class="text-white">equally</strong>.</p>
+            <div class="formula-box p-4 text-center text-sm text-indigo-300">
+                (70 + 50) / 2 = <strong>60</strong>
+            </div>
+        </div>
+        <div class="glass rounded-2xl p-8 border-purple-500/20">
+            <h4 class="text-sm font-semibold text-purple-400 uppercase tracking-wider mb-4">Distance Weighting</h4>
+            <p class="text-sm text-neutral-400 font-light mb-2">Closer neighbors receive <strong class="text-purple-400">higher importance</strong>.</p>
+            <p class="text-xs text-neutral-500 mb-3">Weights: w = 1/distance</p>
+            <div class="formula-box p-4 text-center text-xs text-purple-300">
+                (70/10 + 50/50) / (1/10 + 1/50)
+            </div>
+            <p class="text-xs text-neutral-500 mt-3 text-center">Value <strong class="text-green-400">70</strong> influences more because its neighbor is <strong class="text-sky-400">much closer</strong>.</p>
+        </div>
+    </div>
+    <div class="success-box p-5 mt-6 flex items-start gap-3">
+        <i data-lucide="trending-up" class="w-5 h-5 text-green-400 mt-0.5 flex-shrink-0"></i>
+        <div>
+            <p class="text-sm text-green-300 font-medium">Observation from the Lecture</p>
+            <p class="text-sm text-neutral-400 mt-1">Changing to <code class="text-purple-400 bg-purple-500/10 px-1 py-0.5 rounded text-xs">weights='distance'</code> <strong class="text-green-400">slightly increased accuracy</strong> compared to default <code class="text-neutral-400 bg-white/5 px-1 py-0.5 rounded text-xs">'uniform'</code>. Not guaranteed for every dataset, but <strong class="text-white">worth testing</strong>.</p>
+        </div>
+    </div>
+</section>
+
+<div class="section-divider my-20"></div>
+
+<!-- Comparison -->
+<section id="comparison" class="pt-8 scroll-mt-24">
+    <div class="flex items-center gap-3 mb-6">
+        <div class="w-10 h-10 rounded-xl bg-sky-500/10 border border-sky-500/20 flex items-center justify-center"><i data-lucide="bar-chart-3" class="w-5 h-5 text-sky-400"></i></div>
+        <h2 class="text-2xl sm:text-3xl font-semibold tracking-tight gradient-text">Comparison with Mean Imputation</h2>
+    </div>
+    <div class="glass rounded-2xl p-8 space-y-5">
+        <p class="text-sm text-neutral-400 font-light">The instructor compared Mean, Median, and KNN Imputation on the Titanic dataset.</p>
+        <div class="success-box p-5 flex items-start gap-3">
+            <i data-lucide="trophy" class="w-5 h-5 text-green-400 mt-0.5 flex-shrink-0"></i>
+            <div>
+                <p class="text-sm text-green-300 font-medium">KNN produced better performance.</p>
+                <p class="text-sm text-neutral-400 mt-1"><strong class="text-white">Reason:</strong> It leverages <strong class="text-sky-400">relationships between multiple features</strong> instead of relying on a single statistic.</p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<div class="section-divider my-20"></div>
+
+<!-- Best Practices -->
+<section id="best-practices" class="pt-8 scroll-mt-24">
+    <div class="flex items-center gap-3 mb-6">
+        <div class="w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center"><i data-lucide="award" class="w-5 h-5 text-amber-400"></i></div>
+        <h2 class="text-2xl sm:text-3xl font-semibold tracking-tight amber-gradient">Best Practices</h2>
+    </div>
+    <div class="space-y-3">
+        <div class="glass rounded-2xl p-5 flex items-start gap-4 hover:border-amber-500/20 transition-colors duration-500">
+            <div class="w-8 h-8 rounded-lg bg-sky-500/10 flex items-center justify-center flex-shrink-0 mt-0.5"><i data-lucide="normalize" class="w-4 h-4 text-sky-400"></i></div>
+            <p class="text-sm text-neutral-300 font-light"><strong class="text-sky-400">Standardize/normalize</strong> numerical features before KNN, because distance calculations are sensitive to feature scales.</p>
+        </div>
+        <div class="glass rounded-2xl p-5 flex items-start gap-4 hover:border-amber-500/20 transition-colors duration-500">
+            <div class="w-8 h-8 rounded-lg bg-green-500/10 flex items-center justify-center flex-shrink-0 mt-0.5"><i data-lucide="hard-drive" class="w-4 h-4 text-green-400"></i></div>
+            <p class="text-sm text-neutral-300 font-light">Use KNN mainly for <strong class="text-green-400">small to medium-sized datasets</strong>; for very large datasets it can become slow.</p>
+        </div>
+        <div class="glass rounded-2xl p-5 flex items-start gap-4 hover:border-amber-500/20 transition-colors duration-500">
+            <div class="w-8 h-8 rounded-lg bg-amber-500/10 flex items-center justify-center flex-shrink-0 mt-0.5"><i data-lucide="sliders" class="w-4 h-4 text-amber-400"></i></div>
+            <p class="text-sm text-neutral-300 font-light"><strong class="text-amber-400">Tune <code class="text-amber-400 bg-amber-500/10 px-1 py-0.5 rounded text-xs">n_neighbors</code></strong> using validation or cross-validation.</p>
+        </div>
+        <div class="glass rounded-2xl p-5 flex items-start gap-4 hover:border-amber-500/20 transition-colors duration-500">
+            <div class="w-8 h-8 rounded-lg bg-purple-500/10 flex items-center justify-center flex-shrink-0 mt-0.5"><i data-lucide="scale" class="w-4 h-4 text-purple-400"></i></div>
+            <p class="text-sm text-neutral-300 font-light">Compare <code class="text-indigo-400 bg-indigo-500/10 px-1 py-0.5 rounded text-xs">weights='uniform'</code> and <code class="text-purple-400 bg-purple-500/10 px-1 py-0.5 rounded text-xs">weights='distance'</code>.</p>
+        </div>
+        <div class="glass rounded-2xl p-5 flex items-start gap-4 hover:border-amber-500/20 transition-colors duration-500">
+            <div class="w-8 h-8 rounded-lg bg-teal-500/10 flex items-center justify-center flex-shrink-0 mt-0.5"><i data-lucide="ruler" class="w-4 h-4 text-teal-400"></i></div>
+            <p class="text-sm text-neutral-300 font-light">Keep the default <code class="text-teal-400 bg-teal-500/10 px-1 py-0.5 rounded text-xs">metric='nan_euclidean'</code> unless you have a specific reason to change it.</p>
+        </div>
+        <div class="glass rounded-2xl p-5 flex items-start gap-4 hover:border-amber-500/20 transition-colors duration-500">
+            <div class="w-8 h-8 rounded-lg bg-indigo-500/10 flex items-center justify-center flex-shrink-0 mt-0.5"><i data-lucide="git-compare" class="w-4 h-4 text-indigo-400"></i></div>
+            <p class="text-sm text-neutral-300 font-light">Compare KNN with simpler imputers (Mean, Median) and more advanced methods (<strong class="text-indigo-400">Iterative Imputer</strong>) to choose the best approach for your dataset.</p>
+        </div>
+    </div>
+</section>
+
+<div class="section-divider my-20"></div>
+
+<!-- Interview Questions -->
+<section id="interview" class="pt-8 scroll-mt-24">
+    <div class="flex items-center gap-3 mb-8">
+        <div class="w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center"><i data-lucide="message-square" class="w-5 h-5 text-amber-400"></i></div>
+        <h2 class="text-2xl sm:text-3xl font-semibold tracking-tight amber-gradient">Interview Questions</h2>
+    </div>
+    <div class="space-y-4" style="counter-reset:q-counter">
+        <div class="interview-q glass rounded-2xl p-6 flex items-start hover:border-amber-500/20 transition-colors duration-500">
+            <div><p class="text-sm text-white font-medium mb-2">What is KNN Imputer?</p><p class="text-sm text-neutral-400 font-light">A <strong class="text-neutral-200">multivariate</strong> imputation technique that fills missing values using the values of the K most similar observations.</p></div>
+        </div>
+        <div class="interview-q glass rounded-2xl p-6 flex items-start hover:border-amber-500/20 transition-colors duration-500">
+            <div><p class="text-sm text-white font-medium mb-2">Why is it called multivariate?</p><p class="text-sm text-neutral-400 font-light">Because it uses information from <strong class="text-neutral-200">multiple features</strong> to estimate missing values.</p></div>
+        </div>
+        <div class="interview-q glass rounded-2xl p-6 flex items-start hover:border-amber-500/20 transition-colors duration-500">
+            <div><p class="text-sm text-white font-medium mb-2">Which distance metric is used by default?</p><p class="text-sm text-neutral-400 font-light"><strong class="text-sky-400">NaN Euclidean Distance</strong>.</p></div>
+        </div>
+        <div class="interview-q glass rounded-2xl p-6 flex items-start hover:border-amber-500/20 transition-colors duration-500">
+            <div><p class="text-sm text-white font-medium mb-2">Why not use ordinary Euclidean Distance?</p><p class="text-sm text-neutral-400 font-light">Because it <strong class="text-red-400">cannot handle missing values</strong>; NaN Euclidean Distance ignores missing dimensions and adjusts the distance with a <strong class="text-neutral-200">weighting factor</strong>.</p></div>
+        </div>
+        <div class="interview-q glass rounded-2xl p-6 flex items-start hover:border-amber-500/20 transition-colors duration-500">
+            <div><p class="text-sm text-white font-medium mb-2">What is the role of K?</p><p class="text-sm text-neutral-400 font-light">It specifies <strong class="text-neutral-200">how many nearest neighbors</strong> are used to estimate the missing value.</p></div>
+        </div>
+        <div class="interview-q glass rounded-2xl p-6 flex items-start hover:border-amber-500/20 transition-colors duration-500">
+            <div><p class="text-sm text-white font-medium mb-2">What is the difference between uniform and distance weights?</p><p class="text-sm text-neutral-400 font-light"><strong class="text-indigo-400">Uniform:</strong> Every neighbor contributes equally. <strong class="text-purple-400">Distance:</strong> Closer neighbors receive <strong class="text-neutral-200">greater influence</strong>.</p></div>
+        </div>
+        <div class="interview-q glass rounded-2xl p-6 flex items-start hover:border-amber-500/20 transition-colors duration-500">
+            <div><p class="text-sm text-white font-medium mb-2">What are the major disadvantages of KNN Imputer?</p><p class="text-sm text-neutral-400 font-light"><strong class="text-red-400">High computational cost</strong> · Slow on large datasets · <strong class="text-red-400">High memory usage</strong> · Requires the training data during <strong class="text-red-400">inference/deployment</strong></p></div>
+        </div>
+    </div>
+</section>
+
+<div class="section-divider my-20"></div>
+
+<!-- Key Takeaways -->
+<section id="takeaways" class="pt-8 scroll-mt-24">
+    <div class="flex items-center gap-3 mb-8">
+        <div class="w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center"><i data-lucide="bookmark" class="w-5 h-5 text-amber-400"></i></div>
+        <h2 class="text-2xl sm:text-3xl font-semibold tracking-tight amber-gradient">Key Takeaways</h2>
+    </div>
+    <div class="space-y-4">
+        <div class="glass rounded-2xl p-6 flex items-start gap-4 hover:border-amber-500/20 transition-colors duration-500">
+            <div class="w-8 h-8 rounded-lg bg-amber-500/10 flex items-center justify-center flex-shrink-0 mt-0.5"><span class="text-amber-400 text-sm font-bold">1</span></div>
+            <p class="text-sm text-neutral-300 font-light leading-relaxed">KNN Imputer is a <strong class="text-sky-400">multivariate</strong> missing value imputation technique — it uses information from <strong class="text-white">multiple features</strong>, not just one.</p>
+        </div>
+        <div class="glass rounded-2xl p-6 flex items-start gap-4 hover:border-amber-500/20 transition-colors duration-500">
+            <div class="w-8 h-8 rounded-lg bg-amber-500/10 flex items-center justify-center flex-shrink-0 mt-0.5"><span class="text-amber-400 text-sm font-bold">2</span></div>
+            <p class="text-sm text-neutral-300 font-light leading-relaxed">It estimates missing values using <strong class="text-sky-400">similar rows</strong> rather than a single statistic (mean/median).</p>
+        </div>
+        <div class="glass rounded-2xl p-6 flex items-start gap-4 hover:border-amber-500/20 transition-colors duration-500">
+            <div class="w-8 h-8 rounded-lg bg-amber-500/10 flex items-center justify-center flex-shrink-0 mt-0.5"><span class="text-amber-400 text-sm font-bold">3</span></div>
+            <p class="text-sm text-neutral-300 font-light leading-relaxed">Similarity is measured using <strong class="text-green-400">NaN Euclidean Distance</strong> — a modified distance that ignores missing dimensions and uses a <strong class="text-white">weighting factor</strong> to compensate.</p>
+        </div>
+        <div class="glass rounded-2xl p-6 flex items-start gap-4 hover:border-amber-500/20 transition-colors duration-500">
+            <div class="w-8 h-8 rounded-lg bg-amber-500/10 flex items-center justify-center flex-shrink-0 mt-0.5"><span class="text-amber-400 text-sm font-bold">4</span></div>
+            <p class="text-sm text-neutral-300 font-light leading-relaxed"><code class="text-sky-400 bg-sky-500/10 px-1 py-0.5 rounded text-xs">n_neighbors</code> controls how many neighbors are used. <code class="text-purple-400 bg-purple-500/10 px-1 py-0.5 rounded text-xs">weights='distance'</code> often <strong class="text-green-400">improves results</strong> because closer neighbors influence the prediction more.</p>
+        </div>
+        <div class="glass rounded-2xl p-6 flex items-start gap-4 hover:border-amber-500/20 transition-colors duration-500">
+            <div class="w-8 h-8 rounded-lg bg-amber-500/10 flex items-center justify-center flex-shrink-0 mt-0.5"><span class="text-amber-400 text-sm font-bold">5</span></div>
+            <p class="text-sm text-neutral-300 font-light leading-relaxed">Compared with Mean/Median imputation, KNN usually produces <strong class="text-green-400">better predictive performance</strong> by preserving relationships between features.</p>
+        </div>
+        <div class="glass rounded-2xl p-6 flex items-start gap-4 hover:border-amber-500/20 transition-colors duration-500">
+            <div class="w-8 h-8 rounded-lg bg-amber-500/10 flex items-center justify-center flex-shrink-0 mt-0.5"><span class="text-amber-400 text-sm font-bold">6</span></div>
+            <p class="text-sm text-neutral-300 font-light leading-relaxed">The trade-off is increased <strong class="text-red-400">computation time</strong>, <strong class="text-red-400">memory usage</strong>, and <strong class="text-red-400">deployment complexity</strong> (must store entire training data).</p>
+        </div>
+        <div class="glass rounded-2xl p-6 flex items-start gap-4 hover:border-amber-500/20 transition-colors duration-500">
+            <div class="w-8 h-8 rounded-lg bg-amber-500/10 flex items-center justify-center flex-shrink-0 mt-0.5"><span class="text-amber-400 text-sm font-bold">7</span></div>
+            <p class="text-sm text-neutral-300 font-light leading-relaxed"><strong class="text-amber-400">Always standardize features</strong> before KNN (distance is scale-sensitive), tune <code class="text-amber-400 bg-amber-500/10 px-1 py-0.5 rounded text-xs">n_neighbors</code>, and compare with other imputers to choose the best approach.</p>
+        </div>
+    </div>
+</section>
+
+<footer class="mt-32 pt-12 border-t border-white/5">
+    <div class="flex flex-col sm:flex-row items-center justify-between gap-4">
+        <div class="flex items-center gap-3">
+            <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-sky-500 to-indigo-500 flex items-center justify-center text-sm font-semibold">39</div>
+            <span class="text-sm text-neutral-500">Day 39 — Feature Engineering Study Notes</span>
+        </div>
+        <p class="text-xs text-neutral-600">Complete notes for study, revision, interviews, and real-world ML workflows.</p>
+    </div>
+</footer>
+
+</main>
+
+<script>
+    lucide.createIcons();
+    window.addEventListener('scroll',()=>{const s=window.scrollY,d=document.documentElement.scrollHeight-window.innerHeight;document.getElementById('scrollProgress').style.width=(s/d*100)+'%'});
+    const t=document.getElementById('tocToggle'),sb=document.getElementById('tocSidebar'),tc=document.getElementById('tocClose');let o=false;
+    t.addEventListener('click',()=>{o=!o;sb.style.transform=o?'translateX(0)':'translateX(100%)'});
+    tc.addEventListener('click',()=>{o=false;sb.style.transform='translateX(100%)'});
+    document.querySelectorAll('.toc-link').forEach(l=>l.addEventListener('click',()=>{o=false;sb.style.transform='translateX(100%)'}));
+    document.getElementById('backToTop').addEventListener('click',()=>window.scrollTo({top:0,behavior:'smooth'}));
+    const obs=new IntersectionObserver(e=>{e.forEach(en=>{if(en.isIntersecting){en.target.style.opacity='1';en.target.style.transform='translateY(0)'}})},{root:null,rootMargin:'0px 0px -80px 0px',threshold:.1});
+    document.querySelectorAll('main > section, main > div').forEach(s=>{s.style.opacity='0';s.style.transform='translateY(20px)';s.style.transition='opacity .6s ease-out, transform .6s ease-out';obs.observe(s)});
+    const secs=document.querySelectorAll('section[id]'),tl=document.querySelectorAll('.toc-link');
+    const ho=new IntersectionObserver(e=>{e.forEach(en=>{if(en.isIntersecting){const id=en.target.getAttribute('id');tl.forEach(l=>l.classList.toggle('active',l.getAttribute('href')==='#'+id))}})},{rootMargin:'-20% 0px -70% 0px'});
+    secs.forEach(s=>ho.observe(s));
+</script>
+</body>
+</html>
