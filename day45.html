@@ -1,0 +1,880 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Day 45 – Feature Construction & Feature Splitting</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600&family=Inter:wght@300;400;500&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script>
+        tailwind.config={theme:{extend:{fontFamily:{heading:['Space Grotesk','sans-serif'],body:['Inter','sans-serif'],brand:['Bricolage Grotesque','sans-serif']}}}}
+    </script>
+    <style>
+        body{background:#020202;color:#fff;font-family:'Inter',sans-serif}
+        h1,h2,h3,h4,h5,h6{font-family:'Space Grotesk',sans-serif}
+        .font-brand{font-family:'Bricolage Grotesque',sans-serif}
+        .grain::before{content:'';position:fixed;top:0;left:0;width:100%;height:100%;z-index:40;pointer-events:none;opacity:.03;background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E%3Cfilter id='g'%3E%3CfeTurbulence baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23g)'/%3E%3C/svg%3E")}
+        ::-webkit-scrollbar{width:6px}::-webkit-scrollbar-track{background:#020202}::-webkit-scrollbar-thumb{background:#333;border-radius:3px}::-webkit-scrollbar-thumb:hover{background:#555}
+        @keyframes fadeInUp{from{opacity:0;transform:translateY(30px)}to{opacity:1;transform:translateY(0)}}
+        .anim{opacity:0;animation:fadeInUp .8s cubic-bezier(.2,.8,.2,1) forwards}
+        .d1{animation-delay:150ms}.d2{animation-delay:300ms}.d3{animation-delay:450ms}.d4{animation-delay:600ms}
+        @keyframes shimmer{0%{left:-100%}20%{left:200%}100%{left:200%}}
+        @keyframes ping{75%,100%{transform:scale(2);opacity:0}}
+        @keyframes pulse-glow{0%,100%{opacity:.4}50%{opacity:1}}
+        .hero-text-gradient{background:linear-gradient(to bottom,#FFF,#E5E5E5,#737373);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+        .card-hover{transition:all 500ms cubic-bezier(.2,.8,.2,1)}.card-hover:hover{transform:translateY(-8px);box-shadow:0 0 50px -10px rgba(132,204,22,.3)}
+        .btn-shine{position:relative;overflow:hidden}.btn-shine::after{content:'';position:absolute;top:0;left:-100%;width:50%;height:100%;background:linear-gradient(to right,transparent,rgba(255,255,255,.8),transparent);animation:shimmer 3s infinite cubic-bezier(.4,0,.2,1)}
+        .grid-bg{background-image:linear-gradient(to right,#222 1px,transparent 1px),linear-gradient(to bottom,#222 1px,transparent 1px);background-size:40px 40px;mask-image:linear-gradient(to bottom,transparent,black 20%,black 80%,transparent);-webkit-mask-image:linear-gradient(to bottom,transparent,black 20%,black 80%,transparent)}
+        .code-block{background:#0a0a0a;border:1px solid #262626;border-radius:12px;font-family:'JetBrains Mono','Fira Code',monospace;font-size:13px;line-height:1.7;overflow-x:auto}
+        .code-block .keyword{color:#A78BFA}.code-block .func{color:#60A5FA}.code-block .string{color:#34D399}.code-block .comment{color:#525252}.code-block .number{color:#FBBF24}.code-block .var{color:#F9A8D4}
+        .sidebar-link{transition:all 200ms ease;border-left:2px solid transparent}
+        .sidebar-link:hover,.sidebar-link.active{color:#A3E635;border-left-color:#A3E635;background:rgba(163,230,53,.05)}
+        .formula-box{background:linear-gradient(135deg,rgba(163,230,53,.05),rgba(163,230,53,.02));border:1px solid rgba(163,230,53,.2)}
+        .section-divider{height:1px;background:linear-gradient(to right,transparent,#262626,transparent)}
+        .accordion-content{max-height:0;overflow:hidden;transition:max-height 500ms cubic-bezier(.2,.8,.2,1)}
+        .accordion-content.open{max-height:600px}
+        .accordion-icon{transition:transform 300ms ease}.accordion-icon.rotated{transform:rotate(45deg)}
+        .toast{transform:translateX(120%);transition:transform 400ms cubic-bezier(.2,.8,.2,1)}.toast.show{transform:translateX(0)}
+        .timeline-line{background:linear-gradient(to bottom,rgba(163,230,53,.5),rgba(163,230,53,.1))}
+        .tree-line{border-left:2px solid #262626}
+        @media(max-width:1023px){.sidebar{display:none}}
+    </style>
+</head>
+<body class="grain antialiased">
+
+<div id="toast" class="toast fixed top-6 right-6 z-50 bg-neutral-900 border border-lime-500/30 rounded-xl px-5 py-3 flex items-center gap-3 shadow-lg">
+    <i data-lucide="check-circle" class="w-5 h-5 text-lime-400"></i>
+    <span id="toast-msg" class="text-sm text-neutral-200">Copied to clipboard!</span>
+</div>
+
+<nav class="fixed top-0 left-0 right-0 z-30 px-6 py-5" style="backdrop-filter:blur(4px);background:rgba(2,2,2,.6)">
+    <div class="max-w-7xl mx-auto flex items-center justify-between">
+        <div class="flex items-center gap-3">
+            <div class="w-8 h-8 rounded-lg bg-lime-400 flex items-center justify-center"><i data-lucide="book-open" class="w-4 h-4 text-black"></i></div>
+            <span class="font-brand font-semibold text-lg tracking-tight">Day 45</span>
+        </div>
+        <div class="hidden md:flex items-center gap-8 text-sm text-neutral-400">
+            <a href="#introduction" class="hover:text-lime-400 transition-colors">Intro</a>
+            <a href="#types" class="hover:text-lime-400 transition-colors">Types</a>
+            <a href="#construction" class="hover:text-lime-400 transition-colors">Construction</a>
+            <a href="#titanic" class="hover:text-lime-400 transition-colors">Titanic</a>
+            <a href="#splitting" class="hover:text-lime-400 transition-colors">Splitting</a>
+            <a href="#interview" class="hover:text-lime-400 transition-colors">Interview</a>
+        </div>
+        <a href="#top" class="btn-shine bg-lime-400 text-black px-5 py-2.5 rounded-full text-sm font-medium tracking-wide hover:scale-105 transition-transform" style="box-shadow:0 0 20px rgba(163,230,53,.6)">Back to Top</a>
+    </div>
+</nav>
+
+<aside class="sidebar fixed left-0 top-20 bottom-0 w-64 z-20 overflow-y-auto py-8 px-4" style="backdrop-filter:blur(4px);background:rgba(2,2,2,.4)">
+    <p class="text-xs font-mono uppercase tracking-widest text-neutral-600 mb-4 px-3">Contents</p>
+    <div class="flex flex-col gap-0.5">
+        <a href="#introduction" class="sidebar-link text-sm text-neutral-500 px-3 py-2 rounded-r-lg">Introduction</a>
+        <a href="#types" class="sidebar-link text-sm text-neutral-500 px-3 py-2 rounded-r-lg">Types of FE</a>
+        <a href="#construction" class="sidebar-link text-sm text-neutral-500 px-3 py-2 rounded-r-lg">Feature Construction</a>
+        <a href="#why-different" class="sidebar-link text-sm text-neutral-500 px-3 py-2 rounded-r-lg">Why It's Different</a>
+        <a href="#why-improves" class="sidebar-link text-sm text-neutral-500 px-3 py-2 rounded-r-lg">Why It Improves Models</a>
+        <a href="#titanic" class="sidebar-link text-sm text-neutral-500 px-3 py-2 rounded-r-lg">Titanic Example</a>
+        <a href="#family-size" class="sidebar-link text-sm text-neutral-500 px-3 py-2 rounded-r-lg">Family Size</a>
+        <a href="#family-type" class="sidebar-link text-sm text-neutral-500 px-3 py-2 rounded-r-lg">Family Type</a>
+        <a href="#why-categorize" class="sidebar-link text-sm text-neutral-500 px-3 py-2 rounded-r-lg">Why Categorize</a>
+        <a href="#model-perf" class="sidebar-link text-sm text-neutral-500 px-3 py-2 rounded-r-lg">Model Performance</a>
+        <a href="#splitting" class="sidebar-link text-sm text-neutral-500 px-3 py-2 rounded-r-lg">Feature Splitting</a>
+        <a href="#why-split" class="sidebar-link text-sm text-neutral-500 px-3 py-2 rounded-r-lg">Why Split Features</a>
+        <a href="#extracting-title" class="sidebar-link text-sm text-neutral-500 px-3 py-2 rounded-r-lg">Extracting Title</a>
+        <a href="#title-useful" class="sidebar-link text-sm text-neutral-500 px-3 py-2 rounded-r-lg">Why Title is Useful</a>
+        <a href="#survival" class="sidebar-link text-sm text-neutral-500 px-3 py-2 rounded-r-lg">Survival Analysis</a>
+        <a href="#married" class="sidebar-link text-sm text-neutral-500 px-3 py-2 rounded-r-lg">Married Feature</a>
+        <a href="#realworld" class="sidebar-link text-sm text-neutral-500 px-3 py-2 rounded-r-lg">Real-World Examples</a>
+        <a href="#best-practices" class="sidebar-link text-sm text-neutral-500 px-3 py-2 rounded-r-lg">Best Practices</a>
+        <a href="#pitfalls" class="sidebar-link text-sm text-neutral-500 px-3 py-2 rounded-r-lg">Common Pitfalls</a>
+        <a href="#interview" class="sidebar-link text-sm text-neutral-500 px-3 py-2 rounded-r-lg">Interview Questions</a>
+        <a href="#takeaways" class="sidebar-link text-sm text-neutral-500 px-3 py-2 rounded-r-lg">Final Takeaways</a>
+    </div>
+</aside>
+
+<main class="lg:ml-64">
+
+<!-- Hero -->
+<section id="top" class="relative min-h-screen flex flex-col justify-center items-center px-6 overflow-hidden">
+    <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[500px] bg-lime-500/5 rounded-full" style="filter:blur(120px)"></div>
+    <div class="absolute inset-0 grid-bg opacity-30"></div>
+    <div class="relative z-10 text-center max-w-5xl mx-auto pt-32 pb-20">
+        <div class="anim inline-flex items-center gap-2 px-4 py-2 rounded-full border border-neutral-800 bg-neutral-900/50 mb-8">
+            <span class="relative flex h-2 w-2"><span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-lime-400 opacity-75" style="animation:ping 1s cubic-bezier(0,0,.2,1) infinite"></span><span class="relative inline-flex rounded-full h-2 w-2 bg-lime-400"></span></span>
+            <span class="text-xs font-mono uppercase tracking-widest text-neutral-400">Feature Engineering Series</span>
+        </div>
+        <p class="anim d1 font-mono text-lime-400 text-sm tracking-widest uppercase mb-4">Day 45</p>
+        <h1 class="anim d2 text-5xl md:text-7xl lg:text-8xl font-medium tracking-tighter leading-[.85] mb-8">
+            <span class="hero-text-gradient">Feature</span><br>
+            <span class="text-lime-400">Construction</span><br>
+            <span class="text-neutral-500 text-4xl md:text-5xl lg:text-6xl">& Feature Splitting</span>
+        </h1>
+        <p class="anim d3 text-lg md:text-xl text-neutral-400 font-light max-w-2xl mx-auto leading-relaxed mb-12">
+            The most creative part of data science — no fixed formulas, just domain knowledge and intuition.
+        </p>
+        <div class="anim d4 flex flex-col sm:flex-row gap-4 justify-center">
+            <a href="#introduction" class="btn-shine bg-lime-400 text-black px-8 py-4 rounded-full text-sm font-medium tracking-wide hover:scale-105 transition-transform inline-flex items-center gap-2" style="box-shadow:0 0 20px rgba(163,230,53,.6)">Start Learning <i data-lucide="arrow-down" class="w-4 h-4"></i></a>
+            <a href="#titanic" class="border border-neutral-700 text-white px-8 py-4 rounded-full text-sm font-medium tracking-wide hover:border-lime-400/50 hover:text-lime-400 transition-all inline-flex items-center gap-2"><i data-lucide="code-2" class="w-4 h-4"></i> Jump to Titanic</a>
+        </div>
+    </div>
+    <div class="absolute bottom-10 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2 animate-bounce">
+        <span class="text-xs text-neutral-600 tracking-widest uppercase">Scroll</span>
+        <i data-lucide="chevron-down" class="w-4 h-4 text-neutral-600"></i>
+    </div>
+</section>
+
+<div class="section-divider mx-6 lg:mx-12"></div>
+
+<!-- Introduction -->
+<section id="introduction" class="py-24 md:py-32 px-6 lg:px-12">
+    <div class="max-w-4xl mx-auto">
+        <div class="flex items-center gap-3 mb-6"><div class="w-10 h-10 rounded-xl bg-lime-400/10 border border-lime-400/20 flex items-center justify-center"><i data-lucide="info" class="w-5 h-5 text-lime-400"></i></div><span class="font-mono text-xs uppercase tracking-widest text-neutral-500">Introduction</span></div>
+        <h2 class="text-3xl md:text-5xl font-medium tracking-tight mb-8">Introduction</h2>
+        <div class="space-y-6 text-lg text-neutral-400 font-light leading-relaxed">
+            <p>In this lecture, the instructor begins a <span class="text-lime-400 font-medium">new chapter of Feature Engineering</span>.</p>
+            <p>Until now, all previous lectures focused on <span class="text-white font-medium">Feature Transformation</span>, such as:</p>
+        </div>
+        <div class="flex flex-wrap gap-3 mt-6 mb-8">
+            <span class="px-4 py-2 rounded-full bg-neutral-900/50 border border-neutral-800 text-sm text-neutral-300">Handling Missing Values</span>
+            <span class="px-4 py-2 rounded-full bg-neutral-900/50 border border-neutral-800 text-sm text-neutral-300">Encoding Categorical Data</span>
+            <span class="px-4 py-2 rounded-full bg-neutral-900/50 border border-neutral-800 text-sm text-neutral-300">Scaling Features</span>
+            <span class="px-4 py-2 rounded-full bg-neutral-900/50 border border-neutral-800 text-sm text-neutral-300">Outlier Detection</span>
+            <span class="px-4 py-2 rounded-full bg-neutral-900/50 border border-neutral-800 text-sm text-neutral-300">Outlier Removal</span>
+        </div>
+        <p class="text-lg text-neutral-400 font-light leading-relaxed">Now we move to a different area:</p>
+        <blockquote class="border-l-2 border-lime-400 pl-6 py-2 my-8">
+            <p class="text-xl md:text-2xl text-white font-medium tracking-tight">Feature Construction & Feature Splitting</p>
+        </blockquote>
+        <div class="bg-lime-400/5 border border-lime-400/20 rounded-2xl p-6 flex gap-4">
+            <i data-lucide="sparkles" class="w-6 h-6 text-lime-400 shrink-0 mt-0.5"></i>
+            <p class="text-neutral-300 leading-relaxed">These techniques are among the most <strong class="text-white">creative</strong> parts of data science because there is <strong class="text-lime-400">no fixed mathematical formula</strong> to follow.</p>
+        </div>
+    </div>
+</section>
+
+<div class="section-divider mx-6 lg:mx-12"></div>
+
+<!-- Types of Feature Engineering -->
+<section id="types" class="py-24 md:py-32 px-6 lg:px-12">
+    <div class="max-w-4xl mx-auto">
+        <div class="flex items-center gap-3 mb-6"><div class="w-10 h-10 rounded-xl bg-lime-400/10 border border-lime-400/20 flex items-center justify-center"><i data-lucide="git-branch" class="w-5 h-5 text-lime-400"></i></div><span class="font-mono text-xs uppercase tracking-widest text-neutral-500">Taxonomy</span></div>
+        <h2 class="text-3xl md:text-5xl font-medium tracking-tight mb-8">Types of Feature Engineering</h2>
+        <p class="text-lg text-neutral-400 font-light leading-relaxed mb-10">Feature Engineering is generally divided into four major categories.</p>
+
+        <!-- Tree Visualization -->
+        <div class="bg-neutral-900/50 border border-neutral-800 rounded-2xl p-8 mb-8">
+            <div class="flex flex-col items-center">
+                <div class="bg-lime-400/10 border border-lime-400/20 rounded-xl px-6 py-3 mb-6"><span class="text-lime-400 font-heading font-medium">Feature Engineering</span></div>
+                <div class="w-0.5 h-6 bg-neutral-700"></div>
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-3 w-full">
+                    <div class="text-center">
+                        <div class="w-0.5 h-4 bg-neutral-700 mx-auto mb-2"></div>
+                        <div class="bg-neutral-800 rounded-xl p-4 border border-neutral-700"><i data-lucide="refresh-cw" class="w-5 h-5 text-neutral-400 mx-auto mb-2"></i><p class="text-xs text-neutral-400 font-medium">Transformation</p></div>
+                    </div>
+                    <div class="text-center">
+                        <div class="w-0.5 h-4 bg-lime-400/50 mx-auto mb-2"></div>
+                        <div class="bg-lime-400/5 border border-lime-400/20 rounded-xl p-4"><i data-lucide="plus-circle" class="w-5 h-5 text-lime-400 mx-auto mb-2"></i><p class="text-xs text-lime-400 font-medium">Construction</p><p class="text-[10px] text-lime-400/40 mt-0.5">Today ✦</p></div>
+                    </div>
+                    <div class="text-center">
+                        <div class="w-0.5 h-4 bg-neutral-700 mx-auto mb-2"></div>
+                        <div class="bg-neutral-800 rounded-xl p-4 border border-neutral-700"><i data-lucide="filter" class="w-5 h-5 text-neutral-400 mx-auto mb-2"></i><p class="text-xs text-neutral-400 font-medium">Selection</p></div>
+                    </div>
+                    <div class="text-center">
+                        <div class="w-0.5 h-4 bg-neutral-700 mx-auto mb-2"></div>
+                        <div class="bg-neutral-800 rounded-xl p-4 border border-neutral-700"><i data-lucide="layers" class="w-5 h-5 text-neutral-400 mx-auto mb-2"></i><p class="text-xs text-neutral-400 font-medium">Extraction</p></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Detail Cards -->
+        <div class="space-y-4">
+            <div class="bg-neutral-900/50 border border-neutral-800 rounded-2xl p-6">
+                <div class="flex items-center gap-3 mb-4"><div class="w-8 h-8 rounded-lg bg-neutral-800 flex items-center justify-center"><i data-lucide="refresh-cw" class="w-4 h-4 text-neutral-400"></i></div><h3 class="text-lg font-medium text-neutral-300">1. Feature Transformation</h3></div>
+                <p class="text-neutral-500 text-sm mb-3">Modify existing features.</p>
+                <div class="flex flex-wrap gap-2"><span class="px-3 py-1 rounded-lg bg-neutral-800/50 text-xs text-neutral-500">Missing Value Imputation</span><span class="px-3 py-1 rounded-lg bg-neutral-800/50 text-xs text-neutral-500">Encoding</span><span class="px-3 py-1 rounded-lg bg-neutral-800/50 text-xs text-neutral-500">Normalization</span><span class="px-3 py-1 rounded-lg bg-neutral-800/50 text-xs text-neutral-500">Standardization</span><span class="px-3 py-1 rounded-lg bg-neutral-800/50 text-xs text-neutral-500">Outlier Treatment</span><span class="px-3 py-1 rounded-lg bg-neutral-800/50 text-xs text-neutral-500">Log Transform</span><span class="px-3 py-1 rounded-lg bg-neutral-800/50 text-xs text-neutral-500">Box-Cox</span></div>
+            </div>
+            <div class="bg-lime-400/5 border border-lime-400/20 rounded-2xl p-6" style="box-shadow:0 0 20px rgba(132,204,22,.08)">
+                <div class="flex items-center gap-3 mb-4"><div class="w-8 h-8 rounded-lg bg-lime-400/10 flex items-center justify-center"><i data-lucide="plus-circle" class="w-4 h-4 text-lime-400"></i></div><h3 class="text-lg font-medium text-lime-400">2. Feature Construction ✦</h3></div>
+                <p class="text-neutral-300 text-sm">Create <strong class="text-white">new features manually</strong> using existing features.</p>
+            </div>
+            <div class="bg-neutral-900/50 border border-neutral-800 rounded-2xl p-6">
+                <div class="flex items-center gap-3 mb-4"><div class="w-8 h-8 rounded-lg bg-neutral-800 flex items-center justify-center"><i data-lucide="filter" class="w-4 h-4 text-neutral-400"></i></div><h3 class="text-lg font-medium text-neutral-300">3. Feature Selection</h3></div>
+                <p class="text-neutral-500 text-sm mb-3">Select only the important features.</p>
+                <div class="flex flex-wrap gap-2"><span class="px-3 py-1 rounded-lg bg-neutral-800/50 text-xs text-neutral-500">Filter Methods</span><span class="px-3 py-1 rounded-lg bg-neutral-800/50 text-xs text-neutral-500">Wrapper Methods</span><span class="px-3 py-1 rounded-lg bg-neutral-800/50 text-xs text-neutral-500">Embedded Methods</span></div>
+            </div>
+            <div class="bg-neutral-900/50 border border-neutral-800 rounded-2xl p-6">
+                <div class="flex items-center gap-3 mb-4"><div class="w-8 h-8 rounded-lg bg-neutral-800 flex items-center justify-center"><i data-lucide="layers" class="w-4 h-4 text-neutral-400"></i></div><h3 class="text-lg font-medium text-neutral-300">4. Feature Extraction</h3></div>
+                <p class="text-neutral-500 text-sm mb-3">Generate completely new representations.</p>
+                <div class="flex flex-wrap gap-2"><span class="px-3 py-1 rounded-lg bg-neutral-800/50 text-xs text-neutral-500">PCA</span><span class="px-3 py-1 rounded-lg bg-neutral-800/50 text-xs text-neutral-500">LDA</span><span class="px-3 py-1 rounded-lg bg-neutral-800/50 text-xs text-neutral-500">Autoencoders</span></div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<div class="section-divider mx-6 lg:mx-12"></div>
+
+<!-- What is Feature Construction -->
+<section id="construction" class="py-24 md:py-32 px-6 lg:px-12">
+    <div class="max-w-4xl mx-auto">
+        <div class="flex items-center gap-3 mb-6"><div class="w-10 h-10 rounded-xl bg-lime-400/10 border border-lime-400/20 flex items-center justify-center"><i data-lucide="plus-circle" class="w-5 h-5 text-lime-400"></i></div><span class="font-mono text-xs uppercase tracking-widest text-neutral-500">Definition</span></div>
+        <h2 class="text-3xl md:text-5xl font-medium tracking-tight mb-4">What is Feature Construction?</h2>
+        <p class="text-lg text-neutral-400 font-light leading-relaxed mb-8">Feature Construction is the process of creating <span class="text-white font-medium">new features</span> from existing features to improve model performance.</p>
+        <p class="text-neutral-400 font-light leading-relaxed mb-8">Instead of collecting new data, we create better information from the data we already have.</p>
+
+        <!-- BMI Example -->
+        <div class="bg-neutral-900/50 border border-neutral-800 rounded-2xl p-8 mb-8">
+            <p class="font-mono text-xs uppercase tracking-widest text-neutral-500 mb-4">Example</p>
+            <p class="text-neutral-400 text-sm mb-4">Instead of using:</p>
+            <div class="flex gap-3 mb-6">
+                <span class="px-4 py-2 rounded-lg bg-neutral-800 text-sm text-white">Height</span>
+                <span class="px-4 py-2 rounded-lg bg-neutral-800 text-sm text-white">Weight</span>
+            </div>
+            <p class="text-neutral-400 text-sm mb-4">Create:</p>
+            <div class="formula-box rounded-xl p-5 text-center mb-4">
+                <p class="text-2xl font-heading font-medium text-lime-400">BMI = Weight / Height²</p>
+            </div>
+            <p class="text-neutral-400 text-sm">The model may learn much better from BMI than from Height and Weight separately.</p>
+        </div>
+    </div>
+</section>
+
+<div class="section-divider mx-6 lg:mx-12"></div>
+
+<!-- Why Different -->
+<section id="why-different" class="py-24 md:py-32 px-6 lg:px-12">
+    <div class="max-w-4xl mx-auto">
+        <div class="flex items-center gap-3 mb-6"><div class="w-10 h-10 rounded-xl bg-amber-400/10 border border-amber-400/20 flex items-center justify-center"><i data-lucide="help-circle" class="w-5 h-5 text-amber-400"></i></div><span class="font-mono text-xs uppercase tracking-widest text-neutral-500">Key Insight</span></div>
+        <h2 class="text-3xl md:text-5xl font-medium tracking-tight mb-8">Why Feature Construction is Different</h2>
+        <p class="text-lg text-neutral-400 font-light leading-relaxed mb-8">Unlike scaling or encoding, there is <span class="text-red-400 font-medium">no standard algorithm</span> that tells you "Create this new feature."</p>
+        <p class="text-neutral-400 font-light leading-relaxed mb-8">Instead, you must use:</p>
+        <div class="grid grid-cols-2 md:grid-cols-5 gap-3">
+            <div class="bg-neutral-900/50 border border-neutral-800 rounded-xl p-4 text-center card-hover"><i data-lucide="graduation-cap" class="w-5 h-5 text-lime-400 mx-auto mb-2"></i><p class="text-xs text-neutral-300">Domain Knowledge</p></div>
+            <div class="bg-neutral-900/50 border border-neutral-800 rounded-xl p-4 text-center card-hover"><i data-lucide="briefcase" class="w-5 h-5 text-lime-400 mx-auto mb-2"></i><p class="text-xs text-neutral-300">Experience</p></div>
+            <div class="bg-neutral-900/50 border border-neutral-800 rounded-xl p-4 text-center card-hover"><i data-lucide="building" class="w-5 h-5 text-lime-400 mx-auto mb-2"></i><p class="text-xs text-neutral-300">Business Understanding</p></div>
+            <div class="bg-neutral-900/50 border border-neutral-800 rounded-xl p-4 text-center card-hover"><i data-lucide="lightbulb" class="w-5 h-5 text-lime-400 mx-auto mb-2"></i><p class="text-xs text-neutral-300">Common Sense</p></div>
+            <div class="bg-neutral-900/50 border border-neutral-800 rounded-xl p-4 text-center card-hover col-span-2 md:col-span-1"><i data-lucide="palette" class="w-5 h-5 text-lime-400 mx-auto mb-2"></i><p class="text-xs text-neutral-300">Creativity</p></div>
+        </div>
+        <div class="bg-lime-400/5 border border-lime-400/20 rounded-2xl p-6 mt-8 flex gap-4">
+            <i data-lucide="star" class="w-6 h-6 text-lime-400 shrink-0 mt-0.5"></i>
+            <p class="text-neutral-300 leading-relaxed">This is why Feature Construction is considered one of the most important skills of an <strong class="text-white">experienced Data Scientist</strong>.</p>
+        </div>
+    </div>
+</section>
+
+<div class="section-divider mx-6 lg:mx-12"></div>
+
+<!-- Why Improves -->
+<section id="why-improves" class="py-24 md:py-32 px-6 lg:px-12">
+    <div class="max-w-4xl mx-auto">
+        <div class="flex items-center gap-3 mb-6"><div class="w-10 h-10 rounded-xl bg-lime-400/10 border border-lime-400/20 flex items-center justify-center"><i data-lucide="trending-up" class="w-5 h-5 text-lime-400"></i></div><span class="font-mono text-xs uppercase tracking-widest text-neutral-500">Motivation</span></div>
+        <h2 class="text-3xl md:text-5xl font-medium tracking-tight mb-8">Why Feature Construction Improves Models</h2>
+        <p class="text-lg text-neutral-400 font-light leading-relaxed mb-8">Sometimes existing columns do not reveal hidden patterns. By combining features, you can expose relationships that the model can easily understand.</p>
+        <div class="bg-neutral-900/50 border border-neutral-800 rounded-2xl p-8">
+            <p class="text-neutral-400 text-sm mb-4">Suppose we have:</p>
+            <div class="flex gap-3 mb-6"><span class="px-4 py-2 rounded-lg bg-neutral-800 text-sm text-white">Age</span><span class="px-4 py-2 rounded-lg bg-neutral-800 text-sm text-white">Income</span></div>
+            <p class="text-neutral-400 text-sm mb-4">Instead of using them separately, create:</p>
+            <div class="formula-box rounded-xl p-4 text-center">
+                <p class="text-lg font-heading font-medium text-lime-400">Income per Year of Experience</p>
+            </div>
+            <p class="text-neutral-500 text-sm mt-4">This may become much more informative.</p>
+        </div>
+    </div>
+</section>
+
+<div class="section-divider mx-6 lg:mx-12"></div>
+
+<!-- Titanic Example -->
+<section id="titanic" class="py-24 md:py-32 px-6 lg:px-12">
+    <div class="max-w-4xl mx-auto">
+        <div class="flex items-center gap-3 mb-6"><div class="w-10 h-10 rounded-xl bg-lime-400/10 border border-lime-400/20 flex items-center justify-center"><i data-lucide="ship" class="w-5 h-5 text-lime-400"></i></div><span class="font-mono text-xs uppercase tracking-widest text-neutral-500">Case Study</span></div>
+        <h2 class="text-3xl md:text-5xl font-medium tracking-tight mb-4">Titanic Dataset Example</h2>
+        <p class="text-lg text-neutral-400 font-light leading-relaxed mb-8">The instructor uses the famous <span class="text-white font-medium">Titanic Dataset</span>.</p>
+        <div class="grid grid-cols-2 md:grid-cols-3 gap-3 mb-8">
+            <div class="bg-neutral-900/50 border border-neutral-800 rounded-xl p-4 text-center"><p class="text-sm text-white font-medium">Pclass</p></div>
+            <div class="bg-neutral-900/50 border border-neutral-800 rounded-xl p-4 text-center"><p class="text-sm text-white font-medium">Sex</p></div>
+            <div class="bg-neutral-900/50 border border-neutral-800 rounded-xl p-4 text-center"><p class="text-sm text-white font-medium">Age</p></div>
+            <div class="bg-lime-400/5 border border-lime-400/20 rounded-xl p-4 text-center"><p class="text-sm text-lime-400 font-medium">SibSp</p><p class="text-[10px] text-neutral-500 mt-1">Siblings/Spouses</p></div>
+            <div class="bg-amber-400/5 border border-amber-400/20 rounded-xl p-4 text-center"><p class="text-sm text-amber-400 font-medium">Parch</p><p class="text-[10px] text-neutral-500 mt-1">Parents/Children</p></div>
+            <div class="bg-neutral-900/50 border border-neutral-800 rounded-xl p-4 text-center"><p class="text-sm text-white font-medium">Survived</p></div>
+        </div>
+    </div>
+</section>
+
+<div class="section-divider mx-6 lg:mx-12"></div>
+
+<!-- Family Size -->
+<section id="family-size" class="py-24 md:py-32 px-6 lg:px-12">
+    <div class="max-w-4xl mx-auto">
+        <div class="flex items-center gap-3 mb-6"><div class="w-10 h-10 rounded-xl bg-lime-400/10 border border-lime-400/20 flex items-center justify-center"><i data-lucide="users" class="w-5 h-5 text-lime-400"></i></div><span class="font-mono text-xs uppercase tracking-widest text-neutral-500">Step 1</span></div>
+        <h2 class="text-3xl md:text-5xl font-medium tracking-tight mb-8">Creating Family Size</h2>
+
+        <div class="formula-box rounded-2xl p-8 text-center mb-8">
+            <p class="text-3xl md:text-4xl font-heading font-medium text-white mb-2">FamilySize = SibSp + Parch + <span class="text-lime-400">1</span></p>
+            <p class="text-neutral-500 text-sm">+1 because the passenger themselves should also be counted</p>
+        </div>
+
+        <!-- Interactive Family Size Calculator -->
+        <div class="bg-neutral-900/50 border border-neutral-800 rounded-2xl p-8 mb-8">
+            <h3 class="text-lg font-medium tracking-tight mb-6 flex items-center gap-2"><i data-lucide="calculator" class="w-5 h-5 text-lime-400"></i> Try It</h3>
+            <div class="grid md:grid-cols-2 gap-6 mb-6">
+                <div><label class="block text-sm text-neutral-400 mb-2">SibSp (Siblings/Spouses)</label><input type="number" id="sibsp" value="1" min="0" max="10" class="w-full bg-black border border-neutral-800 rounded-xl px-4 py-3 text-white text-lg focus:outline-none focus:border-lime-400/50 transition-colors"></div>
+                <div><label class="block text-sm text-neutral-400 mb-2">Parch (Parents/Children)</label><input type="number" id="parch" value="2" min="0" max="10" class="w-full bg-black border border-neutral-800 rounded-xl px-4 py-3 text-white text-lg focus:outline-none focus:border-lime-400/50 transition-colors"></div>
+            </div>
+            <div class="bg-black border border-neutral-800 rounded-xl px-6 py-4 flex items-center justify-between">
+                <span class="text-neutral-500 text-sm">Family Size</span>
+                <span id="fam-result" class="text-3xl font-heading font-semibold text-lime-400">4</span>
+            </div>
+            <p id="fam-type-label" class="text-center text-sm text-amber-400 mt-3">Small Family</p>
+        </div>
+
+        <div class="code-block p-6">
+            <div class="flex items-center justify-between mb-4"><div class="flex items-center gap-2"><div class="w-3 h-3 rounded-full bg-red-500/60"></div><div class="w-3 h-3 rounded-full bg-amber-500/60"></div><div class="w-3 h-3 rounded-full bg-lime-500/60"></div><span class="text-xs text-neutral-600 ml-2">family_size.py</span></div><button onclick="copyCode(this)" class="text-xs text-neutral-500 hover:text-lime-400 transition-colors flex items-center gap-1"><i data-lucide="copy" class="w-3.5 h-3.5"></i> Copy</button></div>
+<pre class="text-neutral-300"><span class="var">df</span>[<span class="string">"FamilySize"</span>] = <span class="var">df</span>[<span class="string">"SibSp"</span>] + <span class="var">df</span>[<span class="string">"Parch"</span>] + <span class="number">1</span></pre>
+        </div>
+    </div>
+</section>
+
+<div class="section-divider mx-6 lg:mx-12"></div>
+
+<!-- Family Type -->
+<section id="family-type" class="py-24 md:py-32 px-6 lg:px-12">
+    <div class="max-w-4xl mx-auto">
+        <div class="flex items-center gap-3 mb-6"><div class="w-10 h-10 rounded-xl bg-lime-400/10 border border-lime-400/20 flex items-center justify-center"><i data-lucide="tag" class="w-5 h-5 text-lime-400"></i></div><span class="font-mono text-xs uppercase tracking-widest text-neutral-500">Step 2</span></div>
+        <h2 class="text-3xl md:text-5xl font-medium tracking-tight mb-8">Creating Family Type</h2>
+        <p class="text-lg text-neutral-400 font-light leading-relaxed mb-8">Now Family Size is converted into categories.</p>
+
+        <div class="bg-neutral-900/50 border border-neutral-800 rounded-2xl p-8 mb-8">
+            <div class="grid md:grid-cols-3 gap-4 mb-6">
+                <div class="bg-neutral-800/50 rounded-xl p-5 text-center border border-neutral-700"><p class="font-heading font-semibold text-white text-lg mb-1">FamilySize == 1</p><p class="text-sm text-neutral-400">→ Alone</p><p class="font-mono text-xs text-neutral-600 mt-2">returns 0</p></div>
+                <div class="bg-lime-400/5 rounded-xl p-5 text-center border border-lime-400/20"><p class="font-heading font-semibold text-lime-400 text-lg mb-1">1 &lt; Size ≤ 4</p><p class="text-sm text-neutral-300">→ Small Family</p><p class="font-mono text-xs text-neutral-600 mt-2">returns 1</p></div>
+                <div class="bg-amber-400/5 rounded-xl p-5 text-center border border-amber-400/20"><p class="font-heading font-semibold text-amber-400 text-lg mb-1">Size &gt; 4</p><p class="text-sm text-neutral-300">→ Large Family</p><p class="font-mono text-xs text-neutral-600 mt-2">returns 2</p></div>
+            </div>
+        </div>
+
+        <div class="code-block p-6 mb-6">
+            <div class="flex items-center justify-between mb-4"><div class="flex items-center gap-2"><div class="w-3 h-3 rounded-full bg-red-500/60"></div><div class="w-3 h-3 rounded-full bg-amber-500/60"></div><div class="w-3 h-3 rounded-full bg-lime-500/60"></div><span class="text-xs text-neutral-600 ml-2">family_type.py</span></div><button onclick="copyCode(this)" class="text-xs text-neutral-500 hover:text-lime-400 transition-colors flex items-center gap-1"><i data-lucide="copy" class="w-3.5 h-3.5"></i> Copy</button></div>
+<pre class="text-neutral-300"><span class="keyword">def</span> <span class="func">family_type</span>(num):
+    <span class="keyword">if</span> num == <span class="number">1</span>:
+        <span class="keyword">return</span> <span class="number">0</span>      <span class="comment"># Alone</span>
+    <span class="keyword">elif</span> num > <span class="number">1</span> <span class="keyword">and</span> num <= <span class="number">4</span>:
+        <span class="keyword">return</span> <span class="number">1</span>      <span class="comment"># Small Family</span>
+    <span class="keyword">else</span>:
+        <span class="keyword">return</span> <span class="number">2</span>      <span class="comment"># Large Family</span>
+
+<span class="var">df</span>[<span class="string">"FamilyType"</span>] = <span class="var">df</span>[<span class="string">"FamilySize"</span>].<span class="func">apply</span>(family_type)</pre>
+        </div>
+
+        <!-- Why Categorize -->
+        <div id="why-categorize" class="bg-neutral-900/50 border border-neutral-800 rounded-2xl p-6">
+            <h3 class="text-lg font-medium tracking-tight mb-4">Why Categorize Instead of Using Family Size Directly?</h3>
+            <div class="flex flex-wrap gap-2 mb-4">
+                <span class="px-3 py-1.5 rounded-lg bg-neutral-800 text-sm text-neutral-400">1</span><span class="px-3 py-1.5 rounded-lg bg-neutral-800 text-sm text-neutral-400">2</span><span class="px-3 py-1.5 rounded-lg bg-neutral-800 text-sm text-neutral-400">3</span><span class="px-3 py-1.5 rounded-lg bg-neutral-800 text-sm text-neutral-400">4</span><span class="px-3 py-1.5 rounded-lg bg-neutral-800 text-sm text-neutral-400">5</span><span class="px-3 py-1.5 rounded-lg bg-neutral-800 text-sm text-neutral-400">6</span><span class="px-3 py-1.5 rounded-lg bg-neutral-800 text-sm text-neutral-400">7</span>
+            </div>
+            <p class="text-neutral-400 text-sm mb-3">Instead, group them into:</p>
+            <div class="flex gap-3">
+                <span class="px-4 py-2 rounded-lg bg-neutral-800 text-sm text-neutral-300">0 → Alone</span>
+                <span class="px-4 py-2 rounded-lg bg-lime-400/10 border border-lime-400/20 text-sm text-lime-400">1 → Small Family</span>
+                <span class="px-4 py-2 rounded-lg bg-amber-400/10 border border-amber-400/20 text-sm text-amber-400">2 → Large Family</span>
+            </div>
+            <p class="text-neutral-500 text-sm mt-4">This reduces noise and lets the model learn broader patterns.</p>
+        </div>
+    </div>
+</section>
+
+<div class="section-divider mx-6 lg:mx-12"></div>
+
+<!-- After Creating & Model Performance -->
+<section id="model-perf" class="py-24 md:py-32 px-6 lg:px-12">
+    <div class="max-w-4xl mx-auto">
+        <div class="flex items-center gap-3 mb-6"><div class="w-10 h-10 rounded-xl bg-lime-400/10 border border-lime-400/20 flex items-center justify-center"><i data-lucide="bar-chart-2" class="w-5 h-5 text-lime-400"></i></div><span class="font-mono text-xs uppercase tracking-widest text-neutral-500">Results</span></div>
+        <h2 class="text-3xl md:text-5xl font-medium tracking-tight mb-8">After Creating the New Feature</h2>
+        <p class="text-neutral-400 font-light leading-relaxed mb-6">Once FamilyType is created, old columns become less useful. Drop:</p>
+        <div class="flex flex-wrap gap-3 mb-8">
+            <span class="px-4 py-2 rounded-lg bg-red-500/10 border border-red-500/20 text-sm text-red-400 line-through">SibSp</span>
+            <span class="px-4 py-2 rounded-lg bg-red-500/10 border border-red-500/20 text-sm text-red-400 line-through">Parch</span>
+            <span class="px-4 py-2 rounded-lg bg-red-500/10 border border-red-500/20 text-sm text-red-400 line-through">FamilySize</span>
+        </div>
+        <p class="text-neutral-400 text-sm mb-8">Remaining: <span class="text-white">Pclass, Sex, Age, FamilyType</span></p>
+
+        <!-- Accuracy comparison -->
+        <div class="grid md:grid-cols-2 gap-6 mb-8">
+            <div class="bg-neutral-900/50 border border-neutral-800 rounded-2xl p-6 text-center">
+                <p class="text-sm text-neutral-500 mb-3">Before Feature Construction</p>
+                <p class="text-xs text-neutral-600 mb-4">Logistic Regression</p>
+                <div class="relative h-4 bg-neutral-800 rounded-full overflow-hidden mb-2"><div class="absolute inset-y-0 left-0 bg-neutral-500 rounded-full" style="width:65%"></div></div>
+                <p class="font-heading font-semibold text-3xl text-neutral-400">65%</p>
+            </div>
+            <div class="bg-lime-400/5 border border-lime-400/20 rounded-2xl p-6 text-center" style="box-shadow:0 0 20px rgba(132,204,22,.08)">
+                <p class="text-sm text-lime-400/60 mb-3">After Adding FamilyType</p>
+                <p class="text-xs text-neutral-600 mb-4">Logistic Regression</p>
+                <div class="relative h-4 bg-neutral-800 rounded-full overflow-hidden mb-2"><div class="absolute inset-y-0 left-0 bg-lime-400 rounded-full" style="width:67%"></div></div>
+                <p class="font-heading font-semibold text-3xl text-lime-400">67% <span class="text-sm text-lime-400/60">↑</span></p>
+            </div>
+        </div>
+
+        <div class="bg-lime-400/5 border border-lime-400/20 rounded-2xl p-6 flex gap-4">
+            <i data-lucide="lightbulb" class="w-6 h-6 text-lime-400 shrink-0 mt-0.5"></i>
+            <p class="text-neutral-300 leading-relaxed text-sm">Even a <strong class="text-lime-400">1–2% improvement</strong> can be valuable in real-world ML, especially in competitive environments like Kaggle or production systems.</p>
+        </div>
+
+        <div class="bg-neutral-900/50 border border-neutral-800 rounded-2xl p-6 mt-8">
+            <h3 class="text-lg font-medium tracking-tight mb-3 flex items-center gap-2"><i data-lucide="key" class="w-5 h-5 text-lime-400"></i> Key Lesson</h3>
+            <blockquote class="border-l-2 border-lime-400 pl-6 py-2">
+                <p class="text-white font-medium">Whenever you work on a dataset, always ask yourself: "Can I create a better feature using the existing columns?"</p>
+            </blockquote>
+            <p class="text-neutral-500 text-sm mt-4">This mindset often separates beginner data scientists from experienced ones.</p>
+        </div>
+    </div>
+</section>
+
+<div class="section-divider mx-6 lg:mx-12"></div>
+
+<!-- Feature Splitting -->
+<section id="splitting" class="py-24 md:py-32 px-6 lg:px-12">
+    <div class="max-w-4xl mx-auto">
+        <div class="flex items-center gap-3 mb-6"><div class="w-10 h-10 rounded-xl bg-amber-400/10 border border-amber-400/20 flex items-center justify-center"><i data-lucide="scissors" class="w-5 h-5 text-amber-400"></i></div><span class="font-mono text-xs uppercase tracking-widest text-neutral-500">Topic 2</span></div>
+        <h2 class="text-3xl md:text-5xl font-medium tracking-tight mb-4">Feature Splitting</h2>
+        <p class="text-lg text-neutral-400 font-light leading-relaxed mb-8">The second topic is <span class="text-amber-400 font-medium">Feature Splitting</span>.</p>
+
+        <div class="bg-neutral-900/50 border border-neutral-800 rounded-2xl p-8 mb-8">
+            <h3 class="text-lg font-medium tracking-tight mb-4">What is Feature Splitting?</h3>
+            <p class="text-neutral-400 font-light leading-relaxed mb-6">Sometimes one column stores multiple pieces of information.</p>
+            <div class="bg-black rounded-xl p-5 mb-6">
+                <p class="font-mono text-white text-lg text-center">Mr. Rahul Sharma</p>
+            </div>
+            <p class="text-neutral-400 text-sm mb-4">This contains:</p>
+            <div class="flex gap-3 mb-6"><span class="px-4 py-2 rounded-lg bg-neutral-800 text-sm text-neutral-300">Title</span><span class="px-4 py-2 rounded-lg bg-neutral-800 text-sm text-neutral-300">First Name</span><span class="px-4 py-2 rounded-lg bg-neutral-800 text-sm text-neutral-300">Last Name</span></div>
+            <p class="text-neutral-400 text-sm mb-4">After splitting:</p>
+            <div class="grid grid-cols-3 gap-3">
+                <div class="bg-black rounded-xl p-4 text-center"><p class="text-xs text-neutral-500 mb-1">Title</p><p class="font-mono text-amber-400">Mr</p></div>
+                <div class="bg-black rounded-xl p-4 text-center"><p class="text-xs text-neutral-500 mb-1">FirstName</p><p class="font-mono text-white">Rahul</p></div>
+                <div class="bg-black rounded-xl p-4 text-center"><p class="text-xs text-neutral-500 mb-1">LastName</p><p class="font-mono text-white">Sharma</p></div>
+            </div>
+        </div>
+
+        <div id="why-split" class="bg-neutral-900/50 border border-neutral-800 rounded-2xl p-6">
+            <h3 class="text-lg font-medium tracking-tight mb-3">Why Split Features?</h3>
+            <p class="text-neutral-400 text-sm leading-relaxed">ML models work better when every column represents a <span class="text-white font-medium">single concept</span>. Now the model can learn whether <span class="text-amber-400">Mr</span>, <span class="text-amber-400">Mrs</span>, <span class="text-amber-400">Miss</span>, <span class="text-amber-400">Master</span> have any relationship with survival.</p>
+        </div>
+    </div>
+</section>
+
+<div class="section-divider mx-6 lg:mx-12"></div>
+
+<!-- Extracting Title -->
+<section id="extracting-title" class="py-24 md:py-32 px-6 lg:px-12">
+    <div class="max-w-4xl mx-auto">
+        <div class="flex items-center gap-3 mb-6"><div class="w-10 h-10 rounded-xl bg-lime-400/10 border border-lime-400/20 flex items-center justify-center"><i data-lucide="code-2" class="w-5 h-5 text-lime-400"></i></div><span class="font-mono text-xs uppercase tracking-widest text-neutral-500">Step-by-Step</span></div>
+        <h2 class="text-3xl md:text-5xl font-medium tracking-tight mb-4">Extracting the Title</h2>
+        <p class="text-lg text-neutral-400 font-light leading-relaxed mb-8">The Name column looks like:</p>
+
+        <div class="bg-black rounded-xl p-5 mb-8 space-y-2">
+            <p class="font-mono text-neutral-300 text-sm">Braund, <span class="text-amber-400">Mr.</span> Owen Harris</p>
+            <p class="font-mono text-neutral-300 text-sm">Cumings, <span class="text-amber-400">Mrs.</span> John Bradley</p>
+            <p class="font-mono text-neutral-300 text-sm">Allen, <span class="text-amber-400">Miss</span> Elisabeth</p>
+        </div>
+        <p class="text-neutral-500 text-sm mb-8">Notice the structure: <code class="text-white bg-neutral-800 px-2 py-0.5 rounded text-xs">Surname, Title. Name</code></p>
+
+        <!-- Interactive Name Splitter -->
+        <div class="bg-neutral-900/50 border border-neutral-800 rounded-2xl p-8 mb-8">
+            <h3 class="text-lg font-medium tracking-tight mb-6 flex items-center gap-2"><i data-lucide="mouse-pointer-click" class="w-5 h-5 text-lime-400"></i> Interactive Name Splitter</h3>
+            <div class="mb-4">
+                <label class="block text-sm text-neutral-400 mb-2">Titanic-Style Name</label>
+                <input type="text" id="name-input" value="Braund, Mr. Owen Harris" class="w-full bg-black border border-neutral-800 rounded-xl px-4 py-3 text-white text-lg focus:outline-none focus:border-lime-400/50 transition-colors font-mono">
+            </div>
+            <div class="grid grid-cols-3 gap-3">
+                <div class="bg-black border border-neutral-800 rounded-xl px-4 py-3 text-center"><p class="text-xs text-neutral-500 mb-1">Surname</p><p id="split-last" class="font-mono text-white">Braund</p></div>
+                <div class="bg-black border border-amber-400/20 rounded-xl px-4 py-3 text-center"><p class="text-xs text-amber-400 mb-1">Title</p><p id="split-title" class="font-mono text-amber-400">Mr</p></div>
+                <div class="bg-black border border-neutral-800 rounded-xl px-4 py-3 text-center"><p class="text-xs text-neutral-500 mb-1">First Name</p><p id="split-first" class="font-mono text-white">Owen Harris</p></div>
+            </div>
+        </div>
+
+        <!-- Step 1 -->
+        <div class="relative pl-12 mb-6">
+            <div class="absolute left-4 top-2 bottom-2 w-0.5 timeline-line rounded-full"></div>
+            <div class="absolute -left-8 w-7 h-7 rounded-full bg-lime-400 flex items-center justify-center"><span class="text-black text-xs font-bold">1</span></div>
+            <div class="bg-neutral-900/50 border border-neutral-800 rounded-xl p-5">
+                <p class="text-white font-medium mb-3">Split using comma</p>
+                <div class="code-block p-4">
+                    <div class="flex items-center justify-between mb-3"><div class="flex items-center gap-2"><div class="w-2.5 h-2.5 rounded-full bg-red-500/60"></div><div class="w-2.5 h-2.5 rounded-full bg-amber-500/60"></div><div class="w-2.5 h-2.5 rounded-full bg-lime-500/60"></div></div><button onclick="copyCode(this)" class="text-xs text-neutral-500 hover:text-lime-400 transition-colors flex items-center gap-1"><i data-lucide="copy" class="w-3 h-3"></i> Copy</button></div>
+<pre class="text-neutral-300"><span class="var">df</span>[<span class="string">"Name"</span>].str.<span class="func">split</span>(<span class="string">","</span>).str[<span class="number">1</span>]
+<span class="comment"># "Mr. Owen Harris"</span></pre>
+                </div>
+            </div>
+        </div>
+
+        <!-- Step 2 -->
+        <div class="relative pl-12">
+            <div class="absolute left-4 top-2 bottom-2 w-0.5 timeline-line rounded-full"></div>
+            <div class="absolute -left-8 w-7 h-7 rounded-full bg-lime-400/60 flex items-center justify-center"><span class="text-black text-xs font-bold">2</span></div>
+            <div class="bg-neutral-900/50 border border-neutral-800 rounded-xl p-5">
+                <p class="text-white font-medium mb-3">Split again using period</p>
+                <div class="code-block p-4">
+                    <div class="flex items-center justify-between mb-3"><div class="flex items-center gap-2"><div class="w-2.5 h-2.5 rounded-full bg-red-500/60"></div><div class="w-2.5 h-2.5 rounded-full bg-amber-500/60"></div><div class="w-2.5 h-2.5 rounded-full bg-lime-500/60"></div></div><button onclick="copyCode(this)" class="text-xs text-neutral-500 hover:text-lime-400 transition-colors flex items-center gap-1"><i data-lucide="copy" class="w-3 h-3"></i> Copy</button></div>
+<pre class="text-neutral-300"><span class="var">df</span>[<span class="string">"Title"</span>] = <span class="var">df</span>[<span class="string">"Name"</span>].str.<span class="func">split</span>(<span class="string">","</span>).str[<span class="number">1</span>].str.<span class="func">split</span>(<span class="string">"."</span>).str[<span class="number">0</span>].str.<span class="func">strip</span>()
+<span class="comment"># "Mr"</span></pre>
+                </div>
+            </div>
+        </div>
+
+        <!-- Titles Found -->
+        <div class="mt-10">
+            <h3 class="text-lg font-medium tracking-tight mb-4">Titles Found</h3>
+            <div class="flex flex-wrap gap-2">
+                <span class="px-3 py-1.5 rounded-lg bg-amber-400/10 border border-amber-400/20 text-sm text-amber-400">Mr</span>
+                <span class="px-3 py-1.5 rounded-lg bg-amber-400/10 border border-amber-400/20 text-sm text-amber-400">Mrs</span>
+                <span class="px-3 py-1.5 rounded-lg bg-amber-400/10 border border-amber-400/20 text-sm text-amber-400">Miss</span>
+                <span class="px-3 py-1.5 rounded-lg bg-amber-400/10 border border-amber-400/20 text-sm text-amber-400">Master</span>
+                <span class="px-3 py-1.5 rounded-lg bg-neutral-800 text-sm text-neutral-400">Dr</span>
+                <span class="px-3 py-1.5 rounded-lg bg-neutral-800 text-sm text-neutral-400">Col</span>
+                <span class="px-3 py-1.5 rounded-lg bg-neutral-800 text-sm text-neutral-400">Major</span>
+                <span class="px-3 py-1.5 rounded-lg bg-neutral-800 text-sm text-neutral-400">Capt</span>
+                <span class="px-3 py-1.5 rounded-lg bg-neutral-800 text-sm text-neutral-400">Lady</span>
+                <span class="px-3 py-1.5 rounded-lg bg-neutral-800 text-sm text-neutral-400">Sir</span>
+                <span class="px-3 py-1.5 rounded-lg bg-neutral-800 text-sm text-neutral-400">Rev</span>
+                <span class="px-3 py-1.5 rounded-lg bg-neutral-800 text-sm text-neutral-400">Don</span>
+                <span class="px-3 py-1.5 rounded-lg bg-neutral-800 text-sm text-neutral-400">Jonkheer</span>
+                <span class="px-3 py-1.5 rounded-lg bg-neutral-800 text-sm text-neutral-400">Mme</span>
+                <span class="px-3 py-1.5 rounded-lg bg-neutral-800 text-sm text-neutral-400">Mlle</span>
+            </div>
+        </div>
+    </div>
+</section>
+
+<div class="section-divider mx-6 lg:mx-12"></div>
+
+<!-- Why Title Useful -->
+<section id="title-useful" class="py-24 md:py-32 px-6 lg:px-12">
+    <div class="max-w-4xl mx-auto">
+        <div class="flex items-center gap-3 mb-6"><div class="w-10 h-10 rounded-xl bg-lime-400/10 border border-lime-400/20 flex items-center justify-center"><i data-lucide="search" class="w-5 h-5 text-lime-400"></i></div><span class="font-mono text-xs uppercase tracking-widest text-neutral-500">Insight</span></div>
+        <h2 class="text-3xl md:text-5xl font-medium tracking-tight mb-8">Why is Title Useful?</h2>
+        <p class="text-neutral-400 font-light leading-relaxed mb-8">Different titles correspond to different social groups.</p>
+        <div class="grid md:grid-cols-2 gap-4 mb-8">
+            <div class="bg-neutral-900/50 border border-neutral-800 rounded-xl p-5 flex items-start gap-4"><span class="px-3 py-1 rounded-lg bg-amber-400/10 text-amber-400 text-sm font-mono shrink-0">Mr</span><div><p class="text-white text-sm font-medium">Adult Male</p></div></div>
+            <div class="bg-neutral-900/50 border border-neutral-800 rounded-xl p-5 flex items-start gap-4"><span class="px-3 py-1 rounded-lg bg-amber-400/10 text-amber-400 text-sm font-mono shrink-0">Mrs</span><div><p class="text-white text-sm font-medium">Married Woman</p></div></div>
+            <div class="bg-neutral-900/50 border border-neutral-800 rounded-xl p-5 flex items-start gap-4"><span class="px-3 py-1 rounded-lg bg-amber-400/10 text-amber-400 text-sm font-mono shrink-0">Miss</span><div><p class="text-white text-sm font-medium">Unmarried Woman</p></div></div>
+            <div class="bg-neutral-900/50 border border-neutral-800 rounded-xl p-5 flex items-start gap-4"><span class="px-3 py-1 rounded-lg bg-amber-400/10 text-amber-400 text-sm font-mono shrink-0">Master</span><div><p class="text-white text-sm font-medium">Young Boy</p></div></div>
+        </div>
+        <p class="text-neutral-400 text-sm">Each group may have had different survival probabilities.</p>
+    </div>
+</section>
+
+<div class="section-divider mx-6 lg:mx-12"></div>
+
+<!-- Survival Analysis -->
+<section id="survival" class="py-24 md:py-32 px-6 lg:px-12">
+    <div class="max-w-4xl mx-auto">
+        <div class="flex items-center gap-3 mb-6"><div class="w-10 h-10 rounded-xl bg-lime-400/10 border border-lime-400/20 flex items-center justify-center"><i data-lucide="bar-chart" class="w-5 h-5 text-lime-400"></i></div><span class="font-mono text-xs uppercase tracking-widest text-neutral-500">Analysis</span></div>
+        <h2 class="text-3xl md:text-5xl font-medium tracking-tight mb-8">Survival Analysis by Title</h2>
+
+        <div class="bg-neutral-900/50 border border-neutral-800 rounded-2xl overflow-hidden mb-8">
+            <div class="grid grid-cols-2 text-center border-b border-neutral-800">
+                <div class="p-4 text-sm font-medium text-neutral-400">Title</div>
+                <div class="p-4 text-sm font-medium text-neutral-400">Survival Trend</div>
+            </div>
+            <div class="grid grid-cols-2 text-center border-b border-neutral-800/50">
+                <div class="p-4 border-r border-neutral-800/50 font-mono text-amber-400">Mrs</div>
+                <div class="p-4"><div class="flex items-center justify-center gap-2"><div class="h-2 rounded-full bg-lime-400" style="width:90%"></div><span class="text-xs text-lime-400">Highest</span></div></div>
+            </div>
+            <div class="grid grid-cols-2 text-center border-b border-neutral-800/50">
+                <div class="p-4 border-r border-neutral-800/50 font-mono text-amber-400">Miss</div>
+                <div class="p-4"><div class="flex items-center justify-center gap-2"><div class="h-2 rounded-full bg-lime-400/70" style="width:70%"></div><span class="text-xs text-lime-400/70">High</span></div></div>
+            </div>
+            <div class="grid grid-cols-2 text-center border-b border-neutral-800/50">
+                <div class="p-4 border-r border-neutral-800/50 font-mono text-amber-400">Master</div>
+                <div class="p-4"><div class="flex items-center justify-center gap-2"><div class="h-2 rounded-full bg-amber-400/60" style="width:55%"></div><span class="text-xs text-amber-400/60">Moderate-High</span></div></div>
+            </div>
+            <div class="grid grid-cols-2 text-center">
+                <div class="p-4 border-r border-neutral-800/50 font-mono text-amber-400">Mr</div>
+                <div class="p-4"><div class="flex items-center justify-center gap-2"><div class="h-2 rounded-full bg-red-400/60" style="width:20%"></div><span class="text-xs text-red-400/60">Lower</span></div></div>
+            </div>
+        </div>
+        <p class="text-neutral-500 text-sm">This reflects the historical "women and children first" evacuation policy. Rare titles (Dr, Lady, Col, etc.) had very few samples.</p>
+    </div>
+</section>
+
+<div class="section-divider mx-6 lg:mx-12"></div>
+
+<!-- Married Feature -->
+<section id="married" class="py-24 md:py-32 px-6 lg:px-12">
+    <div class="max-w-4xl mx-auto">
+        <div class="flex items-center gap-3 mb-6"><div class="w-10 h-10 rounded-xl bg-lime-400/10 border border-lime-400/20 flex items-center justify-center"><i data-lucide="heart" class="w-5 h-5 text-lime-400"></i></div><span class="font-mono text-xs uppercase tracking-widest text-neutral-500">Bonus Feature</span></div>
+        <h2 class="text-3xl md:text-5xl font-medium tracking-tight mb-8">Creating Another Feature</h2>
+        <p class="text-neutral-400 font-light leading-relaxed mb-6">The instructor suggests creating a <span class="text-white font-medium">Married</span> feature.</p>
+        <div class="bg-neutral-900/50 border border-neutral-800 rounded-2xl p-6 mb-6">
+            <p class="text-neutral-400 text-sm mb-3">Logic:</p>
+            <div class="flex items-center gap-3 flex-wrap mb-4">
+                <span class="px-3 py-1.5 rounded-lg bg-amber-400/10 border border-amber-400/20 text-sm text-amber-400 font-mono">Title == "Mrs"</span>
+                <i data-lucide="arrow-down" class="w-4 h-4 text-neutral-600"></i>
+                <span class="px-3 py-1.5 rounded-lg bg-lime-400/10 border border-lime-400/20 text-sm text-lime-400">Married = 1</span>
+                <span class="text-neutral-600">Else</span>
+                <span class="px-3 py-1.5 rounded-lg bg-neutral-800 text-sm text-neutral-400">0</span>
+            </div>
+        </div>
+        <div class="code-block p-6 mb-6">
+            <div class="flex items-center justify-between mb-4"><div class="flex items-center gap-2"><div class="w-3 h-3 rounded-full bg-red-500/60"></div><div class="w-3 h-3 rounded-full bg-amber-500/60"></div><div class="w-3 h-3 rounded-full bg-lime-500/60"></div><span class="text-xs text-neutral-600 ml-2">married.py</span></div><button onclick="copyCode(this)" class="text-xs text-neutral-500 hover:text-lime-400 transition-colors flex items-center gap-1"><i data-lucide="copy" class="w-3.5 h-3.5"></i> Copy</button></div>
+<pre class="text-neutral-300"><span class="var">df</span>[<span class="string">"Married"</span>] = <span class="var">df</span>[<span class="string">"Title"</span>].<span class="func">apply</span>(
+    <span class="keyword">lambda</span> x: <span class="number">1</span> <span class="keyword">if</span> x == <span class="string">"Mrs"</span> <span class="keyword">else</span> <span class="number">0</span>
+)</pre>
+        </div>
+        <div class="bg-amber-400/5 border border-amber-400/20 rounded-xl p-4 flex gap-3">
+            <i data-lucide="alert-circle" class="w-5 h-5 text-amber-400 shrink-0 mt-0.5"></i>
+            <p class="text-neutral-400 text-sm">The instructor did not verify whether the <code class="text-white bg-neutral-800 px-1.5 py-0.5 rounded text-xs">Married</code> feature actually improved accuracy. It was presented as an example of how additional features can be engineered using domain knowledge.</p>
+        </div>
+    </div>
+</section>
+
+<div class="section-divider mx-6 lg:mx-12"></div>
+
+<!-- Real-World Examples -->
+<section id="realworld" class="py-24 md:py-32 px-6 lg:px-12">
+    <div class="max-w-4xl mx-auto">
+        <div class="flex items-center gap-3 mb-6"><div class="w-10 h-10 rounded-xl bg-lime-400/10 border border-lime-400/20 flex items-center justify-center"><i data-lucide="globe" class="w-5 h-5 text-lime-400"></i></div><span class="font-mono text-xs uppercase tracking-widest text-neutral-500">Applications</span></div>
+        <h2 class="text-3xl md:text-5xl font-medium tracking-tight mb-8">Real-World Examples of Feature Construction</h2>
+
+        <div class="space-y-4">
+            <div class="card-hover bg-neutral-900/50 border border-neutral-800 rounded-2xl p-6">
+                <div class="flex items-center gap-3 mb-3"><i data-lucide="landmark" class="w-5 h-5 text-lime-400"></i><h3 class="text-white font-medium">Banking</h3></div>
+                <p class="text-neutral-400 text-sm mb-2">Instead of:</p>
+                <div class="flex gap-2 mb-2"><span class="px-3 py-1 rounded bg-neutral-800 text-xs text-neutral-400">Debt</span><span class="px-3 py-1 rounded bg-neutral-800 text-xs text-neutral-400">Income</span></div>
+                <p class="text-neutral-400 text-sm">Create:</p>
+                <div class="formula-box rounded-lg px-4 py-2 inline-block mt-1"><span class="font-mono text-lime-400 text-sm">Debt / Income</span></div>
+            </div>
+            <div class="card-hover bg-neutral-900/50 border border-neutral-800 rounded-2xl p-6">
+                <div class="flex items-center gap-3 mb-3"><i data-lucide="heart-pulse" class="w-5 h-5 text-lime-400"></i><h3 class="text-white font-medium">Healthcare</h3></div>
+                <p class="text-neutral-400 text-sm mb-2">Instead of:</p>
+                <div class="flex gap-2 mb-2"><span class="px-3 py-1 rounded bg-neutral-800 text-xs text-neutral-400">Height</span><span class="px-3 py-1 rounded bg-neutral-800 text-xs text-neutral-400">Weight</span></div>
+                <p class="text-neutral-400 text-sm">Create:</p>
+                <div class="formula-box rounded-lg px-4 py-2 inline-block mt-1"><span class="font-mono text-lime-400 text-sm">BMI = Weight / Height²</span></div>
+            </div>
+            <div class="card-hover bg-neutral-900/50 border border-neutral-800 rounded-2xl p-6">
+                <div class="flex items-center gap-3 mb-3"><i data-lucide="shopping-cart" class="w-5 h-5 text-lime-400"></i><h3 class="text-white font-medium">E-commerce</h3></div>
+                <div class="formula-box rounded-lg px-4 py-2 inline-block mt-1"><span class="font-mono text-lime-400 text-sm">Avg Spending Per Order = Total Spending / Number of Orders</span></div>
+            </div>
+            <div class="card-hover bg-neutral-900/50 border border-neutral-800 rounded-2xl p-6">
+                <div class="flex items-center gap-3 mb-3"><i data-lucide="trophy" class="w-5 h-5 text-lime-400"></i><h3 class="text-white font-medium">Cricket</h3></div>
+                <div class="space-y-2 mt-2">
+                    <div class="formula-box rounded-lg px-4 py-2"><span class="font-mono text-lime-400 text-sm">Strike Rate = Runs / Balls × 100</span></div>
+                    <div class="formula-box rounded-lg px-4 py-2"><span class="font-mono text-lime-400 text-sm">Economy = Runs Conceded / Overs</span></div>
+                </div>
+            </div>
+            <div class="card-hover bg-neutral-900/50 border border-neutral-800 rounded-2xl p-6">
+                <div class="flex items-center gap-3 mb-3"><i data-lucide="swords" class="w-5 h-5 text-lime-400"></i><h3 class="text-white font-medium">IPL Dataset</h3></div>
+                <div class="flex flex-wrap gap-2"><span class="px-3 py-1.5 rounded-lg bg-neutral-800 text-xs text-neutral-400">Batting Strike Rate</span><span class="px-3 py-1.5 rounded-lg bg-neutral-800 text-xs text-neutral-400">Bowling Economy</span><span class="px-3 py-1.5 rounded-lg bg-neutral-800 text-xs text-neutral-400">Dot Ball %</span><span class="px-3 py-1.5 rounded-lg bg-neutral-800 text-xs text-neutral-400">Boundary %</span></div>
+            </div>
+            <div class="card-hover bg-neutral-900/50 border border-neutral-800 rounded-2xl p-6">
+                <div class="flex items-center gap-3 mb-3"><i data-lucide="trending-up" class="w-5 h-5 text-lime-400"></i><h3 class="text-white font-medium">Stock Market</h3></div>
+                <div class="flex flex-wrap gap-2"><span class="px-3 py-1.5 rounded-lg bg-neutral-800 text-xs text-neutral-400">Daily Return</span><span class="px-3 py-1.5 rounded-lg bg-neutral-800 text-xs text-neutral-400">Rolling Mean</span><span class="px-3 py-1.5 rounded-lg bg-neutral-800 text-xs text-neutral-400">Rolling Std Dev</span><span class="px-3 py-1.5 rounded-lg bg-neutral-800 text-xs text-neutral-400">Volatility</span><span class="px-3 py-1.5 rounded-lg bg-neutral-800 text-xs text-neutral-400">RSI</span><span class="px-3 py-1.5 rounded-lg bg-neutral-800 text-xs text-neutral-400">MACD</span><span class="px-3 py-1.5 rounded-lg bg-neutral-800 text-xs text-neutral-400">Moving Avg Diff</span></div>
+            </div>
+            <div class="card-hover bg-neutral-900/50 border border-neutral-800 rounded-2xl p-6">
+                <div class="flex items-center gap-3 mb-3"><i data-lucide="users" class="w-5 h-5 text-lime-400"></i><h3 class="text-white font-medium">Customer Analytics</h3></div>
+                <div class="flex flex-wrap gap-2"><span class="px-3 py-1.5 rounded-lg bg-neutral-800 text-xs text-neutral-400">Customer Lifetime Value</span><span class="px-3 py-1.5 rounded-lg bg-neutral-800 text-xs text-neutral-400">Avg Purchase Frequency</span><span class="px-3 py-1.5 rounded-lg bg-neutral-800 text-xs text-neutral-400">Recency</span><span class="px-3 py-1.5 rounded-lg bg-neutral-800 text-xs text-neutral-400">Monetary Score</span></div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<div class="section-divider mx-6 lg:mx-12"></div>
+
+<!-- Best Practices -->
+<section id="best-practices" class="py-24 md:py-32 px-6 lg:px-12">
+    <div class="max-w-4xl mx-auto">
+        <div class="flex items-center gap-3 mb-6"><div class="w-10 h-10 rounded-xl bg-lime-400/10 border border-lime-400/20 flex items-center justify-center"><i data-lucide="check-circle" class="w-5 h-5 text-lime-400"></i></div><span class="font-mono text-xs uppercase tracking-widest text-neutral-500">Guidelines</span></div>
+        <h2 class="text-3xl md:text-5xl font-medium tracking-tight mb-12">Best Practices</h2>
+        <div class="space-y-3">
+            <div class="flex items-start gap-3 p-4 rounded-xl bg-neutral-900/30 border border-neutral-800/50"><i data-lucide="check" class="w-5 h-5 text-lime-400 shrink-0 mt-0.5"></i><span class="text-neutral-300 text-sm">Use <span class="text-white font-medium">domain knowledge</span>.</span></div>
+            <div class="flex items-start gap-3 p-4 rounded-xl bg-neutral-900/30 border border-neutral-800/50"><i data-lucide="check" class="w-5 h-5 text-lime-400 shrink-0 mt-0.5"></i><span class="text-neutral-300 text-sm">Understand the <span class="text-white font-medium">business problem</span>.</span></div>
+            <div class="flex items-start gap-3 p-4 rounded-xl bg-neutral-900/30 border border-neutral-800/50"><i data-lucide="check" class="w-5 h-5 text-lime-400 shrink-0 mt-0.5"></i><span class="text-neutral-300 text-sm"><span class="text-white font-medium">Visualize the data</span> before engineering features.</span></div>
+            <div class="flex items-start gap-3 p-4 rounded-xl bg-neutral-900/30 border border-neutral-800/50"><i data-lucide="check" class="w-5 h-5 text-lime-400 shrink-0 mt-0.5"></i><span class="text-neutral-300 text-sm"><span class="text-white font-medium">Test whether</span> the new feature improves validation performance.</span></div>
+            <div class="flex items-start gap-3 p-4 rounded-xl bg-neutral-900/30 border border-neutral-800/50"><i data-lucide="check" class="w-5 h-5 text-lime-400 shrink-0 mt-0.5"></i><span class="text-neutral-300 text-sm">Remove <span class="text-white font-medium">redundant features</span> if necessary.</span></div>
+            <div class="flex items-start gap-3 p-4 rounded-xl bg-neutral-900/30 border border-neutral-800/50"><i data-lucide="check" class="w-5 h-5 text-lime-400 shrink-0 mt-0.5"></i><span class="text-neutral-300 text-sm">Avoid <span class="text-red-400 font-medium">data leakage</span> (do not use future information to create features).</span></div>
+        </div>
+    </div>
+</section>
+
+<div class="section-divider mx-6 lg:mx-12"></div>
+
+<!-- Common Pitfalls -->
+<section id="pitfalls" class="py-24 md:py-32 px-6 lg:px-12">
+    <div class="max-w-4xl mx-auto">
+        <div class="flex items-center gap-3 mb-6"><div class="w-10 h-10 rounded-xl bg-red-500/10 border border-red-500/20 flex items-center justify-center"><i data-lucide="alert-triangle" class="w-5 h-5 text-red-400"></i></div><span class="font-mono text-xs uppercase tracking-widest text-neutral-500">Avoid</span></div>
+        <h2 class="text-3xl md:text-5xl font-medium tracking-tight mb-12">Common Pitfalls</h2>
+        <div class="space-y-4">
+            <div class="bg-neutral-900/50 border border-neutral-800 rounded-xl p-5 flex items-start gap-4 card-hover"><div class="w-10 h-10 rounded-lg bg-red-500/10 flex items-center justify-center shrink-0"><i data-lucide="x-circle" class="w-5 h-5 text-red-400"></i></div><p class="text-neutral-300 text-sm">Creating <span class="text-white font-medium">too many unnecessary features</span>.</p></div>
+            <div class="bg-neutral-900/50 border border-neutral-800 rounded-xl p-5 flex items-start gap-4 card-hover"><div class="w-10 h-10 rounded-lg bg-red-500/10 flex items-center justify-center shrink-0"><i data-lucide="x-circle" class="w-5 h-5 text-red-400"></i></div><p class="text-neutral-300 text-sm">Adding features <span class="text-white font-medium">without validating</span> their usefulness.</p></div>
+            <div class="bg-neutral-900/50 border border-neutral-800 rounded-xl p-5 flex items-start gap-4 card-hover"><div class="w-10 h-10 rounded-lg bg-red-500/10 flex items-center justify-center shrink-0"><i data-lucide="x-circle" class="w-5 h-5 text-red-400"></i></div><p class="text-neutral-300 text-sm">Introducing <span class="text-white font-medium">highly correlated or redundant</span> variables.</p></div>
+            <div class="bg-neutral-900/50 border border-neutral-800 rounded-xl p-5 flex items-start gap-4 card-hover"><div class="w-10 h-10 rounded-lg bg-red-500/10 flex items-center justify-center shrink-0"><i data-lucide="x-circle" class="w-5 h-5 text-red-400"></i></div><p class="text-neutral-300 text-sm">Creating features that accidentally <span class="text-red-400 font-medium">leak target information</span>.</p></div>
+        </div>
+    </div>
+</section>
+
+<div class="section-divider mx-6 lg:mx-12"></div>
+
+<!-- Interview Questions -->
+<section id="interview" class="py-24 md:py-32 px-6 lg:px-12">
+    <div class="max-w-4xl mx-auto">
+        <div class="flex items-center gap-3 mb-6"><div class="w-10 h-10 rounded-xl bg-lime-400/10 border border-lime-400/20 flex items-center justify-center"><i data-lucide="message-circle" class="w-5 h-5 text-lime-400"></i></div><span class="font-mono text-xs uppercase tracking-widest text-neutral-500">Preparation</span></div>
+        <h2 class="text-3xl md:text-5xl font-medium tracking-tight mb-4">Interview Questions</h2>
+        <p class="text-lg text-neutral-400 font-light leading-relaxed mb-12">Click each question to reveal the answer.</p>
+
+        <div class="space-y-3">
+            <div class="bg-neutral-900/50 border border-neutral-800 rounded-xl overflow-hidden">
+                <button onclick="toggleAccordion(this)" class="w-full flex items-center justify-between p-5 text-left hover:bg-neutral-800/30 transition-colors"><span class="text-white font-medium text-sm pr-4">Q1. What is Feature Construction?</span><i data-lucide="plus" class="w-5 h-5 text-neutral-500 shrink-0 accordion-icon"></i></button>
+                <div class="accordion-content"><div class="px-5 pb-5 text-neutral-400 text-sm leading-relaxed border-t border-neutral-800/50 pt-4">Creating new features from existing features using domain knowledge to improve model performance. Instead of collecting new data, we create better information from the data we already have.</div></div>
+            </div>
+            <div class="bg-neutral-900/50 border border-neutral-800 rounded-xl overflow-hidden">
+                <button onclick="toggleAccordion(this)" class="w-full flex items-center justify-between p-5 text-left hover:bg-neutral-800/30 transition-colors"><span class="text-white font-medium text-sm pr-4">Q2. Is Feature Construction automatic?</span><i data-lucide="plus" class="w-5 h-5 text-neutral-500 shrink-0 accordion-icon"></i></button>
+                <div class="accordion-content"><div class="px-5 pb-5 text-neutral-400 text-sm leading-relaxed border-t border-neutral-800/50 pt-4"><strong class="text-white">No.</strong> It is primarily a manual and creative process, although automated feature engineering tools exist.</div></div>
+            </div>
+            <div class="bg-neutral-900/50 border border-neutral-800 rounded-xl overflow-hidden">
+                <button onclick="toggleAccordion(this)" class="w-full flex items-center justify-between p-5 text-left hover:bg-neutral-800/30 transition-colors"><span class="text-white font-medium text-sm pr-4">Q3. Why is Domain Knowledge important?</span><i data-lucide="plus" class="w-5 h-5 text-neutral-500 shrink-0 accordion-icon"></i></button>
+                <div class="accordion-content"><div class="px-5 pb-5 text-neutral-400 text-sm leading-relaxed border-t border-neutral-800/50 pt-4">Because understanding the problem domain helps identify <strong class="text-white">meaningful relationships</strong> between variables, leading to more informative features. Without domain knowledge, you might create irrelevant or misleading features.</div></div>
+            </div>
+            <div class="bg-neutral-900/50 border border-neutral-800 rounded-xl overflow-hidden">
+                <button onclick="toggleAccordion(this)" class="w-full flex items-center justify-between p-5 text-left hover:bg-neutral-800/30 transition-colors"><span class="text-white font-medium text-sm pr-4">Q4. What is Feature Splitting?</span><i data-lucide="plus" class="w-5 h-5 text-neutral-500 shrink-0 accordion-icon"></i></button>
+                <div class="accordion-content"><div class="px-5 pb-5 text-neutral-400 text-sm leading-relaxed border-t border-neutral-800/50 pt-4">Breaking a single feature containing <strong class="text-white">multiple pieces of information</strong> into separate, more useful features. Example: Extracting "Title" from a full name column.</div></div>
+            </div>
+            <div class="bg-neutral-900/50 border border-neutral-800 rounded-xl overflow-hidden">
+                <button onclick="toggleAccordion(this)" class="w-full flex items-center justify-between p-5 text-left hover:bg-neutral-800/30 transition-colors"><span class="text-white font-medium text-sm pr-4">Q5. Difference between Feature Construction and Feature Extraction?</span><i data-lucide="plus" class="w-5 h-5 text-neutral-500 shrink-0 accordion-icon"></i></button>
+                <div class="accordion-content"><div class="px-5 pb-5 text-neutral-400 text-sm leading-relaxed border-t border-neutral-800/50 pt-4">
+                    <div class="bg-neutral-900/50 border border-neutral-800 rounded-xl overflow-hidden mt-2">
+                        <div class="grid grid-cols-2 text-center border-b border-neutral-800"><div class="p-3 text-xs text-amber-400 font-medium">Construction</div><div class="p-3 text-xs text-lime-400 font-medium">Extraction</div></div>
+                        <div class="grid grid-cols-2 text-center border-b border-neutral-800/50"><div class="p-3 border-r border-neutral-800/50 text-xs text-neutral-400">Manual</div><div class="p-3 text-xs text-neutral-400">Mostly algorithmic</div></div>
+                        <div class="grid grid-cols-2 text-center border-b border-neutral-800/50"><div class="p-3 border-r border-neutral-800/50 text-xs text-neutral-400">Uses domain knowledge</div><div class="p-3 text-xs text-neutral-400">Uses math techniques</div></div>
+                        <div class="grid grid-cols-2 text-center border-b border-neutral-800/50"><div class="p-3 border-r border-neutral-800/50 text-xs text-neutral-400">New features from existing</div><div class="p-3 text-xs text-neutral-400">New representations</div></div>
+                        <div class="grid grid-cols-2 text-center"><div class="p-3 border-r border-neutral-800/50 text-xs text-neutral-300">BMI, FamilySize</div><div class="p-3 text-xs text-neutral-300">PCA, LDA, Autoencoders</div></div>
+                    </div>
+                </div></div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<div class="section-divider mx-6 lg:mx-12"></div>
+
+<!-- Final Takeaways -->
+<section id="takeaways" class="py-24 md:py-32 px-6 lg:px-12">
+    <div class="max-w-4xl mx-auto">
+        <div class="flex items-center gap-3 mb-6"><div class="w-10 h-10 rounded-xl bg-lime-400/10 border border-lime-400/20 flex items-center justify-center"><i data-lucide="bookmark" class="w-5 h-5 text-lime-400"></i></div><span class="font-mono text-xs uppercase tracking-widest text-neutral-500">Final Notes</span></div>
+        <h2 class="text-3xl md:text-5xl font-medium tracking-tight mb-12">Final Takeaways 🎯</h2>
+
+        <div class="space-y-4">
+            <div class="flex items-start gap-4 p-5 bg-neutral-900/50 border border-neutral-800 rounded-xl card-hover"><span class="text-lime-400 text-lg shrink-0">✔️</span><p class="text-neutral-300 text-sm leading-relaxed">Feature Engineering has four major components: <strong class="text-white">Transformation, Construction, Selection, and Extraction</strong>.</p></div>
+            <div class="flex items-start gap-4 p-5 bg-neutral-900/50 border border-neutral-800 rounded-xl card-hover"><span class="text-lime-400 text-lg shrink-0">✔️</span><p class="text-neutral-300 text-sm leading-relaxed"><strong class="text-lime-400">Feature Construction</strong> involves creating new variables from existing data using creativity, domain expertise, and intuition.</p></div>
+            <div class="flex items-start gap-4 p-5 bg-neutral-900/50 border border-neutral-800 rounded-xl card-hover"><span class="text-lime-400 text-lg shrink-0">✔️</span><p class="text-neutral-300 text-sm leading-relaxed">The <strong class="text-white">Titanic</strong> example demonstrated building <code class="text-lime-400 bg-lime-400/10 px-1.5 py-0.5 rounded text-xs">FamilySize</code> and <code class="text-lime-400 bg-lime-400/10 px-1.5 py-0.5 rounded text-xs">FamilyType</code> from <code class="text-white bg-neutral-800 px-1.5 py-0.5 rounded text-xs">SibSp</code> and <code class="text-white bg-neutral-800 px-1.5 py-0.5 rounded text-xs">Parch</code>, which slightly improved model accuracy.</p></div>
+            <div class="flex items-start gap-4 p-5 bg-neutral-900/50 border border-neutral-800 rounded-xl card-hover"><span class="text-lime-400 text-lg shrink-0">✔️</span><p class="text-neutral-300 text-sm leading-relaxed"><strong class="text-amber-400">Feature Splitting</strong> separates compound information (e.g., extracting <code class="text-amber-400 bg-amber-400/10 px-1.5 py-0.5 rounded text-xs">Title</code> from <code class="text-white bg-neutral-800 px-1.5 py-0.5 rounded text-xs">Name</code>) into meaningful individual features.</p></div>
+            <div class="flex items-start gap-4 p-5 bg-neutral-900/50 border border-neutral-800 rounded-xl card-hover"><span class="text-lime-400 text-lg shrink-0">✔️</span><p class="text-neutral-300 text-sm leading-relaxed">New engineered features such as <code class="text-lime-400 bg-lime-400/10 px-1.5 py-0.5 rounded text-xs">Title</code>, <code class="text-lime-400 bg-lime-400/10 px-1.5 py-0.5 rounded text-xs">FamilyType</code>, and <code class="text-lime-400 bg-lime-400/10 px-1.5 py-0.5 rounded text-xs">Married</code> can capture hidden patterns that improve predictive performance.</p></div>
+            <div class="flex items-start gap-4 p-5 bg-neutral-900/50 border border-neutral-800 rounded-xl card-hover"><span class="text-lime-400 text-lg shrink-0">✔️</span><p class="text-neutral-300 text-sm leading-relaxed">There is <strong class="text-white">no universal rule</strong> for feature construction — the more datasets you work with, the better your intuition becomes.</p></div>
+            <div class="flex items-start gap-4 p-5 bg-neutral-900/50 border border-lime-400/20 rounded-xl card-hover" style="box-shadow:0 0 20px rgba(132,204,22,.1)"><span class="text-lime-400 text-lg shrink-0">✔️</span><p class="text-neutral-300 text-sm leading-relaxed">In real-world ML, <strong class="text-lime-400">thoughtful feature engineering</strong> is often more impactful than trying many different algorithms. A well-engineered feature set can significantly boost even simple models like Logistic Regression.</p></div>
+        </div>
+    </div>
+</section>
+
+<!-- Footer -->
+<footer class="py-16 px-6 lg:px-12 border-t border-neutral-800/50">
+    <div class="max-w-4xl mx-auto text-center">
+        <div class="flex items-center justify-center gap-3 mb-4"><div class="w-8 h-8 rounded-lg bg-lime-400 flex items-center justify-center"><i data-lucide="book-open" class="w-4 h-4 text-black"></i></div><span class="font-brand font-semibold text-lg tracking-tight">Day 45</span></div>
+        <p class="text-neutral-500 text-sm mb-6">Feature Construction & Feature Splitting</p>
+        <p class="text-neutral-600 text-xs">Feature Engineering Series — Complete Notes for Data Science Students</p>
+    </div>
+</footer>
+
+</main>
+
+<script>
+    lucide.createIcons();
+
+    // Family Size Calculator
+    const sibspEl = document.getElementById('sibsp');
+    const parchEl = document.getElementById('parch');
+    const famResult = document.getElementById('fam-result');
+    const famTypeLabel = document.getElementById('fam-type-label');
+    function updateFam() {
+        const s = parseInt(sibspEl.value) || 0;
+        const p = parseInt(parchEl.value) || 0;
+        const f = s + p + 1;
+        famResult.textContent = f;
+        if (f === 1) { famTypeLabel.textContent = 'Alone'; famTypeLabel.className = 'text-center text-sm text-neutral-400 mt-3'; }
+        else if (f <= 4) { famTypeLabel.textContent = 'Small Family'; famTypeLabel.className = 'text-center text-sm text-lime-400 mt-3'; }
+        else { famTypeLabel.textContent = 'Large Family'; famTypeLabel.className = 'text-center text-sm text-amber-400 mt-3'; }
+    }
+    sibspEl.addEventListener('input', updateFam);
+    parchEl.addEventListener('input', updateFam);
+    updateFam();
+
+    // Name Splitter
+    const nameInput = document.getElementById('name-input');
+    const splitLast = document.getElementById('split-last');
+    const splitTitle = document.getElementById('split-title');
+    const splitFirst = document.getElementById('split-first');
+    function updateSplit() {
+        const v = nameInput.value.trim();
+        const parts = v.split(',');
+        splitLast.textContent = parts[0] ? parts[0].trim() : '—';
+        if (parts[1]) {
+            const rest = parts[1].trim();
+            const titleParts = rest.split('.');
+            splitTitle.textContent = titleParts[0] ? titleParts[0].trim() : '—';
+            splitFirst.textContent = titleParts[1] ? titleParts[1].trim() : '—';
+        } else {
+            splitTitle.textContent = '—';
+            splitFirst.textContent = '—';
+        }
+    }
+    nameInput.addEventListener('input', updateSplit);
+    updateSplit();
+
+    // Accordion
+    function toggleAccordion(btn) {
+        const content = btn.nextElementSibling;
+        const icon = btn.querySelector('.accordion-icon');
+        const isOpen = content.classList.contains('open');
+        document.querySelectorAll('.accordion-content').forEach(c => c.classList.remove('open'));
+        document.querySelectorAll('.accordion-icon').forEach(i => i.classList.remove('rotated'));
+        if (!isOpen) { content.classList.add('open'); icon.classList.add('rotated'); }
+    }
+
+    // Copy code
+    function copyCode(btn) {
+        const block = btn.closest('.code-block') || btn.closest('.bg-black');
+        const pre = block ? block.querySelector('pre') : null;
+        if (!pre) return;
+        navigator.clipboard.writeText(pre.textContent).then(() => showToast('Copied to clipboard!'));
+    }
+
+    // Toast
+    function showToast(msg) {
+        const t = document.getElementById('toast');
+        document.getElementById('toast-msg').textContent = msg;
+        t.classList.add('show');
+        setTimeout(() => t.classList.remove('show'), 2500);
+    }
+
+    // Sidebar active
+    const sections = document.querySelectorAll('section[id]');
+    const sidebarLinks = document.querySelectorAll('.sidebar-link');
+    window.addEventListener('scroll', () => {
+        let current = '';
+        sections.forEach(s => { if (window.scrollY >= s.offsetTop - 150) current = s.getAttribute('id'); });
+        sidebarLinks.forEach(l => {
+            l.classList.remove('active');
+            if (l.getAttribute('href') === `#${current}`) l.classList.add('active');
+        });
+    });
+
+    // Scroll animations
+    const obs = new IntersectionObserver((entries) => {
+        entries.forEach(e => { if (e.isIntersecting) { e.target.style.opacity = '1'; e.target.style.transform = 'translateY(0)'; } });
+    }, { threshold: 0.1, rootMargin: '0px 0px -50px 0px' });
+    document.querySelectorAll('section > div').forEach(el => {
+        el.style.opacity = '0';
+        el.style.transform = 'translateY(30px)';
+        el.style.transition = 'opacity 0.8s cubic-bezier(0.2,0.8,0.2,1), transform 0.8s cubic-bezier(0.2,0.8,0.2,1)';
+        obs.observe(el);
+    });
+</script>
+</body>
+</html>
