@@ -1,0 +1,1171 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Day 44 – Outlier Detection using Percentile Method</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600&family=Inter:wght@300;400;500&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        heading: ['Space Grotesk', 'sans-serif'],
+                        body: ['Inter', 'sans-serif'],
+                        brand: ['Bricolage Grotesque', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body{background:#020202;color:#fff;font-family:'Inter',sans-serif}
+        h1,h2,h3,h4,h5,h6{font-family:'Space Grotesk',sans-serif}
+        .font-brand{font-family:'Bricolage Grotesque',sans-serif}
+        .grain::before{content:'';position:fixed;top:0;left:0;width:100%;height:100%;z-index:40;pointer-events:none;opacity:.03;background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E%3Cfilter id='g'%3E%3CfeTurbulence baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23g)'/%3E%3C/svg%3E")}
+        ::-webkit-scrollbar{width:6px}::-webkit-scrollbar-track{background:#020202}::-webkit-scrollbar-thumb{background:#333;border-radius:3px}::-webkit-scrollbar-thumb:hover{background:#555}
+        @keyframes fadeInUp{from{opacity:0;transform:translateY(30px)}to{opacity:1;transform:translateY(0)}}
+        .animate-fade-in-up{opacity:0;animation:fadeInUp .8s cubic-bezier(.2,.8,.2,1) forwards}
+        .delay-150{animation-delay:150ms}.delay-300{animation-delay:300ms}.delay-450{animation-delay:450ms}.delay-600{animation-delay:600ms}
+        @keyframes shimmer{0%{left:-100%}20%{left:200%}100%{left:200%}}
+        @keyframes ping{75%,100%{transform:scale(2);opacity:0}}
+        @keyframes fillBar{from{width:0}to{width:var(--target-w)}}
+        .fill-anim{animation:fillBar 1.2s cubic-bezier(.2,.8,.2,1) forwards}
+        @keyframes slideIn{from{opacity:0;transform:translateX(-10px)}to{opacity:1;transform:translateX(0)}}
+        .hero-text-gradient{background:linear-gradient(to bottom,#FFF,#E5E5E5,#737373);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+        .card-hover{transition:all 500ms cubic-bezier(.2,.8,.2,1)}
+        .card-hover:hover{transform:translateY(-8px);box-shadow:0 0 50px -10px rgba(132,204,22,.3)}
+        .btn-shine{position:relative;overflow:hidden}
+        .btn-shine::after{content:'';position:absolute;top:0;left:-100%;width:50%;height:100%;background:linear-gradient(to right,transparent,rgba(255,255,255,.8),transparent);animation:shimmer 3s infinite cubic-bezier(.4,0,.2,1)}
+        .grid-bg{background-image:linear-gradient(to right,#222 1px,transparent 1px),linear-gradient(to bottom,#222 1px,transparent 1px);background-size:40px 40px;mask-image:linear-gradient(to bottom,transparent,black 20%,black 80%,transparent);-webkit-mask-image:linear-gradient(to bottom,transparent,black 20%,black 80%,transparent)}
+        .code-block{background:#0a0a0a;border:1px solid #262626;border-radius:12px;font-family:'JetBrains Mono','Fira Code',monospace;font-size:13px;line-height:1.7;overflow-x:auto}
+        .code-block .keyword{color:#A78BFA}.code-block .func{color:#60A5FA}.code-block .string{color:#34D399}.code-block .comment{color:#525252}.code-block .number{color:#FBBF24}.code-block .var{color:#F9A8D4}
+        .sidebar-link{transition:all 200ms ease;border-left:2px solid transparent}
+        .sidebar-link:hover,.sidebar-link.active{color:#A3E635;border-left-color:#A3E635;background:rgba(163,230,53,.05)}
+        .formula-box{background:linear-gradient(135deg,rgba(163,230,53,.05),rgba(163,230,53,.02));border:1px solid rgba(163,230,53,.2)}
+        .section-divider{height:1px;background:linear-gradient(to right,transparent,#262626,transparent)}
+        .accordion-content{max-height:0;overflow:hidden;transition:max-height 500ms cubic-bezier(.2,.8,.2,1)}
+        .accordion-content.open{max-height:500px}
+        .accordion-icon{transition:transform 300ms ease}
+        .accordion-icon.rotated{transform:rotate(45deg)}
+        .toast{transform:translateX(120%);transition:transform 400ms cubic-bezier(.2,.8,.2,1)}
+        .toast.show{transform:translateX(0)}
+        .timeline-line{background:linear-gradient(to bottom,rgba(163,230,53,.5),rgba(163,230,53,.1))}
+        @media(max-width:1023px){.sidebar{display:none}}
+    </style>
+</head>
+<body class="grain antialiased">
+
+<div id="toast" class="toast fixed top-6 right-6 z-50 bg-neutral-900 border border-lime-500/30 rounded-xl px-5 py-3 flex items-center gap-3 shadow-lg">
+    <i data-lucide="check-circle" class="w-5 h-5 text-lime-400"></i>
+    <span id="toast-msg" class="text-sm text-neutral-200">Copied to clipboard!</span>
+</div>
+
+<nav class="fixed top-0 left-0 right-0 z-30 px-6 py-5" style="backdrop-filter:blur(4px);background:rgba(2,2,2,.6)">
+    <div class="max-w-7xl mx-auto flex items-center justify-between">
+        <div class="flex items-center gap-3">
+            <div class="w-8 h-8 rounded-lg bg-lime-400 flex items-center justify-center"><i data-lucide="book-open" class="w-4 h-4 text-black"></i></div>
+            <span class="font-brand font-semibold text-lg tracking-tight">Day 44</span>
+        </div>
+        <div class="hidden md:flex items-center gap-8 text-sm text-neutral-400">
+            <a href="#introduction" class="hover:text-lime-400 transition-colors">Introduction</a>
+            <a href="#percentiles" class="hover:text-lime-400 transition-colors">Percentiles</a>
+            <a href="#thresholds" class="hover:text-lime-400 transition-colors">Thresholds</a>
+            <a href="#handling" class="hover:text-lime-400 transition-colors">Handling</a>
+            <a href="#practical" class="hover:text-lime-400 transition-colors">Practical</a>
+            <a href="#interview" class="hover:text-lime-400 transition-colors">Interview Q's</a>
+        </div>
+        <a href="#top" class="btn-shine bg-lime-400 text-black px-5 py-2.5 rounded-full text-sm font-medium tracking-wide hover:scale-105 transition-transform" style="box-shadow:0 0 20px rgba(163,230,53,.6)">Back to Top</a>
+    </div>
+</nav>
+
+<aside class="sidebar fixed left-0 top-20 bottom-0 w-64 z-20 overflow-y-auto py-8 px-4" style="backdrop-filter:blur(4px);background:rgba(2,2,2,.4)">
+    <p class="text-xs font-mono uppercase tracking-widest text-neutral-600 mb-4 px-3">Contents</p>
+    <div class="flex flex-col gap-0.5">
+        <a href="#introduction" class="sidebar-link text-sm text-neutral-500 px-3 py-2 rounded-r-lg">Introduction</a>
+        <a href="#what-is" class="sidebar-link text-sm text-neutral-500 px-3 py-2 rounded-r-lg">What is Percentile Method?</a>
+        <a href="#percentiles" class="sidebar-link text-sm text-neutral-500 px-3 py-2 rounded-r-lg">Understanding Percentiles</a>
+        <a href="#max-min" class="sidebar-link text-sm text-neutral-500 px-3 py-2 rounded-r-lg">Max & Min Values</a>
+        <a href="#median" class="sidebar-link text-sm text-neutral-500 px-3 py-2 rounded-r-lg">50th Percentile = Median</a>
+        <a href="#goal" class="sidebar-link text-sm text-neutral-500 px-3 py-2 rounded-r-lg">Goal of the Method</a>
+        <a href="#thresholds" class="sidebar-link text-sm text-neutral-500 px-3 py-2 rounded-r-lg">Choosing Thresholds</a>
+        <a href="#other-thresholds" class="sidebar-link text-sm text-neutral-500 px-3 py-2 rounded-r-lg">Other Threshold Choices</a>
+        <a href="#handling" class="sidebar-link text-sm text-neutral-500 px-3 py-2 rounded-r-lg">Trimming & Capping</a>
+        <a href="#winsorization" class="sidebar-link text-sm text-neutral-500 px-3 py-2 rounded-r-lg">Winsorization</a>
+        <a href="#trim-vs-win" class="sidebar-link text-sm text-neutral-500 px-3 py-2 rounded-r-lg">Trim vs Winsorization</a>
+        <a href="#practical" class="sidebar-link text-sm text-neutral-500 px-3 py-2 rounded-r-lg">Practical Example</a>
+        <a href="#winsorize-code" class="sidebar-link text-sm text-neutral-500 px-3 py-2 rounded-r-lg">Winsorization Code</a>
+        <a href="#practical-notes" class="sidebar-link text-sm text-neutral-500 px-3 py-2 rounded-r-lg">Practical Notes</a>
+        <a href="#advantages" class="sidebar-link text-sm text-neutral-500 px-3 py-2 rounded-r-lg">Advantages</a>
+        <a href="#disadvantages" class="sidebar-link text-sm text-neutral-500 px-3 py-2 rounded-r-lg">Disadvantages</a>
+        <a href="#when-use" class="sidebar-link text-sm text-neutral-500 px-3 py-2 rounded-r-lg">When to Use</a>
+        <a href="#comparison" class="sidebar-link text-sm text-neutral-500 px-3 py-2 rounded-r-lg">All 3 Methods Compared</a>
+        <a href="#interview" class="sidebar-link text-sm text-neutral-500 px-3 py-2 rounded-r-lg">Interview Questions</a>
+        <a href="#takeaways" class="sidebar-link text-sm text-neutral-500 px-3 py-2 rounded-r-lg">Final Summary</a>
+    </div>
+</aside>
+
+<main class="lg:ml-64">
+
+    <!-- Hero -->
+    <section id="top" class="relative min-h-screen flex flex-col justify-center items-center px-6 overflow-hidden">
+        <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[500px] bg-lime-500/5 rounded-full" style="filter:blur(120px)"></div>
+        <div class="absolute inset-0 grid-bg opacity-30"></div>
+        <div class="relative z-10 text-center max-w-5xl mx-auto pt-32 pb-20">
+            <div class="animate-fade-in-up inline-flex items-center gap-2 px-4 py-2 rounded-full border border-neutral-800 bg-neutral-900/50 mb-8">
+                <span class="relative flex h-2 w-2">
+                    <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-lime-400 opacity-75" style="animation:ping 1s cubic-bezier(0,0,.2,1) infinite"></span>
+                    <span class="relative inline-flex rounded-full h-2 w-2 bg-lime-400"></span>
+                </span>
+                <span class="text-xs font-mono uppercase tracking-widest text-neutral-400">Feature Engineering Series</span>
+            </div>
+            <p class="animate-fade-in-up delay-150 font-mono text-lime-400 text-sm tracking-widest uppercase mb-4">Day 44</p>
+            <h1 class="animate-fade-in-up delay-300 text-5xl md:text-7xl lg:text-8xl font-medium tracking-tighter leading-[.85] mb-8">
+                <span class="hero-text-gradient">Outlier Detection</span><br>
+                <span class="text-lime-400">&</span>
+                <span class="hero-text-gradient"> Removal</span><br>
+                <span class="text-neutral-500 text-4xl md:text-5xl lg:text-6xl">Percentile Method</span>
+            </h1>
+            <p class="animate-fade-in-up delay-450 text-lg md:text-xl text-neutral-400 font-light max-w-2xl mx-auto leading-relaxed mb-12">
+                The third and final technique — simple, flexible, and distribution-free.
+            </p>
+            <div class="animate-fade-in-up delay-600 flex flex-col sm:flex-row gap-4 justify-center">
+                <a href="#introduction" class="btn-shine bg-lime-400 text-black px-8 py-4 rounded-full text-sm font-medium tracking-wide hover:scale-105 transition-transform inline-flex items-center gap-2" style="box-shadow:0 0 20px rgba(163,230,53,.6)">Start Learning <i data-lucide="arrow-down" class="w-4 h-4"></i></a>
+                <a href="#practical" class="border border-neutral-700 text-white px-8 py-4 rounded-full text-sm font-medium tracking-wide hover:border-lime-400/50 hover:text-lime-400 transition-all inline-flex items-center gap-2"><i data-lucide="code-2" class="w-4 h-4"></i> Jump to Code</a>
+            </div>
+        </div>
+        <div class="absolute bottom-10 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2 animate-bounce">
+            <span class="text-xs text-neutral-600 tracking-widest uppercase">Scroll</span>
+            <i data-lucide="chevron-down" class="w-4 h-4 text-neutral-600"></i>
+        </div>
+    </section>
+
+    <div class="section-divider mx-6 lg:mx-12"></div>
+
+    <!-- Introduction -->
+    <section id="introduction" class="py-24 md:py-32 px-6 lg:px-12">
+        <div class="max-w-4xl mx-auto">
+            <div class="flex items-center gap-3 mb-6">
+                <div class="w-10 h-10 rounded-xl bg-lime-400/10 border border-lime-400/20 flex items-center justify-center"><i data-lucide="info" class="w-5 h-5 text-lime-400"></i></div>
+                <span class="font-mono text-xs uppercase tracking-widest text-neutral-500">Introduction</span>
+            </div>
+            <h2 class="text-3xl md:text-5xl font-medium tracking-tight mb-8">Introduction</h2>
+            <div class="space-y-6 text-lg text-neutral-400 font-light leading-relaxed">
+                <p>This lecture explains the <span class="text-lime-400 font-medium">third and final technique</span> for detecting and handling outliers in Feature Engineering.</p>
+                <p class="text-neutral-500 text-sm font-mono">Previous techniques:</p>
+            </div>
+            <div class="flex flex-col sm:flex-row gap-3 mt-6">
+                <div class="flex-1 bg-neutral-900/50 border border-neutral-800 rounded-xl p-4 flex items-center gap-3">
+                    <span class="w-7 h-7 rounded-lg bg-neutral-800 flex items-center justify-center text-xs text-neutral-400 font-mono">1</span>
+                    <span class="text-neutral-400 text-sm">Z-Score Method</span>
+                </div>
+                <div class="flex-1 bg-neutral-900/50 border border-neutral-800 rounded-xl p-4 flex items-center gap-3">
+                    <span class="w-7 h-7 rounded-lg bg-neutral-800 flex items-center justify-center text-xs text-neutral-400 font-mono">2</span>
+                    <span class="text-neutral-400 text-sm">IQR Method</span>
+                </div>
+                <div class="flex-1 bg-lime-400/5 border border-lime-400/20 rounded-xl p-4 flex items-center gap-3">
+                    <span class="w-7 h-7 rounded-lg bg-lime-400/10 flex items-center justify-center text-xs text-lime-400 font-mono">3</span>
+                    <span class="text-lime-400 text-sm font-medium">Percentile Method ✅</span>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <div class="section-divider mx-6 lg:mx-12"></div>
+
+    <!-- What is Percentile Method -->
+    <section id="what-is" class="py-24 md:py-32 px-6 lg:px-12">
+        <div class="max-w-4xl mx-auto">
+            <div class="flex items-center gap-3 mb-6">
+                <div class="w-10 h-10 rounded-xl bg-lime-400/10 border border-lime-400/20 flex items-center justify-center"><i data-lucide="target" class="w-5 h-5 text-lime-400"></i></div>
+                <span class="font-mono text-xs uppercase tracking-widest text-neutral-500">Definition</span>
+            </div>
+            <h2 class="text-3xl md:text-5xl font-medium tracking-tight mb-8">What is the Percentile Method?</h2>
+            <p class="text-lg text-neutral-400 font-light leading-relaxed mb-8">The Percentile Method identifies outliers by selecting a percentage of observations from both ends (lower and upper tails) of the distribution.</p>
+            <p class="text-lg text-neutral-400 font-light leading-relaxed mb-8">Instead of using standard deviations (Z-score) or quartiles (IQR), this method uses <span class="text-white font-medium">percentiles</span>.</p>
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+                <div class="bg-neutral-900/50 border border-neutral-800 rounded-xl p-4 text-center card-hover"><i data-lucide="brain" class="w-5 h-5 text-lime-400 mx-auto mb-2"></i><p class="text-xs text-neutral-300">Very simple</p></div>
+                <div class="bg-neutral-900/50 border border-neutral-800 rounded-xl p-4 text-center card-hover"><i data-lucide="eye" class="w-5 h-5 text-lime-400 mx-auto mb-2"></i><p class="text-xs text-neutral-300">Easy to understand</p></div>
+                <div class="bg-neutral-900/50 border border-neutral-800 rounded-xl p-4 text-center card-hover"><i data-lucide="check-circle" class="w-5 h-5 text-lime-400 mx-auto mb-2"></i><p class="text-xs text-neutral-300">Works for many datasets</p></div>
+                <div class="bg-neutral-900/50 border border-neutral-800 rounded-xl p-4 text-center card-hover"><i data-lucide="sliders" class="w-5 h-5 text-lime-400 mx-auto mb-2"></i><p class="text-xs text-neutral-300">Flexible thresholds</p></div>
+            </div>
+        </div>
+    </section>
+
+    <div class="section-divider mx-6 lg:mx-12"></div>
+
+    <!-- Understanding Percentiles -->
+    <section id="percentiles" class="py-24 md:py-32 px-6 lg:px-12">
+        <div class="max-w-4xl mx-auto">
+            <div class="flex items-center gap-3 mb-6">
+                <div class="w-10 h-10 rounded-xl bg-lime-400/10 border border-lime-400/20 flex items-center justify-center"><i data-lucide="percent" class="w-5 h-5 text-lime-400"></i></div>
+                <span class="font-mono text-xs uppercase tracking-widest text-neutral-500">Foundation</span>
+            </div>
+            <h2 class="text-3xl md:text-5xl font-medium tracking-tight mb-4">First Understand Percentiles</h2>
+            <p class="text-lg text-neutral-400 font-light leading-relaxed mb-4">A percentile tells us <span class="text-white font-medium">how many observations lie below a particular value</span>.</p>
+            <div class="bg-lime-400/5 border border-lime-400/20 rounded-2xl p-6 mb-8 flex gap-4">
+                <i data-lucide="lightbulb" class="w-6 h-6 text-lime-400 shrink-0 mt-0.5"></i>
+                <p class="text-neutral-300 leading-relaxed">Suppose you scored in the <strong class="text-lime-400">98th percentile</strong> in an exam. It means you scored better than 98% of students. Only 2% scored higher than you.</p>
+            </div>
+
+            <!-- Percentile Table -->
+            <div class="bg-neutral-900/50 border border-neutral-800 rounded-2xl overflow-hidden mb-12">
+                <div class="grid grid-cols-2">
+                    <div class="p-4 bg-neutral-800/50 border-b border-r border-neutral-800"><span class="text-sm font-mono text-neutral-400">Percentile</span></div>
+                    <div class="p-4 bg-neutral-800/50 border-b border-neutral-800"><span class="text-sm font-mono text-neutral-400">Meaning</span></div>
+                </div>
+                <div class="grid grid-cols-2">
+                    <div class="p-4 border-b border-r border-neutral-800/50 text-center"><span class="font-heading font-medium text-white">100th</span></div>
+                    <div class="p-4 border-b border-neutral-800/50 text-neutral-300 text-sm">Highest score in dataset</div>
+                </div>
+                <div class="grid grid-cols-2">
+                    <div class="p-4 border-b border-r border-neutral-800/50 text-center"><span class="font-heading font-medium text-white">99th</span></div>
+                    <div class="p-4 border-b border-neutral-800/50 text-neutral-300 text-sm">Better than 99% of people</div>
+                </div>
+                <div class="grid grid-cols-2">
+                    <div class="p-4 border-b border-r border-neutral-800/50 text-center"><span class="font-heading font-medium text-amber-400">75th</span></div>
+                    <div class="p-4 border-b border-neutral-800/50 text-neutral-300 text-sm">Better than 75% of people</div>
+                </div>
+                <div class="grid grid-cols-2">
+                    <div class="p-4 border-b border-r border-neutral-800/50 text-center"><span class="font-heading font-medium text-white">50th</span></div>
+                    <div class="p-4 border-b border-neutral-800/50 text-neutral-300 text-sm">Median (half above, half below)</div>
+                </div>
+                <div class="grid grid-cols-2">
+                    <div class="p-4 border-b border-r border-neutral-800/50 text-center"><span class="font-heading font-medium text-lime-400">25th</span></div>
+                    <div class="p-4 border-b border-neutral-800/50 text-neutral-300 text-sm">25% below, 75% above</div>
+                </div>
+                <div class="grid grid-cols-2">
+                    <div class="p-4 border-r border-neutral-800/50 text-center"><span class="font-heading font-medium text-white">0th</span></div>
+                    <div class="p-4 text-neutral-300 text-sm">Lowest value</div>
+                </div>
+            </div>
+
+            <!-- Interactive Percentile Visualizer -->
+            <h3 class="text-xl font-medium tracking-tight mb-4">Interactive Percentile Visualizer</h3>
+            <div class="bg-neutral-900/50 border border-neutral-800 rounded-2xl p-8">
+                <div class="flex items-center gap-4 mb-6">
+                    <label class="text-sm text-neutral-400 shrink-0">Your Percentile:</label>
+                    <input type="range" id="pct-slider" min="0" max="100" value="98" class="flex-1 accent-lime-400 cursor-pointer">
+                    <span id="pct-value" class="font-heading font-semibold text-lime-400 text-xl w-16 text-right">98th</span>
+                </div>
+                <div class="relative h-14 bg-neutral-800 rounded-xl overflow-hidden mb-4">
+                    <div id="pct-fill" class="absolute inset-y-0 left-0 bg-lime-400/20 rounded-xl transition-all duration-300" style="width:98%"></div>
+                    <div id="pct-line" class="absolute inset-y-0 w-0.5 bg-lime-400 transition-all duration-300" style="left:98%"></div>
+                    <div class="absolute inset-0 flex items-center justify-center">
+                        <span id="pct-label" class="text-white font-medium text-sm">You are here → better than 98% of people</span>
+                    </div>
+                </div>
+                <div class="flex justify-between text-xs text-neutral-600">
+                    <span>0%</span><span>25%</span><span>50%</span><span>75%</span><span>100%</span>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <div class="section-divider mx-6 lg:mx-12"></div>
+
+    <!-- Max & Min -->
+    <section id="max-min" class="py-24 md:py-32 px-6 lg:px-12">
+        <div class="max-w-4xl mx-auto">
+            <div class="flex items-center gap-3 mb-6">
+                <div class="w-10 h-10 rounded-xl bg-lime-400/10 border border-lime-400/20 flex items-center justify-center"><i data-lucide="arrow-up-down" class="w-5 h-5 text-lime-400"></i></div>
+                <span class="font-mono text-xs uppercase tracking-widest text-neutral-500">Extremes</span>
+            </div>
+            <h2 class="text-3xl md:text-5xl font-medium tracking-tight mb-8">Maximum & Minimum Values</h2>
+            <div class="grid md:grid-cols-2 gap-6">
+                <div class="bg-neutral-900/50 border border-neutral-800 rounded-2xl p-6 card-hover">
+                    <div class="flex items-center gap-3 mb-4">
+                        <div class="w-10 h-10 rounded-xl bg-amber-400/10 flex items-center justify-center"><i data-lucide="arrow-up" class="w-5 h-5 text-amber-400"></i></div>
+                        <h3 class="text-lg font-medium">Maximum Value</h3>
+                    </div>
+                    <p class="text-neutral-400 text-sm mb-3">Suppose Maximum Height = <span class="text-white font-medium">195 cm</span></p>
+                    <p class="text-neutral-400 text-sm">Since nobody has a larger value, its percentile is <span class="text-amber-400 font-medium">100th percentile</span> because every other observation lies below it.</p>
+                </div>
+                <div class="bg-neutral-900/50 border border-neutral-800 rounded-2xl p-6 card-hover">
+                    <div class="flex items-center gap-3 mb-4">
+                        <div class="w-10 h-10 rounded-xl bg-lime-400/10 flex items-center justify-center"><i data-lucide="arrow-down" class="w-5 h-5 text-lime-400"></i></div>
+                        <h3 class="text-lg font-medium">Minimum Value</h3>
+                    </div>
+                    <p class="text-neutral-400 text-sm mb-3">Suppose Minimum Height = <span class="text-white font-medium">120 cm</span></p>
+                    <p class="text-neutral-400 text-sm">This lies at <span class="text-lime-400 font-medium">0th percentile</span> because nobody lies below it.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <div class="section-divider mx-6 lg:mx-12"></div>
+
+    <!-- Median -->
+    <section id="median" class="py-24 md:py-32 px-6 lg:px-12">
+        <div class="max-w-4xl mx-auto">
+            <div class="flex items-center gap-3 mb-6">
+                <div class="w-10 h-10 rounded-xl bg-lime-400/10 border border-lime-400/20 flex items-center justify-center"><i data-lucide="minus" class="w-5 h-5 text-lime-400"></i></div>
+                <span class="font-mono text-xs uppercase tracking-widest text-neutral-500">Key Concept</span>
+            </div>
+            <h2 class="text-3xl md:text-5xl font-medium tracking-tight mb-8">The 50th Percentile = Median</h2>
+            <div class="bg-neutral-900/50 border border-lime-400/20 rounded-2xl p-8" style="box-shadow:0 0 20px rgba(132,204,22,.1)">
+                <div class="flex items-center gap-4 mb-6">
+                    <div class="w-16 h-16 rounded-2xl bg-lime-400/10 border border-lime-400/20 flex items-center justify-center">
+                        <span class="text-lime-400 font-heading font-bold text-2xl">50th</span>
+                    </div>
+                    <div>
+                        <p class="text-2xl font-medium tracking-tight text-white">Median</p>
+                        <p class="text-neutral-400 text-sm">The exact middle of the data</p>
+                    </div>
+                </div>
+                <div class="flex gap-6">
+                    <div class="flex items-center gap-2"><i data-lucide="arrow-down" class="w-4 h-4 text-lime-400"></i><span class="text-neutral-300 text-sm">50% of observations lie <span class="text-white font-medium">below</span></span></div>
+                    <div class="flex items-center gap-2"><i data-lucide="arrow-up" class="w-4 h-4 text-lime-400"></i><span class="text-neutral-300 text-sm">50% lie <span class="text-white font-medium">above</span></span></div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <div class="section-divider mx-6 lg:mx-12"></div>
+
+    <!-- Goal -->
+    <section id="goal" class="py-24 md:py-32 px-6 lg:px-12">
+        <div class="max-w-4xl mx-auto">
+            <div class="flex items-center gap-3 mb-6">
+                <div class="w-10 h-10 rounded-xl bg-lime-400/10 border border-lime-400/20 flex items-center justify-center"><i data-lucide="flag" class="w-5 h-5 text-lime-400"></i></div>
+                <span class="font-mono text-xs uppercase tracking-widest text-neutral-500">Purpose</span>
+            </div>
+            <h2 class="text-3xl md:text-5xl font-medium tracking-tight mb-8">Goal of Percentile Method</h2>
+            <p class="text-lg text-neutral-400 font-light leading-relaxed mb-6">Suppose you have any feature like:</p>
+            <div class="flex flex-wrap gap-3 mb-8">
+                <span class="px-4 py-2 rounded-full bg-neutral-900/50 border border-neutral-800 text-sm text-neutral-300">Age</span>
+                <span class="px-4 py-2 rounded-full bg-neutral-900/50 border border-neutral-800 text-sm text-neutral-300">Height</span>
+                <span class="px-4 py-2 rounded-full bg-neutral-900/50 border border-neutral-800 text-sm text-neutral-300">Weight</span>
+                <span class="px-4 py-2 rounded-full bg-neutral-900/50 border border-neutral-800 text-sm text-neutral-300">Salary</span>
+                <span class="px-4 py-2 rounded-full bg-neutral-900/50 border border-neutral-800 text-sm text-neutral-300">Income</span>
+            </div>
+            <blockquote class="border-l-2 border-lime-400 pl-6 py-2">
+                <p class="text-xl text-white font-medium tracking-tight">Does this feature contain outliers?</p>
+                <p class="text-neutral-400 mt-2">The percentile method answers exactly that.</p>
+            </blockquote>
+        </div>
+    </section>
+
+    <div class="section-divider mx-6 lg:mx-12"></div>
+
+    <!-- Choosing Thresholds -->
+    <section id="thresholds" class="py-24 md:py-32 px-6 lg:px-12">
+        <div class="max-w-4xl mx-auto">
+            <div class="flex items-center gap-3 mb-6">
+                <div class="w-10 h-10 rounded-xl bg-lime-400/10 border border-lime-400/20 flex items-center justify-center"><i data-lucide="sliders" class="w-5 h-5 text-lime-400"></i></div>
+                <span class="font-mono text-xs uppercase tracking-widest text-neutral-500">Core Mechanism</span>
+            </div>
+            <h2 class="text-3xl md:text-5xl font-medium tracking-tight mb-4">Choosing Thresholds</h2>
+            <p class="text-lg text-neutral-400 font-light leading-relaxed mb-8">The main idea: Choose lower and upper percentiles. Everything outside those limits becomes an outlier.</p>
+
+            <!-- Visual -->
+            <div class="bg-neutral-900/50 border border-neutral-800 rounded-2xl p-8 mb-8">
+                <div class="flex items-center gap-2 mb-6">
+                    <span class="text-sm text-red-400 font-mono">Lower = 1%</span>
+                    <span class="text-neutral-600 mx-2">|</span>
+                    <span class="text-sm text-lime-400 font-mono">Normal Data</span>
+                    <span class="text-neutral-600 mx-2">|</span>
+                    <span class="text-sm text-red-400 font-mono">Upper = 99%</span>
+                </div>
+                <div class="relative h-16 bg-neutral-800 rounded-xl overflow-hidden">
+                    <div class="absolute inset-y-0 left-0 w-[1%] bg-red-500/20 rounded-l-xl flex items-center justify-center">
+                        <span class="text-red-400 text-xs font-mono">✕</span>
+                    </div>
+                    <div class="absolute inset-y-0 left-[1%] w-[98%] bg-lime-400/10 flex items-center justify-center">
+                        <span class="text-lime-400/60 text-sm">Normal Data</span>
+                    </div>
+                    <div class="absolute inset-y-0 right-0 w-[1%] bg-red-500/20 rounded-r-xl flex items-center justify-center">
+                        <span class="text-red-400 text-xs font-mono">✕</span>
+                    </div>
+                </div>
+                <div class="flex justify-between text-xs text-neutral-600 mt-2">
+                    <span class="text-red-400">← Outliers</span>
+                    <span class="text-red-400">Outliers →</span>
+                </div>
+            </div>
+
+            <div class="grid md:grid-cols-2 gap-4">
+                <div class="bg-red-500/5 border border-red-500/20 rounded-xl p-5">
+                    <p class="text-red-400 font-medium text-sm mb-2">Values Below 1st Percentile</p>
+                    <p class="text-neutral-400 text-sm">are outliers.</p>
+                </div>
+                <div class="bg-red-500/5 border border-red-500/20 rounded-xl p-5">
+                    <p class="text-red-400 font-medium text-sm mb-2">Values Above 99th Percentile</p>
+                    <p class="text-neutral-400 text-sm">are also outliers.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <div class="section-divider mx-6 lg:mx-12"></div>
+
+    <!-- Other Threshold Choices -->
+    <section id="other-thresholds" class="py-24 md:py-32 px-6 lg:px-12">
+        <div class="max-w-4xl mx-auto">
+            <div class="flex items-center gap-3 mb-6">
+                <div class="w-10 h-10 rounded-xl bg-lime-400/10 border border-lime-400/20 flex items-center justify-center"><i data-lucide="settings-2" class="w-5 h-5 text-lime-400"></i></div>
+                <span class="font-mono text-xs uppercase tracking-widest text-neutral-500">Flexibility</span>
+            </div>
+            <h2 class="text-3xl md:text-5xl font-medium tracking-tight mb-8">Other Threshold Choices</h2>
+            <p class="text-lg text-neutral-400 font-light leading-relaxed mb-8">You are free to choose any threshold. The best threshold depends on the dataset.</p>
+
+            <!-- Interactive threshold explorer -->
+            <div class="bg-neutral-900/50 border border-neutral-800 rounded-2xl p-8 mb-8">
+                <h3 class="text-lg font-medium tracking-tight mb-6 flex items-center gap-2"><i data-lucide="mouse-pointer-click" class="w-5 h-5 text-lime-400"></i> Threshold Explorer</h3>
+                <div class="grid md:grid-cols-2 gap-6 mb-6">
+                    <div>
+                        <label class="block text-sm text-neutral-400 mb-2">Lower Percentile</label>
+                        <input type="range" id="th-lower" min="0" max="20" value="1" class="w-full accent-lime-400 cursor-pointer">
+                        <div class="flex justify-between text-xs text-neutral-600 mt-1"><span>0%</span><span id="th-lower-val" class="text-lime-400">1%</span><span>20%</span></div>
+                    </div>
+                    <div>
+                        <label class="block text-sm text-neutral-400 mb-2">Upper Percentile</label>
+                        <input type="range" id="th-upper" min="80" max="100" value="99" class="w-full accent-amber-400 cursor-pointer">
+                        <div class="flex justify-between text-xs text-neutral-600 mt-1"><span>80%</span><span id="th-upper-val" class="text-amber-400">99%</span><span>100%</span></div>
+                    </div>
+                </div>
+                <div class="relative h-12 bg-neutral-800 rounded-xl overflow-hidden">
+                    <div id="th-low-zone" class="absolute inset-y-0 left-0 bg-red-500/20 rounded-l-xl transition-all duration-300" style="width:1%"></div>
+                    <div id="th-normal-zone" class="absolute inset-y-0 bg-lime-400/10 transition-all duration-300" style="left:1%;width:98%"></div>
+                    <div id="th-high-zone" class="absolute inset-y-0 right-0 bg-red-500/20 rounded-r-xl transition-all duration-300" style="width:1%"></div>
+                </div>
+                <p id="th-info" class="text-center text-sm text-neutral-400 mt-4">Data removed from each tail: <span class="text-red-400 font-medium">1%</span> lower + <span class="text-red-400 font-medium">1%</span> upper = <span class="text-white font-medium">2%</span> total</p>
+            </div>
+
+            <!-- Common choices -->
+            <h3 class="text-lg font-medium tracking-tight mb-4">Common Choices</h3>
+            <div class="grid grid-cols-3 gap-3">
+                <div class="bg-neutral-900/50 border border-neutral-800 rounded-xl p-4 text-center card-hover">
+                    <p class="font-mono text-lime-400 text-sm mb-1">0.5% — 99.5%</p>
+                    <p class="text-xs text-neutral-500">Very conservative</p>
+                </div>
+                <div class="bg-lime-400/5 border border-lime-400/20 rounded-xl p-4 text-center card-hover">
+                    <p class="font-mono text-lime-400 text-sm mb-1">1% — 99%</p>
+                    <p class="text-xs text-lime-400/60">Common choice ✦</p>
+                </div>
+                <div class="bg-neutral-900/50 border border-neutral-800 rounded-xl p-4 text-center card-hover">
+                    <p class="font-mono text-amber-400 text-sm mb-1">5% — 95%</p>
+                    <p class="text-xs text-neutral-500">More aggressive</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <div class="section-divider mx-6 lg:mx-12"></div>
+
+    <!-- Handling: Trimming & Capping -->
+    <section id="handling" class="py-24 md:py-32 px-6 lg:px-12">
+        <div class="max-w-4xl mx-auto">
+            <div class="flex items-center gap-3 mb-6">
+                <div class="w-10 h-10 rounded-xl bg-lime-400/10 border border-lime-400/20 flex items-center justify-center"><i data-lucide="wrench" class="w-5 h-5 text-lime-400"></i></div>
+                <span class="font-mono text-xs uppercase tracking-widest text-neutral-500">Two Options</span>
+            </div>
+            <h2 class="text-3xl md:text-5xl font-medium tracking-tight mb-4">Two Things You Can Do</h2>
+            <p class="text-lg text-neutral-400 font-light leading-relaxed mb-12">Once outliers are detected, there are only two options.</p>
+
+            <!-- Trimming -->
+            <div class="card-hover bg-neutral-900/50 border border-neutral-800 rounded-2xl p-8 mb-8">
+                <div class="flex items-center gap-4 mb-6">
+                    <div class="w-12 h-12 rounded-2xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center"><i data-lucide="scissors" class="w-6 h-6 text-amber-400"></i></div>
+                    <div><h3 class="text-2xl font-medium tracking-tight">Option 1: Trimming</h3><p class="text-neutral-500 text-sm">Removing Outliers</p></div>
+                </div>
+                <p class="text-neutral-400 font-light leading-relaxed mb-6">Delete every observation beyond the threshold.</p>
+                <div class="bg-black rounded-xl p-5 space-y-2">
+                    <p class="text-sm text-neutral-400">If <code class="text-amber-400 bg-amber-400/10 px-1.5 py-0.5 rounded text-xs">Height > 99th percentile</code> → <span class="text-red-400 font-medium">Delete</span></p>
+                    <p class="text-sm text-neutral-400">If <code class="text-amber-400 bg-amber-400/10 px-1.5 py-0.5 rounded text-xs">Height < 1st percentile</code> → <span class="text-red-400 font-medium">Delete</span></p>
+                </div>
+                <p class="text-neutral-500 text-sm mt-4">Simple.</p>
+            </div>
+
+            <!-- Capping -->
+            <div class="card-hover bg-neutral-900/50 border border-lime-400/20 rounded-2xl p-8" style="box-shadow:0 0 30px rgba(132,204,22,.1)">
+                <div class="flex items-center gap-4 mb-6">
+                    <div class="w-12 h-12 rounded-2xl bg-lime-400/10 border border-lime-400/20 flex items-center justify-center"><i data-lucide="clamp" class="w-6 h-6 text-lime-400"></i></div>
+                    <div><h3 class="text-2xl font-medium tracking-tight">Option 2: Capping</h3><p class="text-lime-400/60 text-sm">✦ Often preferred</p></div>
+                </div>
+                <p class="text-neutral-400 font-light leading-relaxed mb-6">Instead of deleting, replace extreme values.</p>
+                <div class="bg-black rounded-xl p-5 mb-4">
+                    <p class="text-xs font-mono text-neutral-500 mb-3">Suppose 95th percentile = 70</p>
+                    <div class="flex items-center gap-3 flex-wrap">
+                        <span class="px-3 py-1.5 rounded-lg bg-red-500/10 border border-red-500/20 text-sm text-red-400 line-through">80</span>
+                        <i data-lucide="arrow-right" class="w-4 h-4 text-neutral-600"></i>
+                        <span class="px-3 py-1.5 rounded-lg bg-lime-400/10 border border-lime-400/20 text-sm text-lime-400 font-medium">70</span>
+                        <span class="px-3 py-1.5 rounded-lg bg-red-500/10 border border-red-500/20 text-sm text-red-400 line-through ml-2">85</span>
+                        <i data-lucide="arrow-right" class="w-4 h-4 text-neutral-600"></i>
+                        <span class="px-3 py-1.5 rounded-lg bg-lime-400/10 border border-lime-400/20 text-sm text-lime-400 font-medium">70</span>
+                        <span class="px-3 py-1.5 rounded-lg bg-red-500/10 border border-red-500/20 text-sm text-red-400 line-through ml-2">90</span>
+                        <i data-lucide="arrow-right" class="w-4 h-4 text-neutral-600"></i>
+                        <span class="px-3 py-1.5 rounded-lg bg-lime-400/10 border border-lime-400/20 text-sm text-lime-400 font-medium">70</span>
+                        <span class="px-3 py-1.5 rounded-lg bg-red-500/10 border border-red-500/20 text-sm text-red-400 line-through ml-2">95</span>
+                        <i data-lucide="arrow-right" class="w-4 h-4 text-neutral-600"></i>
+                        <span class="px-3 py-1.5 rounded-lg bg-lime-400/10 border border-lime-400/20 text-sm text-lime-400 font-medium">70</span>
+                    </div>
+                </div>
+                <p class="text-neutral-400 text-sm">No data is deleted. Only extreme values are limited.</p>
+            </div>
+        </div>
+    </section>
+
+    <div class="section-divider mx-6 lg:mx-12"></div>
+
+    <!-- Winsorization -->
+    <section id="winsorization" class="py-24 md:py-32 px-6 lg:px-12">
+        <div class="max-w-4xl mx-auto">
+            <div class="flex items-center gap-3 mb-6">
+                <div class="w-10 h-10 rounded-xl bg-lime-400/10 border border-lime-400/20 flex items-center justify-center"><i data-lucide="shield" class="w-5 h-5 text-lime-400"></i></div>
+                <span class="font-mono text-xs uppercase tracking-widest text-neutral-500">Named Technique</span>
+            </div>
+            <h2 class="text-3xl md:text-5xl font-medium tracking-tight mb-4">Winsorization</h2>
+            <p class="text-lg text-neutral-400 font-light leading-relaxed mb-8">Capping using percentiles is called <span class="text-lime-400 font-medium">Winsorization</span> — named after the statistician <span class="text-white font-medium">Charles P. Winsor</span>.</p>
+            <p class="text-neutral-400 font-light leading-relaxed mb-8">Instead of removing extreme observations, they are replaced with the nearest acceptable values.</p>
+
+            <!-- Before/After -->
+            <div class="grid md:grid-cols-2 gap-6">
+                <div class="bg-neutral-900/50 border border-neutral-800 rounded-2xl p-6">
+                    <p class="font-mono text-xs uppercase tracking-widest text-neutral-500 mb-4">Original</p>
+                    <div class="flex flex-wrap gap-2">
+                        <span class="px-3 py-1.5 rounded-lg bg-red-500/10 border border-red-500/20 text-sm text-red-400">2</span>
+                        <span class="px-3 py-1.5 rounded-lg bg-neutral-800 text-sm text-white">5</span>
+                        <span class="px-3 py-1.5 rounded-lg bg-neutral-800 text-sm text-white">7</span>
+                        <span class="px-3 py-1.5 rounded-lg bg-neutral-800 text-sm text-white">8</span>
+                        <span class="px-3 py-1.5 rounded-lg bg-neutral-800 text-sm text-white">9</span>
+                        <span class="px-3 py-1.5 rounded-lg bg-neutral-800 text-sm text-white">11</span>
+                        <span class="px-3 py-1.5 rounded-lg bg-red-500/10 border border-red-500/20 text-sm text-red-400">200</span>
+                    </div>
+                </div>
+                <div class="bg-lime-400/5 border border-lime-400/20 rounded-2xl p-6">
+                    <p class="font-mono text-xs uppercase tracking-widest text-lime-400/60 mb-4">After Winsorization</p>
+                    <div class="flex flex-wrap gap-2">
+                        <span class="px-3 py-1.5 rounded-lg bg-lime-400/10 border border-lime-400/20 text-sm text-lime-400">5</span>
+                        <span class="px-3 py-1.5 rounded-lg bg-neutral-800 text-sm text-white">5</span>
+                        <span class="px-3 py-1.5 rounded-lg bg-neutral-800 text-sm text-white">7</span>
+                        <span class="px-3 py-1.5 rounded-lg bg-neutral-800 text-sm text-white">8</span>
+                        <span class="px-3 py-1.5 rounded-lg bg-neutral-800 text-sm text-white">9</span>
+                        <span class="px-3 py-1.5 rounded-lg bg-neutral-800 text-sm text-white">11</span>
+                        <span class="px-3 py-1.5 rounded-lg bg-lime-400/10 border border-lime-400/20 text-sm text-lime-400">11</span>
+                    </div>
+                </div>
+            </div>
+            <p class="text-neutral-400 text-sm mt-4">No observations are deleted. Only extremes are capped.</p>
+        </div>
+    </section>
+
+    <div class="section-divider mx-6 lg:mx-12"></div>
+
+    <!-- Trim vs Winsorization Table -->
+    <section id="trim-vs-win" class="py-24 md:py-32 px-6 lg:px-12">
+        <div class="max-w-4xl mx-auto">
+            <div class="flex items-center gap-3 mb-6">
+                <div class="w-10 h-10 rounded-xl bg-lime-400/10 border border-lime-400/20 flex items-center justify-center"><i data-lucide="git-compare" class="w-5 h-5 text-lime-400"></i></div>
+                <span class="font-mono text-xs uppercase tracking-widest text-neutral-500">Comparison</span>
+            </div>
+            <h2 class="text-3xl md:text-5xl font-medium tracking-tight mb-8">Trimming vs. Winsorization</h2>
+            <div class="bg-neutral-900/50 border border-neutral-800 rounded-2xl overflow-hidden">
+                <div class="grid grid-cols-2 text-center border-b border-neutral-800">
+                    <div class="p-5 text-sm font-medium text-amber-400 border-r border-neutral-800">Trimming</div>
+                    <div class="p-5 text-sm font-medium text-lime-400">Winsorization</div>
+                </div>
+                <div class="grid grid-cols-2 text-center border-b border-neutral-800/50">
+                    <div class="p-4 border-r border-neutral-800/50 text-sm text-neutral-300">Deletes outliers</div>
+                    <div class="p-4 text-sm text-neutral-300">Keeps all rows</div>
+                </div>
+                <div class="grid grid-cols-2 text-center border-b border-neutral-800/50">
+                    <div class="p-4 border-r border-neutral-800/50 text-sm text-neutral-300">Dataset size decreases</div>
+                    <div class="p-4 text-sm text-neutral-300">Dataset size remains same</div>
+                </div>
+                <div class="grid grid-cols-2 text-center border-b border-neutral-800/50">
+                    <div class="p-4 border-r border-neutral-800/50 text-sm text-neutral-300">Simple</div>
+                    <div class="p-4 text-sm text-lime-400">Often preferred in ML</div>
+                </div>
+                <div class="grid grid-cols-2 text-center">
+                    <div class="p-4 border-r border-neutral-800/50 text-sm text-red-400">May lose useful information</div>
+                    <div class="p-4 text-sm text-lime-400">Preserves information</div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <div class="section-divider mx-6 lg:mx-12"></div>
+
+    <!-- Practical Example -->
+    <section id="practical" class="py-24 md:py-32 px-6 lg:px-12">
+        <div class="max-w-4xl mx-auto">
+            <div class="flex items-center gap-3 mb-6">
+                <div class="w-10 h-10 rounded-xl bg-lime-400/10 border border-lime-400/20 flex items-center justify-center"><i data-lucide="code-2" class="w-5 h-5 text-lime-400"></i></div>
+                <span class="font-mono text-xs uppercase tracking-widest text-neutral-500">Hands-On</span>
+            </div>
+            <h2 class="text-3xl md:text-5xl font-medium tracking-tight mb-4">Practical Example</h2>
+            <p class="text-lg text-neutral-400 font-light leading-relaxed mb-8">The instructor uses a dataset containing <span class="text-white font-medium">Gender, Height, Weight</span>. Only <span class="text-lime-400 font-medium">Height</span> is used because it clearly contains outliers.</p>
+
+            <!-- Dataset info -->
+            <div class="bg-neutral-900/50 border border-neutral-800 rounded-2xl p-6 mb-8">
+                <h3 class="text-lg font-medium tracking-tight mb-4">Dataset Information</h3>
+                <div class="code-block p-4 mb-4">
+                    <div class="flex items-center justify-between mb-3"><div class="flex items-center gap-2"><div class="w-2.5 h-2.5 rounded-full bg-red-500/60"></div><div class="w-2.5 h-2.5 rounded-full bg-amber-500/60"></div><div class="w-2.5 h-2.5 rounded-full bg-lime-500/60"></div></div><button onclick="copyCode(this)" class="text-xs text-neutral-500 hover:text-lime-400 transition-colors flex items-center gap-1"><i data-lucide="copy" class="w-3 h-3"></i> Copy</button></div>
+<pre class="text-neutral-300"><span class="var">df</span>.<span class="func">describe</span>()</pre>
+                </div>
+                <p class="text-neutral-500 text-sm">Observes: Count, Mean, Standard deviation, Minimum, Maximum, Quartiles</p>
+            </div>
+
+            <!-- Visualizations -->
+            <h3 class="text-xl font-medium tracking-tight mb-4">Visualizing Distribution</h3>
+            <div class="grid md:grid-cols-2 gap-4 mb-10">
+                <div>
+                    <p class="font-mono text-xs uppercase tracking-widest text-neutral-500 mb-3">Histogram</p>
+                    <div class="code-block p-4">
+                        <div class="flex items-center justify-between mb-3"><div class="flex items-center gap-2"><div class="w-2.5 h-2.5 rounded-full bg-red-500/60"></div><div class="w-2.5 h-2.5 rounded-full bg-amber-500/60"></div><div class="w-2.5 h-2.5 rounded-full bg-lime-500/60"></div></div><button onclick="copyCode(this)" class="text-xs text-neutral-500 hover:text-lime-400 transition-colors flex items-center gap-1"><i data-lucide="copy" class="w-3 h-3"></i> Copy</button></div>
+<pre class="text-neutral-300">sns.<span class="func">histplot</span>(<span class="var">df</span>[<span class="string">'Height'</span>], kde=<span class="keyword">True</span>)</pre>
+                    </div>
+                    <div class="bg-lime-400/5 border border-lime-400/20 rounded-lg p-3 mt-2"><p class="text-xs text-neutral-300">Height is <span class="text-lime-400 font-medium">almost normally distributed</span>.</p></div>
+                </div>
+                <div>
+                    <p class="font-mono text-xs uppercase tracking-widest text-neutral-500 mb-3">Box Plot</p>
+                    <div class="code-block p-4">
+                        <div class="flex items-center justify-between mb-3"><div class="flex items-center gap-2"><div class="w-2.5 h-2.5 rounded-full bg-red-500/60"></div><div class="w-2.5 h-2.5 rounded-full bg-amber-500/60"></div><div class="w-2.5 h-2.5 rounded-full bg-lime-500/60"></div></div><button onclick="copyCode(this)" class="text-xs text-neutral-500 hover:text-lime-400 transition-colors flex items-center gap-1"><i data-lucide="copy" class="w-3 h-3"></i> Copy</button></div>
+<pre class="text-neutral-300">sns.<span class="func">boxplot</span>(<span class="var">df</span>[<span class="string">'Height'</span>])</pre>
+                    </div>
+                    <div class="bg-red-500/5 border border-red-500/20 rounded-lg p-3 mt-2"><p class="text-xs text-neutral-300">Outliers exist <span class="text-red-400 font-medium">on both sides</span>.</p></div>
+                </div>
+            </div>
+
+            <!-- Steps -->
+            <h3 class="text-xl font-medium tracking-tight mb-6">Step-by-Step</h3>
+
+            <!-- Step 1 -->
+            <div class="relative pl-12 mb-8">
+                <div class="absolute left-4 top-2 bottom-2 w-0.5 timeline-line rounded-full"></div>
+                <div class="absolute -left-8 w-7 h-7 rounded-full bg-lime-400 flex items-center justify-center"><span class="text-black text-xs font-bold">1</span></div>
+                <div class="bg-neutral-900/50 border border-neutral-800 rounded-xl p-5">
+                    <p class="text-white font-medium mb-3">Finding Upper Limit (99th Percentile)</p>
+                    <div class="code-block p-4">
+                        <div class="flex items-center justify-between mb-3"><div class="flex items-center gap-2"><div class="w-2.5 h-2.5 rounded-full bg-red-500/60"></div><div class="w-2.5 h-2.5 rounded-full bg-amber-500/60"></div><div class="w-2.5 h-2.5 rounded-full bg-lime-500/60"></div></div><button onclick="copyCode(this)" class="text-xs text-neutral-500 hover:text-lime-400 transition-colors flex items-center gap-1"><i data-lucide="copy" class="w-3 h-3"></i> Copy</button></div>
+<pre class="text-neutral-300"><span class="var">upper_limit</span> = <span class="var">df</span>[<span class="string">'Height'</span>].<span class="func">quantile</span>(<span class="number">0.99</span>)
+<span class="comment"># ≈ 74.85</span></pre>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Step 2 -->
+            <div class="relative pl-12 mb-8">
+                <div class="absolute left-4 top-2 bottom-2 w-0.5 timeline-line rounded-full"></div>
+                <div class="absolute -left-8 w-7 h-7 rounded-full bg-lime-400/60 flex items-center justify-center"><span class="text-black text-xs font-bold">2</span></div>
+                <div class="bg-neutral-900/50 border border-neutral-800 rounded-xl p-5">
+                    <p class="text-white font-medium mb-3">Finding Lower Limit (1st Percentile)</p>
+                    <div class="code-block p-4">
+                        <div class="flex items-center justify-between mb-3"><div class="flex items-center gap-2"><div class="w-2.5 h-2.5 rounded-full bg-red-500/60"></div><div class="w-2.5 h-2.5 rounded-full bg-amber-500/60"></div><div class="w-2.5 h-2.5 rounded-full bg-lime-500/60"></div></div><button onclick="copyCode(this)" class="text-xs text-neutral-500 hover:text-lime-400 transition-colors flex items-center gap-1"><i data-lucide="copy" class="w-3 h-3"></i> Copy</button></div>
+<pre class="text-neutral-300"><span class="var">lower_limit</span> = <span class="var">df</span>[<span class="string">'Height'</span>].<span class="func">quantile</span>(<span class="number">0.01</span>)
+<span class="comment"># ≈ 63.50</span></pre>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Step 3 -->
+            <div class="relative pl-12 mb-8">
+                <div class="absolute left-4 top-2 bottom-2 w-0.5 timeline-line rounded-full"></div>
+                <div class="absolute -left-8 w-7 h-7 rounded-full bg-lime-400/60 flex items-center justify-center"><span class="text-black text-xs font-bold">3</span></div>
+                <div class="bg-neutral-900/50 border border-neutral-800 rounded-xl p-5">
+                    <p class="text-white font-medium mb-3">Trimming Code</p>
+                    <div class="code-block p-4">
+                        <div class="flex items-center justify-between mb-3"><div class="flex items-center gap-2"><div class="w-2.5 h-2.5 rounded-full bg-red-500/60"></div><div class="w-2.5 h-2.5 rounded-full bg-amber-500/60"></div><div class="w-2.5 h-2.5 rounded-full bg-lime-500/60"></div></div><button onclick="copyCode(this)" class="text-xs text-neutral-500 hover:text-lime-400 transition-colors flex items-center gap-1"><i data-lucide="copy" class="w-3 h-3"></i> Copy</button></div>
+<pre class="text-neutral-300"><span class="var">new_df</span> = <span class="var">df</span>[
+    (<span class="var">df</span>[<span class="string">'Height'</span>] <span class="keyword">>=</span> <span class="var">lower_limit</span>) <span class="keyword">&</span>
+    (<span class="var">df</span>[<span class="string">'Height'</span>] <span class="keyword"><=</span> <span class="var">upper_limit</span>)
+]</pre>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Row counts -->
+            <div class="grid grid-cols-3 gap-3 mb-10">
+                <div class="text-center p-4 bg-neutral-900/50 border border-neutral-800 rounded-xl"><p class="text-xs text-neutral-500 mb-1">Before</p><p class="font-heading font-semibold text-white text-xl">10,000</p></div>
+                <div class="text-center p-4 bg-red-500/5 border border-red-500/20 rounded-xl"><p class="text-xs text-red-400 mb-1">Removed</p><p class="font-heading font-semibold text-red-400 text-xl">~200</p></div>
+                <div class="text-center p-4 bg-lime-400/5 border border-lime-400/20 rounded-xl"><p class="text-xs text-lime-400 mb-1">After</p><p class="font-heading font-semibold text-lime-400 text-xl">~9,800</p></div>
+            </div>
+
+            <!-- Checking again -->
+            <h3 class="text-xl font-medium tracking-tight mb-4">Checking Distribution Again</h3>
+            <div class="grid md:grid-cols-2 gap-4 mb-6">
+                <div>
+                    <div class="code-block p-4 mb-2">
+                        <div class="flex items-center justify-between mb-3"><div class="flex items-center gap-2"><div class="w-2.5 h-2.5 rounded-full bg-red-500/60"></div><div class="w-2.5 h-2.5 rounded-full bg-amber-500/60"></div><div class="w-2.5 h-2.5 rounded-full bg-lime-500/60"></div></div><button onclick="copyCode(this)" class="text-xs text-neutral-500 hover:text-lime-400 transition-colors flex items-center gap-1"><i data-lucide="copy" class="w-3 h-3"></i> Copy</button></div>
+<pre class="text-neutral-300">sns.<span class="func">histplot</span>(<span class="var">new_df</span>[<span class="string">'Height'</span>], kde=<span class="keyword">True</span>)</pre>
+                    </div>
+                    <div class="bg-lime-400/5 border border-lime-400/20 rounded-lg p-3"><p class="text-xs text-neutral-300">Distribution looks <span class="text-lime-400 font-medium">cleaner</span>.</p></div>
+                </div>
+                <div>
+                    <div class="code-block p-4 mb-2">
+                        <div class="flex items-center justify-between mb-3"><div class="flex items-center gap-2"><div class="w-2.5 h-2.5 rounded-full bg-red-500/60"></div><div class="w-2.5 h-2.5 rounded-full bg-amber-500/60"></div><div class="w-2.5 h-2.5 rounded-full bg-lime-500/60"></div></div><button onclick="copyCode(this)" class="text-xs text-neutral-500 hover:text-lime-400 transition-colors flex items-center gap-1"><i data-lucide="copy" class="w-3 h-3"></i> Copy</button></div>
+<pre class="text-neutral-300">sns.<span class="func">boxplot</span>(<span class="var">new_df</span>[<span class="string">'Height'</span>])</pre>
+                    </div>
+                    <div class="bg-lime-400/5 border border-lime-400/20 rounded-lg p-3"><p class="text-xs text-neutral-300"><span class="text-lime-400 font-medium">Almost no visible outliers</span>.</p></div>
+                </div>
+            </div>
+
+            <div class="bg-neutral-900/50 border border-neutral-800 rounded-xl p-5">
+                <p class="text-white font-medium mb-3">Statistics After Trimming</p>
+                <div class="code-block p-4">
+                    <div class="flex items-center justify-between mb-3"><div class="flex items-center gap-2"><div class="w-2.5 h-2.5 rounded-full bg-red-500/60"></div><div class="w-2.5 h-2.5 rounded-full bg-amber-500/60"></div><div class="w-2.5 h-2.5 rounded-full bg-lime-500/60"></div></div><button onclick="copyCode(this)" class="text-xs text-neutral-500 hover:text-lime-400 transition-colors flex items-center gap-1"><i data-lucide="copy" class="w-3 h-3"></i> Copy</button></div>
+<pre class="text-neutral-300"><span class="var">new_df</span>.<span class="func">describe</span>()</pre>
+                </div>
+                <ul class="mt-4 space-y-2 text-sm text-neutral-400">
+                    <li class="flex items-start gap-2"><i data-lucide="check" class="w-4 h-4 text-lime-400 shrink-0 mt-0.5"></i>Mean changes slightly</li>
+                    <li class="flex items-start gap-2"><i data-lucide="check" class="w-4 h-4 text-lime-400 shrink-0 mt-0.5"></i>Standard deviation decreases</li>
+                    <li class="flex items-start gap-2"><i data-lucide="check" class="w-4 h-4 text-lime-400 shrink-0 mt-0.5"></i>Maximum value reduces</li>
+                    <li class="flex items-start gap-2"><i data-lucide="check" class="w-4 h-4 text-lime-400 shrink-0 mt-0.5"></i>Minimum value increases</li>
+                    <li class="flex items-start gap-2"><i data-lucide="check" class="w-4 h-4 text-lime-400 shrink-0 mt-0.5"></i>Median remains almost unchanged</li>
+                </ul>
+            </div>
+        </div>
+    </section>
+
+    <div class="section-divider mx-6 lg:mx-12"></div>
+
+    <!-- Winsorization Code -->
+    <section id="winsorize-code" class="py-24 md:py-32 px-6 lg:px-12">
+        <div class="max-w-4xl mx-auto">
+            <div class="flex items-center gap-3 mb-6">
+                <div class="w-10 h-10 rounded-xl bg-lime-400/10 border border-lime-400/20 flex items-center justify-center"><i data-lucide="shield" class="w-5 h-5 text-lime-400"></i></div>
+                <span class="font-mono text-xs uppercase tracking-widest text-neutral-500">Implementation</span>
+            </div>
+            <h2 class="text-3xl md:text-5xl font-medium tracking-tight mb-8">Winsorization (Capping) Code</h2>
+
+            <!-- Main code -->
+            <div class="code-block p-6 mb-6">
+                <div class="flex items-center justify-between mb-4">
+                    <div class="flex items-center gap-2"><div class="w-3 h-3 rounded-full bg-red-500/60"></div><div class="w-3 h-3 rounded-full bg-amber-500/60"></div><div class="w-3 h-3 rounded-full bg-lime-500/60"></div><span class="text-xs text-neutral-600 ml-2">winsorize.py</span></div>
+                    <button onclick="copyCode(this)" class="text-xs text-neutral-500 hover:text-lime-400 transition-colors flex items-center gap-1"><i data-lucide="copy" class="w-3.5 h-3.5"></i> Copy</button>
+                </div>
+<pre class="text-neutral-300"><span class="keyword">import</span> numpy <span class="keyword">as</span> np
+
+<span class="var">df</span>[<span class="string">'Height'</span>] = np.<span class="func">where</span>(
+    <span class="var">df</span>[<span class="string">'Height'</span>] <span class="keyword">>=</span> <span class="var">upper_limit</span>,
+    <span class="var">upper_limit</span>,
+    np.<span class="func">where</span>(
+        <span class="var">df</span>[<span class="string">'Height'</span>] <span class="keyword"><=</span> <span class="var">lower_limit</span>,
+        <span class="var">lower_limit</span>,
+        <span class="var">df</span>[<span class="string">'Height'</span>]
+    )
+)</pre>
+            </div>
+
+            <!-- Alternative -->
+            <h3 class="text-lg font-medium tracking-tight mb-4">Alternative Readable Code</h3>
+            <div class="code-block p-6 mb-8">
+                <div class="flex items-center justify-between mb-4">
+                    <div class="flex items-center gap-2"><div class="w-3 h-3 rounded-full bg-red-500/60"></div><div class="w-3 h-3 rounded-full bg-amber-500/60"></div><div class="w-3 h-3 rounded-full bg-lime-500/60"></div><span class="text-xs text-neutral-600 ml-2">winsorize_readable.py</span></div>
+                    <button onclick="copyCode(this)" class="text-xs text-neutral-500 hover:text-lime-400 transition-colors flex items-center gap-1"><i data-lucide="copy" class="w-3.5 h-3.5"></i> Copy</button>
+                </div>
+<pre class="text-neutral-300"><span class="comment"># Cap upper values</span>
+<span class="var">df</span>[<span class="string">'Height'</span>] = np.<span class="func">where</span>(
+    <span class="var">df</span>[<span class="string">'Height'</span>] <span class="keyword">></span> <span class="var">upper_limit</span>,
+    <span class="var">upper_limit</span>,
+    <span class="var">df</span>[<span class="string">'Height'</span>]
+)
+
+<span class="comment"># Cap lower values</span>
+<span class="var">df</span>[<span class="string">'Height'</span>] = np.<span class="func">where</span>(
+    <span class="var">df</span>[<span class="string">'Height'</span>] <span class="keyword"><</span> <span class="var">lower_limit</span>,
+    <span class="var">lower_limit</span>,
+    <span class="var">df</span>[<span class="string">'Height'</span>]
+)</pre>
+            </div>
+
+            <!-- After stats -->
+            <div class="bg-neutral-900/50 border border-lime-400/20 rounded-2xl p-6 mb-6">
+                <h4 class="text-white font-medium mb-4 flex items-center gap-2"><i data-lucide="check-circle" class="w-5 h-5 text-lime-400"></i> After Winsorization</h4>
+                <ul class="space-y-2 text-sm text-neutral-400">
+                    <li class="flex items-start gap-2"><i data-lucide="check" class="w-4 h-4 text-lime-400 shrink-0 mt-0.5"></i>Dataset size remains <span class="text-white font-medium">exactly the same</span>.</li>
+                    <li class="flex items-start gap-2"><i data-lucide="check" class="w-4 h-4 text-lime-400 shrink-0 mt-0.5"></i>Only extreme values change.</li>
+                    <li class="flex items-start gap-2"><i data-lucide="check" class="w-4 h-4 text-lime-400 shrink-0 mt-0.5"></i>Maximum value decreases, Minimum value increases.</li>
+                    <li class="flex items-start gap-2"><i data-lucide="check" class="w-4 h-4 text-lime-400 shrink-0 mt-0.5"></i>Mean changes slightly, Standard deviation decreases.</li>
+                    <li class="flex items-start gap-2"><i data-lucide="check" class="w-4 h-4 text-lime-400 shrink-0 mt-0.5"></i>Count remains unchanged.</li>
+                </ul>
+            </div>
+
+            <div class="grid md:grid-cols-2 gap-4">
+                <div class="bg-neutral-900/50 border border-neutral-800 rounded-xl p-5">
+                    <p class="text-sm text-neutral-500 mb-2">Histogram After</p>
+                    <p class="text-neutral-300 text-sm">Looks almost identical. Only tails become shorter.</p>
+                </div>
+                <div class="bg-neutral-900/50 border border-neutral-800 rounded-xl p-5">
+                    <p class="text-sm text-neutral-500 mb-2">Box Plot After</p>
+                    <p class="text-neutral-300 text-sm">No visible outliers remain.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <div class="section-divider mx-6 lg:mx-12"></div>
+
+    <!-- Practical Notes -->
+    <section id="practical-notes" class="py-24 md:py-32 px-6 lg:px-12">
+        <div class="max-w-4xl mx-auto">
+            <div class="flex items-center gap-3 mb-6">
+                <div class="w-10 h-10 rounded-xl bg-amber-400/10 border border-amber-400/20 flex items-center justify-center"><i data-lucide="alert-circle" class="w-5 h-5 text-amber-400"></i></div>
+                <span class="font-mono text-xs uppercase tracking-widest text-neutral-500">From the Lecturer</span>
+            </div>
+            <h2 class="text-3xl md:text-5xl font-medium tracking-tight mb-12">Important Practical Notes</h2>
+
+            <div class="space-y-6">
+                <!-- Note 1 -->
+                <div class="bg-neutral-900/50 border border-neutral-800 rounded-2xl p-6 card-hover">
+                    <div class="flex items-center gap-3 mb-4">
+                        <span class="w-8 h-8 rounded-lg bg-amber-400/10 flex items-center justify-center text-amber-400 font-heading font-bold text-sm">1</span>
+                        <h3 class="text-white font-medium">There is no universally perfect percentile.</h3>
+                    </div>
+                    <p class="text-neutral-400 text-sm mb-3">Try different values:</p>
+                    <div class="flex flex-wrap gap-2">
+                        <span class="px-3 py-1.5 rounded-lg bg-neutral-800 text-xs text-neutral-300">99%</span>
+                        <span class="px-3 py-1.5 rounded-lg bg-neutral-800 text-xs text-neutral-300">99.5%</span>
+                        <span class="px-3 py-1.5 rounded-lg bg-neutral-800 text-xs text-neutral-300">95%</span>
+                        <span class="px-3 py-1.5 rounded-lg bg-neutral-800 text-xs text-neutral-300">97%</span>
+                        <span class="px-3 py-1.5 rounded-lg bg-neutral-800 text-xs text-neutral-300">98%</span>
+                    </div>
+                    <p class="text-neutral-500 text-sm mt-3">Choose whichever gives the best practical result.</p>
+                </div>
+
+                <!-- Note 2 -->
+                <div class="bg-neutral-900/50 border border-neutral-800 rounded-2xl p-6 card-hover">
+                    <div class="flex items-center gap-3 mb-4">
+                        <span class="w-8 h-8 rounded-lg bg-amber-400/10 flex items-center justify-center text-amber-400 font-heading font-bold text-sm">2</span>
+                        <h3 class="text-white font-medium">Higher Percentile Means Less Data Loss</h3>
+                    </div>
+                    <div class="grid grid-cols-2 gap-3">
+                        <div class="bg-lime-400/5 border border-lime-400/20 rounded-lg p-3 text-center">
+                            <p class="font-mono text-lime-400 text-sm mb-1">99.9%</p>
+                            <p class="text-xs text-neutral-500">Very few observations removed</p>
+                        </div>
+                        <div class="bg-red-500/5 border border-red-500/20 rounded-lg p-3 text-center">
+                            <p class="font-mono text-red-400 text-sm mb-1">95%</p>
+                            <p class="text-xs text-neutral-500">Much more data removed</p>
+                        </div>
+                    </div>
+                    <p class="text-neutral-500 text-sm mt-3">Higher thresholds preserve more data.</p>
+                </div>
+
+                <!-- Note 3 -->
+                <div class="bg-neutral-900/50 border border-neutral-800 rounded-2xl p-6 card-hover">
+                    <div class="flex items-center gap-3 mb-4">
+                        <span class="w-8 h-8 rounded-lg bg-amber-400/10 flex items-center justify-center text-amber-400 font-heading font-bold text-sm">3</span>
+                        <h3 class="text-white font-medium">Different Libraries Exist</h3>
+                    </div>
+                    <div class="code-block p-4 mb-3">
+                        <div class="flex items-center justify-between mb-3"><div class="flex items-center gap-2"><div class="w-2.5 h-2.5 rounded-full bg-red-500/60"></div><div class="w-2.5 h-2.5 rounded-full bg-amber-500/60"></div><div class="w-2.5 h-2.5 rounded-full bg-lime-500/60"></div></div><button onclick="copyCode(this)" class="text-xs text-neutral-500 hover:text-lime-400 transition-colors flex items-center gap-1"><i data-lucide="copy" class="w-3 h-3"></i> Copy</button></div>
+<pre class="text-neutral-300"><span class="keyword">from</span> scipy.stats.mstats <span class="keyword">import</span> winsorize
+
+<span class="func">winsorize</span>(<span class="var">data</span>, limits=[<span class="number">0.01</span>, <span class="number">0.01</span>])</pre>
+                    </div>
+                    <p class="text-neutral-500 text-sm">The instructor prefers simple NumPy code — easy to understand, avoids unnecessary dependencies.</p>
+                </div>
+
+                <!-- Note 4 -->
+                <div class="bg-neutral-900/50 border border-neutral-800 rounded-2xl p-6 card-hover">
+                    <div class="flex items-center gap-3 mb-4">
+                        <span class="w-8 h-8 rounded-lg bg-amber-400/10 flex items-center justify-center text-amber-400 font-heading font-bold text-sm">4</span>
+                        <h3 class="text-white font-medium">Some Implementations Replace with Slightly Different Values</h3>
+                    </div>
+                    <p class="text-neutral-400 text-sm mb-3">Some practitioners replace values with:</p>
+                    <div class="flex flex-wrap gap-2 mb-3">
+                        <code class="px-3 py-1.5 rounded-lg bg-neutral-800 text-xs text-neutral-300">upper_limit + 1</code>
+                        <code class="px-3 py-1.5 rounded-lg bg-neutral-800 text-xs text-neutral-300">lower_limit - 1</code>
+                    </div>
+                    <div class="bg-lime-400/5 border border-lime-400/20 rounded-lg p-3">
+                        <p class="text-neutral-300 text-xs">There is <strong class="text-lime-400">no strict rule</strong> — use the approach that produces the best results for your specific problem.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <div class="section-divider mx-6 lg:mx-12"></div>
+
+    <!-- Advantages -->
+    <section id="advantages" class="py-24 md:py-32 px-6 lg:px-12">
+        <div class="max-w-4xl mx-auto">
+            <div class="flex items-center gap-3 mb-6">
+                <div class="w-10 h-10 rounded-xl bg-lime-400/10 border border-lime-400/20 flex items-center justify-center"><i data-lucide="thumbs-up" class="w-5 h-5 text-lime-400"></i></div>
+                <span class="font-mono text-xs uppercase tracking-widest text-neutral-500">Pros</span>
+            </div>
+            <h2 class="text-3xl md:text-5xl font-medium tracking-tight mb-12">Advantages</h2>
+            <div class="grid md:grid-cols-2 gap-4">
+                <div class="card-hover bg-neutral-900/50 border border-neutral-800 rounded-xl p-5 flex items-start gap-4"><div class="w-10 h-10 rounded-lg bg-lime-400/10 flex items-center justify-center shrink-0"><i data-lucide="brain" class="w-5 h-5 text-lime-400"></i></div><p class="text-neutral-300 text-sm">Very easy to understand.</p></div>
+                <div class="card-hover bg-neutral-900/50 border border-neutral-800 rounded-xl p-5 flex items-start gap-4"><div class="w-10 h-10 rounded-lg bg-lime-400/10 flex items-center justify-center shrink-0"><i data-lucide="code" class="w-5 h-5 text-lime-400"></i></div><p class="text-neutral-300 text-sm">Easy to implement.</p></div>
+                <div class="card-hover bg-neutral-900/50 border border-neutral-800 rounded-xl p-5 flex items-start gap-4"><div class="w-10 h-10 rounded-lg bg-lime-400/10 flex items-center justify-center shrink-0"><i data-lucide="x-circle" class="w-5 h-5 text-lime-400"></i></div><p class="text-neutral-300 text-sm"><span class="text-white font-medium">No assumptions</span> about data distribution.</p></div>
+                <div class="card-hover bg-neutral-900/50 border border-neutral-800 rounded-xl p-5 flex items-start gap-4"><div class="w-10 h-10 rounded-lg bg-lime-400/10 flex items-center justify-center shrink-0"><i data-lucide="sliders" class="w-5 h-5 text-lime-400"></i></div><p class="text-neutral-300 text-sm">Flexible thresholds.</p></div>
+                <div class="card-hover bg-neutral-900/50 border border-neutral-800 rounded-xl p-5 flex items-start gap-4"><div class="w-10 h-10 rounded-lg bg-lime-400/10 flex items-center justify-center shrink-0"><i data-lucide="bar-chart-3" class="w-5 h-5 text-lime-400"></i></div><p class="text-neutral-300 text-sm">Useful for <span class="text-white font-medium">skewed datasets</span>.</p></div>
+                <div class="card-hover bg-neutral-900/50 border border-neutral-800 rounded-xl p-5 flex items-start gap-4"><div class="w-10 h-10 rounded-lg bg-lime-400/10 flex items-center justify-center shrink-0"><i data-lucide="zap" class="w-5 h-5 text-lime-400"></i></div><p class="text-neutral-300 text-sm">Fast on <span class="text-white font-medium">large datasets</span>.</p></div>
+            </div>
+        </div>
+    </section>
+
+    <div class="section-divider mx-6 lg:mx-12"></div>
+
+    <!-- Disadvantages -->
+    <section id="disadvantages" class="py-24 md:py-32 px-6 lg:px-12">
+        <div class="max-w-4xl mx-auto">
+            <div class="flex items-center gap-3 mb-6">
+                <div class="w-10 h-10 rounded-xl bg-red-500/10 border border-red-500/20 flex items-center justify-center"><i data-lucide="thumbs-down" class="w-5 h-5 text-red-400"></i></div>
+                <span class="font-mono text-xs uppercase tracking-widest text-neutral-500">Cons</span>
+            </div>
+            <h2 class="text-3xl md:text-5xl font-medium tracking-tight mb-12">Disadvantages</h2>
+            <div class="space-y-4">
+                <div class="bg-neutral-900/50 border border-neutral-800 rounded-xl p-5 flex items-start gap-4 card-hover"><div class="w-10 h-10 rounded-lg bg-red-500/10 flex items-center justify-center shrink-0"><i data-lucide="alert-circle" class="w-5 h-5 text-red-400"></i></div><p class="text-neutral-300 text-sm">Threshold selection is <span class="text-white font-medium">subjective</span>.</p></div>
+                <div class="bg-neutral-900/50 border border-neutral-800 rounded-xl p-5 flex items-start gap-4 card-hover"><div class="w-10 h-10 rounded-lg bg-red-500/10 flex items-center justify-center shrink-0"><i data-lucide="minus-circle" class="w-5 h-5 text-red-400"></i></div><p class="text-neutral-300 text-sm">Too small a threshold may <span class="text-white font-medium">remove valid observations</span>.</p></div>
+                <div class="bg-neutral-900/50 border border-neutral-800 rounded-xl p-5 flex items-start gap-4 card-hover"><div class="w-10 h-10 rounded-lg bg-red-500/10 flex items-center justify-center shrink-0"><i data-lucide="alert-triangle" class="w-5 h-5 text-red-400"></i></div><p class="text-neutral-300 text-sm">Too large a threshold may <span class="text-white font-medium">leave real outliers</span>.</p></div>
+                <div class="bg-neutral-900/50 border border-neutral-800 rounded-xl p-5 flex items-start gap-4 card-hover"><div class="w-10 h-10 rounded-lg bg-red-500/10 flex items-center justify-center shrink-0"><i data-lucide="bar-chart" class="w-5 h-5 text-red-400"></i></div><p class="text-neutral-300 text-sm">Less statistically grounded than methods based on distribution assumptions.</p></div>
+            </div>
+        </div>
+    </section>
+
+    <div class="section-divider mx-6 lg:mx-12"></div>
+
+    <!-- When to Use -->
+    <section id="when-use" class="py-24 md:py-32 px-6 lg:px-12">
+        <div class="max-w-4xl mx-auto">
+            <div class="flex items-center gap-3 mb-6">
+                <div class="w-10 h-10 rounded-xl bg-lime-400/10 border border-lime-400/20 flex items-center justify-center"><i data-lucide="check-circle" class="w-5 h-5 text-lime-400"></i></div>
+                <span class="font-mono text-xs uppercase tracking-widest text-neutral-500">Guideline</span>
+            </div>
+            <h2 class="text-3xl md:text-5xl font-medium tracking-tight mb-8">When Should You Use It?</h2>
+            <p class="text-lg text-neutral-400 font-light leading-relaxed mb-8">Use the Percentile Method when:</p>
+            <div class="space-y-3">
+                <div class="flex items-start gap-3 p-4 rounded-xl bg-neutral-900/30 border border-neutral-800/50"><i data-lucide="check" class="w-5 h-5 text-lime-400 shrink-0 mt-0.5"></i><span class="text-neutral-300 text-sm">You have <span class="text-white font-medium">numerical features</span>.</span></div>
+                <div class="flex items-start gap-3 p-4 rounded-xl bg-neutral-900/30 border border-neutral-800/50"><i data-lucide="check" class="w-5 h-5 text-lime-400 shrink-0 mt-0.5"></i><span class="text-neutral-300 text-sm">You want a <span class="text-white font-medium">simple and robust</span> outlier handling technique.</span></div>
+                <div class="flex items-start gap-3 p-4 rounded-xl bg-neutral-900/30 border border-neutral-800/50"><i data-lucide="check" class="w-5 h-5 text-lime-400 shrink-0 mt-0.5"></i><span class="text-neutral-300 text-sm">The data is <span class="text-white font-medium">skewed</span> or does not perfectly follow a normal distribution.</span></div>
+                <div class="flex items-start gap-3 p-4 rounded-xl bg-neutral-900/30 border border-neutral-800/50"><i data-lucide="check" class="w-5 h-5 text-lime-400 shrink-0 mt-0.5"></i><span class="text-neutral-300 text-sm">You prefer <span class="text-white font-medium">controlling how aggressive</span> outlier removal should be.</span></div>
+            </div>
+        </div>
+    </section>
+
+    <div class="section-divider mx-6 lg:mx-12"></div>
+
+    <!-- Comparison of All Three -->
+    <section id="comparison" class="py-24 md:py-32 px-6 lg:px-12">
+        <div class="max-w-4xl mx-auto">
+            <div class="flex items-center gap-3 mb-6">
+                <div class="w-10 h-10 rounded-xl bg-lime-400/10 border border-lime-400/20 flex items-center justify-center"><i data-lucide="git-compare" class="w-5 h-5 text-lime-400"></i></div>
+                <span class="font-mono text-xs uppercase tracking-widest text-neutral-500">Complete Comparison</span>
+            </div>
+            <h2 class="text-3xl md:text-5xl font-medium tracking-tight mb-8">All Three Methods Compared</h2>
+
+            <div class="bg-neutral-900/50 border border-neutral-800 rounded-2xl overflow-hidden">
+                <div class="grid grid-cols-4 text-center border-b border-neutral-800">
+                    <div class="p-4 text-sm font-medium text-neutral-400">Method</div>
+                    <div class="p-4 text-sm font-medium text-neutral-400">Best For</div>
+                    <div class="p-4 text-sm font-medium text-neutral-400">Assumption</div>
+                    <div class="p-4 text-sm font-medium text-neutral-400">Threshold</div>
+                </div>
+                <div class="grid grid-cols-4 text-center border-b border-neutral-800/50">
+                    <div class="p-4 border-r border-neutral-800/50"><span class="text-lime-400 font-medium text-sm">Z-Score</span></div>
+                    <div class="p-4 border-r border-neutral-800/50 text-sm text-neutral-300">Normal data</div>
+                    <div class="p-4 border-r border-neutral-800/50 text-sm text-neutral-300">Normal distribution</div>
+                    <div class="p-4 text-sm font-mono text-neutral-300">|Z| &gt; 3</div>
+                </div>
+                <div class="grid grid-cols-4 text-center border-b border-neutral-800/50">
+                    <div class="p-4 border-r border-neutral-800/50"><span class="text-amber-400 font-medium text-sm">IQR</span></div>
+                    <div class="p-4 border-r border-neutral-800/50 text-sm text-neutral-300">Skewed data</div>
+                    <div class="p-4 border-r border-neutral-800/50 text-sm text-neutral-300">No normality</div>
+                    <div class="p-4 text-sm font-mono text-neutral-300">Q3 ± 1.5×IQR</div>
+                </div>
+                <div class="grid grid-cols-4 text-center">
+                    <div class="p-4 border-r border-neutral-800/50"><span class="text-white font-medium text-sm bg-lime-400/10 px-2 py-1 rounded">Percentile</span></div>
+                    <div class="p-4 border-r border-neutral-800/50 text-sm text-neutral-300">Flexible, practical</div>
+                    <div class="p-4 border-r border-neutral-800/50 text-sm text-neutral-300">No assumption</div>
+                    <div class="p-4 text-sm font-mono text-neutral-300">1–99%, 5–95%</div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <div class="section-divider mx-6 lg:mx-12"></div>
+
+    <!-- Interview Questions -->
+    <section id="interview" class="py-24 md:py-32 px-6 lg:px-12">
+        <div class="max-w-4xl mx-auto">
+            <div class="flex items-center gap-3 mb-6">
+                <div class="w-10 h-10 rounded-xl bg-lime-400/10 border border-lime-400/20 flex items-center justify-center"><i data-lucide="message-circle" class="w-5 h-5 text-lime-400"></i></div>
+                <span class="font-mono text-xs uppercase tracking-widest text-neutral-500">Preparation</span>
+            </div>
+            <h2 class="text-3xl md:text-5xl font-medium tracking-tight mb-4">Interview Questions</h2>
+            <p class="text-lg text-neutral-400 font-light leading-relaxed mb-12">Click each question to reveal the answer.</p>
+
+            <div class="space-y-3">
+                <div class="bg-neutral-900/50 border border-neutral-800 rounded-xl overflow-hidden">
+                    <button onclick="toggleAccordion(this)" class="w-full flex items-center justify-between p-5 text-left hover:bg-neutral-800/30 transition-colors">
+                        <span class="text-white font-medium text-sm pr-4">Q1. What is the Percentile Method?</span>
+                        <i data-lucide="plus" class="w-5 h-5 text-neutral-500 shrink-0 accordion-icon"></i>
+                    </button>
+                    <div class="accordion-content"><div class="px-5 pb-5 text-neutral-400 text-sm leading-relaxed border-t border-neutral-800/50 pt-4">A technique that identifies outliers based on selected lower and upper percentiles of the data distribution. Values below the lower percentile or above the upper percentile are flagged as outliers.</div></div>
+                </div>
+                <div class="bg-neutral-900/50 border border-neutral-800 rounded-xl overflow-hidden">
+                    <button onclick="toggleAccordion(this)" class="w-full flex items-center justify-between p-5 text-left hover:bg-neutral-800/30 transition-colors">
+                        <span class="text-white font-medium text-sm pr-4">Q2. What is Winsorization?</span>
+                        <i data-lucide="plus" class="w-5 h-5 text-neutral-500 shrink-0 accordion-icon"></i>
+                    </button>
+                    <div class="accordion-content"><div class="px-5 pb-5 text-neutral-400 text-sm leading-relaxed border-t border-neutral-800/50 pt-4">Replacing extreme values with percentile boundary values instead of removing them. Named after statistician Charles P. Winsor. No observations are deleted — only the extreme values are capped at the boundary.</div></div>
+                </div>
+                <div class="bg-neutral-900/50 border border-neutral-800 rounded-xl overflow-hidden">
+                    <button onclick="toggleAccordion(this)" class="w-full flex items-center justify-between p-5 text-left hover:bg-neutral-800/30 transition-colors">
+                        <span class="text-white font-medium text-sm pr-4">Q3. Difference between Trimming and Winsorization?</span>
+                        <i data-lucide="plus" class="w-5 h-5 text-neutral-500 shrink-0 accordion-icon"></i>
+                    </button>
+                    <div class="accordion-content"><div class="px-5 pb-5 text-neutral-400 text-sm leading-relaxed border-t border-neutral-800/50 pt-4"><strong class="text-white">Trimming</strong> removes outlier rows entirely, reducing dataset size. <strong class="text-white">Winsorization</strong> replaces outlier values while keeping all rows, preserving dataset size and information.</div></div>
+                </div>
+                <div class="bg-neutral-900/50 border border-neutral-800 rounded-xl overflow-hidden">
+                    <button onclick="toggleAccordion(this)" class="w-full flex items-center justify-between p-5 text-left hover:bg-neutral-800/30 transition-colors">
+                        <span class="text-white font-medium text-sm pr-4">Q4. Why use the 1st and 99th percentiles?</span>
+                        <i data-lucide="plus" class="w-5 h-5 text-neutral-500 shrink-0 accordion-icon"></i>
+                    </button>
+                    <div class="accordion-content"><div class="px-5 pb-5 text-neutral-400 text-sm leading-relaxed border-t border-neutral-800/50 pt-4">They remove only the most extreme 1% of observations from each tail, preserving most of the data. This is a good balance between removing genuine outliers and keeping valid data points.</div></div>
+                </div>
+                <div class="bg-neutral-900/50 border border-neutral-800 rounded-xl overflow-hidden">
+                    <button onclick="toggleAccordion(this)" class="w-full flex items-center justify-between p-5 text-left hover:bg-neutral-800/30 transition-colors">
+                        <span class="text-white font-medium text-sm pr-4">Q5. Which is better: Trimming or Winsorization?</span>
+                        <i data-lucide="plus" class="w-5 h-5 text-neutral-500 shrink-0 accordion-icon"></i>
+                    </button>
+                    <div class="accordion-content"><div class="px-5 pb-5 text-neutral-400 text-sm leading-relaxed border-t border-neutral-800/50 pt-4">It depends on the problem. Use <strong class="text-white">Trimming</strong> when extreme values are likely errors or noise. Use <strong class="text-white">Winsorization</strong> when outliers may contain useful information and you want to retain all observations. Winsorization is often preferred in ML workflows.</div></div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <div class="section-divider mx-6 lg:mx-12"></div>
+
+    <!-- Final Summary -->
+    <section id="takeaways" class="py-24 md:py-32 px-6 lg:px-12">
+        <div class="max-w-4xl mx-auto">
+            <div class="flex items-center gap-3 mb-6">
+                <div class="w-10 h-10 rounded-xl bg-lime-400/10 border border-lime-400/20 flex items-center justify-center"><i data-lucide="bookmark" class="w-5 h-5 text-lime-400"></i></div>
+                <span class="font-mono text-xs uppercase tracking-widest text-neutral-500">Final Notes</span>
+            </div>
+            <h2 class="text-3xl md:text-5xl font-medium tracking-tight mb-8">Final Summary</h2>
+
+            <div class="bg-neutral-900/50 border border-neutral-800 rounded-2xl p-8 mb-8">
+                <p class="text-neutral-300 font-light leading-relaxed">The <span class="text-lime-400 font-medium">Percentile Method</span> is a simple yet powerful approach for outlier detection. By defining lower and upper percentile thresholds (such as the 1st and 99th percentiles), you can either <span class="text-amber-400 font-medium">trim</span> outliers by removing them or <span class="text-lime-400 font-medium">winsorize</span> them by replacing extreme values with the nearest acceptable percentile boundary.</p>
+                <p class="text-neutral-300 font-light leading-relaxed mt-4">Unlike the Z-Score method, it does not require normally distributed data, and unlike the IQR method, it allows you to control exactly how much of the data is treated as extreme. This flexibility makes it a popular choice in <span class="text-white font-medium">real-world data preprocessing</span> and <span class="text-white font-medium">feature engineering workflows</span>.</p>
+            </div>
+
+            <div class="space-y-4">
+                <div class="flex items-start gap-4 p-5 bg-neutral-900/50 border border-neutral-800 rounded-xl card-hover"><span class="text-lime-400 text-lg shrink-0">✔️</span><p class="text-neutral-300 text-sm leading-relaxed">Define <strong class="text-white">lower and upper percentile thresholds</strong> (e.g., 1st and 99th).</p></div>
+                <div class="flex items-start gap-4 p-5 bg-neutral-900/50 border border-neutral-800 rounded-xl card-hover"><span class="text-lime-400 text-lg shrink-0">✔️</span><p class="text-neutral-300 text-sm leading-relaxed"><strong class="text-amber-400">Trim</strong> to remove outliers or <strong class="text-lime-400">Winsorize</strong> to replace them.</p></div>
+                <div class="flex items-start gap-4 p-5 bg-neutral-900/50 border border-neutral-800 rounded-xl card-hover"><span class="text-lime-400 text-lg shrink-0">✔️</span><p class="text-neutral-300 text-sm leading-relaxed"><strong class="text-white">No distribution assumption</strong> — works for normal, skewed, or any shape.</p></div>
+                <div class="flex items-start gap-4 p-5 bg-neutral-900/50 border border-neutral-800 rounded-xl card-hover"><span class="text-lime-400 text-lg shrink-0">✔️</span><p class="text-neutral-300 text-sm leading-relaxed"><strong class="text-white">Flexible thresholds</strong> — you control exactly how aggressive outlier removal is.</p></div>
+                <div class="flex items-start gap-4 p-5 bg-neutral-900/50 border border-lime-400/20 rounded-xl card-hover" style="box-shadow:0 0 20px rgba(132,204,22,.1)"><span class="text-lime-400 text-lg shrink-0">✔️</span><p class="text-neutral-300 text-sm leading-relaxed">A popular choice in <strong class="text-lime-400">real-world data preprocessing</strong> and feature engineering workflows.</p></div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="py-16 px-6 lg:px-12 border-t border-neutral-800/50">
+        <div class="max-w-4xl mx-auto text-center">
+            <div class="flex items-center justify-center gap-3 mb-4">
+                <div class="w-8 h-8 rounded-lg bg-lime-400 flex items-center justify-center"><i data-lucide="book-open" class="w-4 h-4 text-black"></i></div>
+                <span class="font-brand font-semibold text-lg tracking-tight">Day 44</span>
+            </div>
+            <p class="text-neutral-500 text-sm mb-6">Outlier Detection & Removal using Percentile Method</p>
+            <p class="text-neutral-600 text-xs">Feature Engineering Series — Complete Notes for Data Science Students</p>
+        </div>
+    </footer>
+
+</main>
+
+<script>
+    lucide.createIcons();
+
+    // Percentile slider
+    const pctSlider = document.getElementById('pct-slider');
+    const pctValue = document.getElementById('pct-value');
+    const pctFill = document.getElementById('pct-fill');
+    const pctLine = document.getElementById('pct-line');
+    const pctLabel = document.getElementById('pct-label');
+    function updatePct() {
+        const v = parseInt(pctSlider.value);
+        pctValue.textContent = v + (v===1?'st':v===2?'nd':v===3?'rd':'th');
+        pctFill.style.width = v + '%';
+        pctLine.style.left = v + '%';
+        if (v === 50) pctLabel.textContent = 'You are at the Median → 50% above, 50% below';
+        else if (v === 100) pctLabel.textContent = 'Maximum value → everyone is below you';
+        else if (v === 0) pctLabel.textContent = 'Minimum value → nobody is below you';
+        else pctLabel.textContent = `You are here → better than ${v}% of people`;
+    }
+    pctSlider.addEventListener('input', updatePct);
+    updatePct();
+
+    // Threshold explorer
+    const thLower = document.getElementById('th-lower');
+    const thUpper = document.getElementById('th-upper');
+    const thLowerVal = document.getElementById('th-lower-val');
+    const thUpperVal = document.getElementById('th-upper-val');
+    const thLowZone = document.getElementById('th-low-zone');
+    const thHighZone = document.getElementById('th-high-zone');
+    const thNormalZone = document.getElementById('th-normal-zone');
+    const thInfo = document.getElementById('th-info');
+    function updateTh() {
+        const lo = parseInt(thLower.value);
+        const hi = parseInt(thUpper.value);
+        thLowerVal.textContent = lo + '%';
+        thUpperVal.textContent = hi + '%';
+        thLowZone.style.width = lo + '%';
+        thHighZone.style.width = (100 - hi) + '%';
+        thNormalZone.style.left = lo + '%';
+        thNormalZone.style.width = (hi - lo) + '%';
+        thInfo.innerHTML = `Data removed from each tail: <span class="text-red-400 font-medium">${lo}%</span> lower + <span class="text-red-400 font-medium">${100-hi}%</span> upper = <span class="text-white font-medium">${lo + (100-hi)}%</span> total`;
+    }
+    thLower.addEventListener('input', updateTh);
+    thUpper.addEventListener('input', updateTh);
+    updateTh();
+
+    // Accordion
+    function toggleAccordion(btn) {
+        const content = btn.nextElementSibling;
+        const icon = btn.querySelector('.accordion-icon');
+        const isOpen = content.classList.contains('open');
+        document.querySelectorAll('.accordion-content').forEach(c => c.classList.remove('open'));
+        document.querySelectorAll('.accordion-icon').forEach(i => i.classList.remove('rotated'));
+        if (!isOpen) { content.classList.add('open'); icon.classList.add('rotated'); }
+    }
+
+    // Copy code
+    function copyCode(btn) {
+        const block = btn.closest('.code-block') || btn.closest('.bg-black');
+        const pre = block ? block.querySelector('pre') : null;
+        if (!pre) return;
+        navigator.clipboard.writeText(pre.textContent).then(() => showToast('Copied to clipboard!'));
+    }
+
+    // Toast
+    function showToast(msg) {
+        const t = document.getElementById('toast');
+        document.getElementById('toast-msg').textContent = msg;
+        t.classList.add('show');
+        setTimeout(() => t.classList.remove('show'), 2500);
+    }
+
+    // Sidebar active
+    const sections = document.querySelectorAll('section[id]');
+    const sidebarLinks = document.querySelectorAll('.sidebar-link');
+    window.addEventListener('scroll', () => {
+        let current = '';
+        sections.forEach(s => { if (window.scrollY >= s.offsetTop - 150) current = s.getAttribute('id'); });
+        sidebarLinks.forEach(l => {
+            l.classList.remove('active');
+            if (l.getAttribute('href') === `#${current}`) l.classList.add('active');
+        });
+    });
+
+    // Scroll animations
+    const obs = new IntersectionObserver((entries) => {
+        entries.forEach(e => { if (e.isIntersecting) { e.target.style.opacity = '1'; e.target.style.transform = 'translateY(0)'; } });
+    }, { threshold: 0.1, rootMargin: '0px 0px -50px 0px' });
+    document.querySelectorAll('section > div').forEach(el => {
+        el.style.opacity = '0';
+        el.style.transform = 'translateY(30px)';
+        el.style.transition = 'opacity 0.8s cubic-bezier(0.2,0.8,0.2,1), transform 0.8s cubic-bezier(0.2,0.8,0.2,1)';
+        obs.observe(el);
+    });
+</script>
+</body>
+</html>
