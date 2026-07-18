@@ -1,0 +1,1871 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Day 42 – Outlier Detection & Removal using Z-Score</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600&family=Inter:wght@300;400;500&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        heading: ['Space Grotesk', 'sans-serif'],
+                        body: ['Inter', 'sans-serif'],
+                        brand: ['Bricolage Grotesque', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { background: #020202; color: #fff; font-family: 'Inter', sans-serif; }
+        h1, h2, h3, h4, h5, h6 { font-family: 'Space Grotesk', sans-serif; }
+        .font-brand { font-family: 'Bricolage Grotesque', sans-serif; }
+
+        /* Grain texture */
+        .grain::before {
+            content: '';
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            z-index: 40;
+            pointer-events: none;
+            opacity: 0.03;
+            background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E%3Cfilter id='g'%3E%3CfeTurbulence baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23g)'/%3E%3C/svg%3E");
+        }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: #020202; }
+        ::-webkit-scrollbar-thumb { background: #333; border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: #555; }
+
+        /* Animations */
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(30px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .animate-fade-in-up {
+            opacity: 0;
+            animation: fadeInUp 0.8s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+        }
+        .delay-150 { animation-delay: 150ms; }
+        .delay-300 { animation-delay: 300ms; }
+        .delay-450 { animation-delay: 450ms; }
+        .delay-600 { animation-delay: 600ms; }
+
+        @keyframes shimmer {
+            0% { left: -100%; }
+            20% { left: 200%; }
+            100% { left: 200%; }
+        }
+
+        @keyframes ping {
+            75%, 100% { transform: scale(2); opacity: 0; }
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-10px); }
+        }
+
+        @keyframes bellDraw {
+            from { stroke-dashoffset: 600; }
+            to { stroke-dashoffset: 0; }
+        }
+
+        .bell-path {
+            stroke-dasharray: 600;
+            stroke-dashoffset: 600;
+            animation: bellDraw 2s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+        }
+
+        @keyframes fillZone {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        .zone-fill {
+            opacity: 0;
+            animation: fillZone 0.6s ease forwards;
+        }
+        .zone-1 { animation-delay: 0.8s; }
+        .zone-2 { animation-delay: 1.2s; }
+        .zone-3 { animation-delay: 1.6s; }
+
+        /* Hero gradient text */
+        .hero-text-gradient {
+            background: linear-gradient(to bottom, #FFFFFF, #E5E5E5, #737373);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        /* Card hover */
+        .card-hover {
+            transition: all 500ms cubic-bezier(0.2, 0.8, 0.2, 1);
+        }
+        .card-hover:hover {
+            transform: translateY(-8px);
+            box-shadow: 0 0 50px -10px rgba(132,204,22,0.3);
+        }
+
+        /* Button shine */
+        .btn-shine { position: relative; overflow: hidden; }
+        .btn-shine::after {
+            content: '';
+            position: absolute;
+            top: 0; left: -100%; width: 50%; height: 100%;
+            background: linear-gradient(to right, transparent, rgba(255,255,255,0.8), transparent);
+            animation: shimmer 3s infinite cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        /* Grid background */
+        .grid-bg {
+            background-image: linear-gradient(to right, #222 1px, transparent 1px),
+                              linear-gradient(to bottom, #222 1px, transparent 1px);
+            background-size: 40px 40px;
+            mask-image: linear-gradient(to bottom, transparent, black 20%, black 80%, transparent);
+            -webkit-mask-image: linear-gradient(to bottom, transparent, black 20%, black 80%, transparent);
+        }
+
+        /* Code block */
+        .code-block {
+            background: #0a0a0a;
+            border: 1px solid #262626;
+            border-radius: 12px;
+            font-family: 'JetBrains Mono', 'Fira Code', monospace;
+            font-size: 13px;
+            line-height: 1.7;
+            overflow-x: auto;
+        }
+        .code-block .keyword { color: #A78BFA; }
+        .code-block .func { color: #60A5FA; }
+        .code-block .string { color: #34D399; }
+        .code-block .comment { color: #525252; }
+        .code-block .number { color: #FBBF24; }
+        .code-block .var { color: #F9A8D4; }
+
+        /* Sidebar nav */
+        .sidebar-link {
+            transition: all 200ms ease;
+            border-left: 2px solid transparent;
+        }
+        .sidebar-link:hover, .sidebar-link.active {
+            color: #A3E635;
+            border-left-color: #A3E635;
+            background: rgba(163,230,53,0.05);
+        }
+
+        /* Outlier highlight */
+        .outlier-row {
+            background: rgba(239,68,68,0.1);
+            border: 1px solid rgba(239,68,68,0.3);
+        }
+
+        /* Formula box */
+        .formula-box {
+            background: linear-gradient(135deg, rgba(163,230,53,0.05), rgba(163,230,53,0.02));
+            border: 1px solid rgba(163,230,53,0.2);
+        }
+
+        /* Section divider */
+        .section-divider {
+            height: 1px;
+            background: linear-gradient(to right, transparent, #262626, transparent);
+        }
+
+        /* Accordion */
+        .accordion-content {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 500ms cubic-bezier(0.2, 0.8, 0.2, 1);
+        }
+        .accordion-content.open {
+            max-height: 500px;
+        }
+        .accordion-icon {
+            transition: transform 300ms ease;
+        }
+        .accordion-icon.rotated {
+            transform: rotate(45deg);
+        }
+
+        /* Toast */
+        .toast {
+            transform: translateX(120%);
+            transition: transform 400ms cubic-bezier(0.2, 0.8, 0.2, 1);
+        }
+        .toast.show {
+            transform: translateX(0);
+        }
+
+        /* Z-score interactive bar */
+        .z-bar {
+            transition: all 400ms ease;
+        }
+
+        /* Timeline */
+        .timeline-line {
+            background: linear-gradient(to bottom, rgba(163,230,53,0.5), rgba(163,230,53,0.1));
+        }
+
+        @media (max-width: 1023px) {
+            .sidebar { display: none; }
+        }
+    </style>
+</head>
+<body class="grain antialiased">
+
+    <!-- Toast notification -->
+    <div id="toast" class="toast fixed top-6 right-6 z-50 bg-neutral-900 border border-lime-500/30 rounded-xl px-5 py-3 flex items-center gap-3 shadow-lg">
+        <i data-lucide="check-circle" class="w-5 h-5 text-lime-400"></i>
+        <span id="toast-msg" class="text-sm text-neutral-200">Copied to clipboard!</span>
+    </div>
+
+    <!-- Navigation -->
+    <nav class="fixed top-0 left-0 right-0 z-30 px-6 py-5" style="backdrop-filter: blur(4px); background: rgba(2,2,2,0.6);">
+        <div class="max-w-7xl mx-auto flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <div class="w-8 h-8 rounded-lg bg-lime-400 flex items-center justify-center">
+                    <i data-lucide="book-open" class="w-4 h-4 text-black"></i>
+                </div>
+                <span class="font-brand font-semibold text-lg tracking-tight">Day 42</span>
+            </div>
+            <div class="hidden md:flex items-center gap-8 text-sm text-neutral-400">
+                <a href="#introduction" class="hover:text-lime-400 transition-colors">Introduction</a>
+                <a href="#zscore" class="hover:text-lime-400 transition-colors">Z-Score</a>
+                <a href="#detection" class="hover:text-lime-400 transition-colors">Detection</a>
+                <a href="#handling" class="hover:text-lime-400 transition-colors">Handling</a>
+                <a href="#practical" class="hover:text-lime-400 transition-colors">Practical</a>
+                <a href="#interview" class="hover:text-lime-400 transition-colors">Interview Q's</a>
+            </div>
+            <a href="#top" class="btn-shine bg-lime-400 text-black px-5 py-2.5 rounded-full text-sm font-medium tracking-wide hover:scale-105 transition-transform" style="box-shadow: 0 0 20px rgba(163,230,53,0.6);">
+                Back to Top
+            </a>
+        </div>
+    </nav>
+
+    <!-- Sidebar Navigation (Desktop) -->
+    <aside class="sidebar fixed left-0 top-20 bottom-0 w-64 z-20 overflow-y-auto py-8 px-4" style="backdrop-filter: blur(4px); background: rgba(2,2,2,0.4);">
+        <p class="text-xs font-mono uppercase tracking-widest text-neutral-600 mb-4 px-3">Contents</p>
+        <div class="flex flex-col gap-0.5">
+            <a href="#introduction" class="sidebar-link text-sm text-neutral-500 px-3 py-2 rounded-r-lg">Introduction</a>
+            <a href="#what-is-outlier" class="sidebar-link text-sm text-neutral-500 px-3 py-2 rounded-r-lg">What is an Outlier?</a>
+            <a href="#zscore" class="sidebar-link text-sm text-neutral-500 px-3 py-2 rounded-r-lg">Z-Score Method</a>
+            <a href="#assumption" class="sidebar-link text-sm text-neutral-500 px-3 py-2 rounded-r-lg">Assumption</a>
+            <a href="#normal-dist" class="sidebar-link text-sm text-neutral-500 px-3 py-2 rounded-r-lg">Normal Distribution</a>
+            <a href="#properties" class="sidebar-link text-sm text-neutral-500 px-3 py-2 rounded-r-lg">68-95-99.7 Rule</a>
+            <a href="#formula" class="sidebar-link text-sm text-neutral-500 px-3 py-2 rounded-r-lg">Z-Score Formula</a>
+            <a href="#interpretation" class="sidebar-link text-sm text-neutral-500 px-3 py-2 rounded-r-lg">Interpretation</a>
+            <a href="#detection" class="sidebar-link text-sm text-neutral-500 px-3 py-2 rounded-r-lg">Detecting Outliers</a>
+            <a href="#why-name" class="sidebar-link text-sm text-neutral-500 px-3 py-2 rounded-r-lg">Why "Z-Score"?</a>
+            <a href="#handling" class="sidebar-link text-sm text-neutral-500 px-3 py-2 rounded-r-lg">Handling Outliers</a>
+            <a href="#algorithm" class="sidebar-link text-sm text-neutral-500 px-3 py-2 rounded-r-lg">Algorithm Summary</a>
+            <a href="#practical" class="sidebar-link text-sm text-neutral-500 px-3 py-2 rounded-r-lg">Practical Example</a>
+            <a href="#advantages" class="sidebar-link text-sm text-neutral-500 px-3 py-2 rounded-r-lg">Advantages</a>
+            <a href="#limitations" class="sidebar-link text-sm text-neutral-500 px-3 py-2 rounded-r-lg">Limitations</a>
+            <a href="#when-not" class="sidebar-link text-sm text-neutral-500 px-3 py-2 rounded-r-lg">When NOT to Use</a>
+            <a href="#interview" class="sidebar-link text-sm text-neutral-500 px-3 py-2 rounded-r-lg">Interview Questions</a>
+            <a href="#takeaways" class="sidebar-link text-sm text-neutral-500 px-3 py-2 rounded-r-lg">Key Takeaways</a>
+        </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="lg:ml-64">
+
+        <!-- Hero Section -->
+        <section id="top" class="relative min-h-screen flex flex-col justify-center items-center px-6 overflow-hidden">
+            <!-- Background glow -->
+            <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[500px] bg-lime-500/5 rounded-full" style="filter: blur(120px);"></div>
+            <!-- Grid -->
+            <div class="absolute inset-0 grid-bg opacity-30"></div>
+
+            <div class="relative z-10 text-center max-w-5xl mx-auto pt-32 pb-20">
+                <!-- Badge -->
+                <div class="animate-fade-in-up inline-flex items-center gap-2 px-4 py-2 rounded-full border border-neutral-800 bg-neutral-900/50 mb-8">
+                    <span class="relative flex h-2 w-2">
+                        <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-lime-400 opacity-75" style="animation: ping 1s cubic-bezier(0, 0, 0.2, 1) infinite;"></span>
+                        <span class="relative inline-flex rounded-full h-2 w-2 bg-lime-400"></span>
+                    </span>
+                    <span class="text-xs font-mono uppercase tracking-widest text-neutral-400">Feature Engineering Series</span>
+                </div>
+
+                <!-- Day number -->
+                <p class="animate-fade-in-up delay-150 font-mono text-lime-400 text-sm tracking-widest uppercase mb-4">Day 42</p>
+
+                <!-- Title -->
+                <h1 class="animate-fade-in-up delay-300 text-5xl md:text-7xl lg:text-8xl font-medium tracking-tighter leading-[0.85] mb-8">
+                    <span class="hero-text-gradient">Outlier Detection</span><br>
+                    <span class="text-lime-400">&</span>
+                    <span class="hero-text-gradient"> Removal</span><br>
+                    <span class="text-neutral-500 text-4xl md:text-5xl lg:text-6xl">using Z-Score</span>
+                </h1>
+
+                <!-- Subtitle -->
+                <p class="animate-fade-in-up delay-450 text-lg md:text-xl text-neutral-400 font-light max-w-2xl mx-auto leading-relaxed mb-12">
+                    One of the most popular statistical techniques for detecting and handling outliers in normally distributed data.
+                </p>
+
+                <!-- CTA Buttons -->
+                <div class="animate-fade-in-up delay-600 flex flex-col sm:flex-row gap-4 justify-center">
+                    <a href="#introduction" class="btn-shine bg-lime-400 text-black px-8 py-4 rounded-full text-sm font-medium tracking-wide hover:scale-105 transition-transform inline-flex items-center gap-2" style="box-shadow: 0 0 20px rgba(163,230,53,0.6);">
+                        Start Learning
+                        <i data-lucide="arrow-down" class="w-4 h-4"></i>
+                    </a>
+                    <a href="#practical" class="border border-neutral-700 text-white px-8 py-4 rounded-full text-sm font-medium tracking-wide hover:border-lime-400/50 hover:text-lime-400 transition-all inline-flex items-center gap-2">
+                        <i data-lucide="code-2" class="w-4 h-4"></i>
+                        Jump to Code
+                    </a>
+                </div>
+            </div>
+
+            <!-- Scroll indicator -->
+            <div class="absolute bottom-10 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2 animate-bounce">
+                <span class="text-xs text-neutral-600 tracking-widest uppercase">Scroll</span>
+                <i data-lucide="chevron-down" class="w-4 h-4 text-neutral-600"></i>
+            </div>
+        </section>
+
+        <div class="section-divider mx-6 lg:mx-12"></div>
+
+        <!-- Introduction -->
+        <section id="introduction" class="py-24 md:py-32 px-6 lg:px-12">
+            <div class="max-w-4xl mx-auto">
+                <div class="flex items-center gap-3 mb-6">
+                    <div class="w-10 h-10 rounded-xl bg-lime-400/10 border border-lime-400/20 flex items-center justify-center">
+                        <i data-lucide="info" class="w-5 h-5 text-lime-400"></i>
+                    </div>
+                    <span class="font-mono text-xs uppercase tracking-widest text-neutral-500">Introduction</span>
+                </div>
+                <h2 class="text-3xl md:text-5xl font-medium tracking-tight mb-8">Introduction</h2>
+                <div class="space-y-6 text-lg text-neutral-400 font-light leading-relaxed">
+                    <p>In this lecture, the instructor continues the <span class="text-white font-medium">Feature Engineering</span> series and starts discussing one of the most important preprocessing topics:</p>
+                    <blockquote class="border-l-2 border-lime-400 pl-6 py-2 my-8">
+                        <p class="text-xl md:text-2xl text-white font-medium tracking-tight">Outlier Detection and Removal</p>
+                    </blockquote>
+                    <p>In the previous lecture, an introduction to outliers was covered. In this lecture, the focus is on the <span class="text-lime-400 font-medium">Z-Score Method</span>, one of the most popular statistical techniques for detecting and handling outliers.</p>
+                </div>
+            </div>
+        </section>
+
+        <div class="section-divider mx-6 lg:mx-12"></div>
+
+        <!-- What is an Outlier? -->
+        <section id="what-is-outlier" class="py-24 md:py-32 px-6 lg:px-12">
+            <div class="max-w-4xl mx-auto">
+                <div class="flex items-center gap-3 mb-6">
+                    <div class="w-10 h-10 rounded-xl bg-lime-400/10 border border-lime-400/20 flex items-center justify-center">
+                        <i data-lucide="target" class="w-5 h-5 text-lime-400"></i>
+                    </div>
+                    <span class="font-mono text-xs uppercase tracking-widest text-neutral-500">Concept</span>
+                </div>
+                <h2 class="text-3xl md:text-5xl font-medium tracking-tight mb-8">What is an Outlier?</h2>
+                <p class="text-lg text-neutral-400 font-light leading-relaxed mb-8">
+                    An <span class="text-white font-medium">outlier</span> is a data point that lies significantly far away from the majority of observations.
+                </p>
+
+                <!-- Visual Example -->
+                <div class="bg-neutral-900/50 border border-neutral-800 rounded-2xl p-8 mb-8">
+                    <p class="font-mono text-xs uppercase tracking-widest text-neutral-500 mb-4">Example — Age Data</p>
+                    <div class="flex flex-wrap gap-3">
+                        <span class="px-4 py-2 rounded-lg bg-neutral-800 text-white font-medium">22</span>
+                        <span class="px-4 py-2 rounded-lg bg-neutral-800 text-white font-medium">24</span>
+                        <span class="px-4 py-2 rounded-lg bg-neutral-800 text-white font-medium">25</span>
+                        <span class="px-4 py-2 rounded-lg bg-neutral-800 text-white font-medium">23</span>
+                        <span class="px-4 py-2 rounded-lg bg-neutral-800 text-white font-medium">24</span>
+                        <span class="px-4 py-2 rounded-lg bg-neutral-800 text-white font-medium">26</span>
+                        <span class="px-4 py-2 rounded-lg bg-red-500/20 border border-red-500/40 text-red-400 font-medium flex items-center gap-2">
+                            120
+                            <i data-lucide="alert-triangle" class="w-4 h-4"></i>
+                            <span class="text-xs">← Outlier</span>
+                        </span>
+                    </div>
+                </div>
+
+                <p class="text-lg text-neutral-400 font-light leading-relaxed mb-8">
+                    The value <span class="text-red-400 font-medium">120</span> is extremely different from the remaining observations.
+                </p>
+
+                <!-- Causes -->
+                <h3 class="text-xl font-medium tracking-tight mb-4 text-white">Outliers may occur because of:</h3>
+                <div class="grid md:grid-cols-2 gap-3 mb-8">
+                    <div class="flex items-center gap-3 p-4 rounded-xl bg-neutral-900/30 border border-neutral-800/50">
+                        <i data-lucide="user-x" class="w-5 h-5 text-lime-400 shrink-0"></i>
+                        <span class="text-neutral-300">Human data entry mistakes</span>
+                    </div>
+                    <div class="flex items-center gap-3 p-4 rounded-xl bg-neutral-900/30 border border-neutral-800/50">
+                        <i data-lucide="ruler" class="w-5 h-5 text-lime-400 shrink-0"></i>
+                        <span class="text-neutral-300">Measurement errors</span>
+                    </div>
+                    <div class="flex items-center gap-3 p-4 rounded-xl bg-neutral-900/30 border border-neutral-800/50">
+                        <i data-lucide="cpu" class="w-5 h-5 text-lime-400 shrink-0"></i>
+                        <span class="text-neutral-300">Equipment malfunction</span>
+                    </div>
+                    <div class="flex items-center gap-3 p-4 rounded-xl bg-neutral-900/30 border border-neutral-800/50">
+                        <i data-lucide="sparkles" class="w-5 h-5 text-lime-400 shrink-0"></i>
+                        <span class="text-neutral-300">Natural rare events</span>
+                    </div>
+                    <div class="flex items-center gap-3 p-4 rounded-xl bg-neutral-900/30 border border-neutral-800/50 md:col-span-2">
+                        <i data-lucide="star" class="w-5 h-5 text-lime-400 shrink-0"></i>
+                        <span class="text-neutral-300">Genuine exceptional observations</span>
+                    </div>
+                </div>
+
+                <!-- Important note -->
+                <div class="bg-lime-400/5 border border-lime-400/20 rounded-2xl p-6 flex gap-4">
+                    <i data-lucide="lightbulb" class="w-6 h-6 text-lime-400 shrink-0 mt-0.5"></i>
+                    <p class="text-neutral-300 leading-relaxed">
+                        <strong class="text-white">Important:</strong> Not every outlier is wrong. Sometimes they carry valuable information. Always investigate before removing.
+                    </p>
+                </div>
+            </div>
+        </section>
+
+        <div class="section-divider mx-6 lg:mx-12"></div>
+
+        <!-- Z-Score Method -->
+        <section id="zscore" class="py-24 md:py-32 px-6 lg:px-12">
+            <div class="max-w-4xl mx-auto">
+                <div class="flex items-center gap-3 mb-6">
+                    <div class="w-10 h-10 rounded-xl bg-lime-400/10 border border-lime-400/20 flex items-center justify-center">
+                        <i data-lucide="zap" class="w-5 h-5 text-lime-400"></i>
+                    </div>
+                    <span class="font-mono text-xs uppercase tracking-widest text-neutral-500">Core Technique</span>
+                </div>
+                <h2 class="text-3xl md:text-5xl font-medium tracking-tight mb-8">Z-Score Method</h2>
+                <p class="text-lg text-neutral-400 font-light leading-relaxed mb-8">
+                    One of the most common techniques for detecting outliers is the <span class="text-lime-400 font-medium">Z-Score Method</span>. However, this technique comes with a very important assumption.
+                </p>
+
+                <!-- Assumption Card -->
+                <div id="assumption" class="bg-neutral-900/50 border border-neutral-800 rounded-2xl p-8 mb-8 card-hover">
+                    <div class="flex items-center gap-3 mb-6">
+                        <div class="w-8 h-8 rounded-lg bg-amber-500/10 flex items-center justify-center">
+                            <i data-lucide="alert-circle" class="w-5 h-5 text-amber-400"></i>
+                        </div>
+                        <h3 class="text-xl font-medium tracking-tight">Assumption of Z-Score</h3>
+                    </div>
+                    <p class="text-neutral-400 font-light leading-relaxed mb-4">The feature (column) must be:</p>
+                    <div class="flex flex-col sm:flex-row gap-4">
+                        <div class="flex-1 bg-lime-400/5 border border-lime-400/20 rounded-xl p-5 text-center">
+                            <i data-lucide="check-circle" class="w-6 h-6 text-lime-400 mx-auto mb-2"></i>
+                            <p class="text-white font-medium">Normally Distributed</p>
+                        </div>
+                        <div class="flex items-center text-neutral-600 text-2xl font-light">or</div>
+                        <div class="flex-1 bg-lime-400/5 border border-lime-400/20 rounded-xl p-5 text-center">
+                            <i data-lucide="check-circle" class="w-6 h-6 text-lime-400 mx-auto mb-2"></i>
+                            <p class="text-white font-medium">Approximately Normally Distributed</p>
+                        </div>
+                    </div>
+                    <div class="mt-6 bg-red-500/5 border border-red-500/20 rounded-xl p-4 flex gap-3">
+                        <i data-lucide="x-circle" class="w-5 h-5 text-red-400 shrink-0 mt-0.5"></i>
+                        <p class="text-neutral-300 text-sm">If the data is heavily skewed, the Z-score method should <strong class="text-red-400">not</strong> be used.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <div class="section-divider mx-6 lg:mx-12"></div>
+
+        <!-- Normal Distribution -->
+        <section id="normal-dist" class="py-24 md:py-32 px-6 lg:px-12">
+            <div class="max-w-4xl mx-auto">
+                <div class="flex items-center gap-3 mb-6">
+                    <div class="w-10 h-10 rounded-xl bg-lime-400/10 border border-lime-400/20 flex items-center justify-center">
+                        <i data-lucide="bell" class="w-5 h-5 text-lime-400"></i>
+                    </div>
+                    <span class="font-mono text-xs uppercase tracking-widest text-neutral-500">Foundation</span>
+                </div>
+                <h2 class="text-3xl md:text-5xl font-medium tracking-tight mb-8">What is a Normal Distribution?</h2>
+                <p class="text-lg text-neutral-400 font-light leading-relaxed mb-4">
+                    A <span class="text-white font-medium">Normal Distribution</span> (Gaussian Distribution) is a bell-shaped curve.
+                </p>
+
+                <!-- Bell Curve SVG -->
+                <div class="bg-neutral-900/50 border border-neutral-800 rounded-2xl p-8 mb-8 overflow-hidden">
+                    <svg viewBox="0 0 600 300" class="w-full max-w-2xl mx-auto" xmlns="http://www.w3.org/2000/svg">
+                        <!-- Grid lines -->
+                        <line x1="50" y1="250" x2="550" y2="250" stroke="#262626" stroke-width="1"/>
+                        <line x1="300" y1="250" x2="300" y2="30" stroke="#262626" stroke-width="1" stroke-dasharray="4,4"/>
+
+                        <!-- Zone fills -->
+                        <path class="zone-fill zone-3" d="M100,250 L100,245 Q150,240 175,230 Q200,215 225,190 Q250,155 275,110 Q290,75 300,55 Q310,75 325,110 Q350,155 375,190 Q400,215 425,230 Q450,240 500,245 L500,250 Z" fill="rgba(163,230,53,0.05)"/>
+                        <path class="zone-fill zone-2" d="M150,250 L150,242 Q175,235 200,220 Q225,195 250,160 Q275,115 290,80 Q295,65 300,55 Q305,65 310,80 Q325,115 350,160 Q375,195 400,220 Q425,235 450,242 L450,250 Z" fill="rgba(163,230,53,0.08)"/>
+                        <path class="zone-fill zone-1" d="M200,250 L200,237 Q225,215 250,175 Q270,130 285,90 Q295,65 300,55 Q305,65 315,90 Q330,130 350,175 Q375,215 400,237 L400,250 Z" fill="rgba(163,230,53,0.12)"/>
+
+                        <!-- Bell curve -->
+                        <path class="bell-path" d="M50,249 Q100,248 125,247 Q150,244 175,237 Q200,225 225,200 Q250,165 275,120 Q290,85 300,55 Q310,85 325,120 Q350,165 375,200 Q400,225 425,237 Q450,244 475,247 Q500,248 550,249" fill="none" stroke="#A3E635" stroke-width="2.5" stroke-linecap="round"/>
+
+                        <!-- Sigma labels -->
+                        <text x="300" y="270" text-anchor="middle" fill="#737373" font-size="11" font-family="monospace">μ</text>
+                        <text x="200" y="270" text-anchor="middle" fill="#737373" font-size="11" font-family="monospace">-1σ</text>
+                        <text x="400" y="270" text-anchor="middle" fill="#737373" font-size="11" font-family="monospace">+1σ</text>
+                        <text x="100" y="270" text-anchor="middle" fill="#737373" font-size="11" font-family="monospace">-2σ</text>
+                        <text x="500" y="270" text-anchor="middle" fill="#737373" font-size="11" font-family="monospace">+2σ</text>
+                        <text x="50" y="270" text-anchor="middle" fill="#737373" font-size="10" font-family="monospace">-3σ</text>
+                        <text x="550" y="270" text-anchor="middle" fill="#737373" font-size="10" font-family="monospace">+3σ</text>
+
+                        <!-- Percentage labels -->
+                        <text x="300" y="180" text-anchor="middle" fill="#A3E635" font-size="13" font-weight="500" font-family="Space Grotesk" opacity="0.9">68%</text>
+                        <text x="300" y="220" text-anchor="middle" fill="#A3E635" font-size="12" font-weight="500" font-family="Space Grotesk" opacity="0.6">95%</text>
+                        <text x="300" y="242" text-anchor="middle" fill="#A3E635" font-size="11" font-weight="500" font-family="Space Grotesk" opacity="0.4">99.7%</text>
+                    </svg>
+                </div>
+
+                <!-- Characteristics -->
+                <h3 class="text-xl font-medium tracking-tight mb-4 text-white">Characteristics:</h3>
+                <div class="space-y-3 mb-8">
+                    <div class="flex items-start gap-3 p-4 rounded-xl bg-neutral-900/30 border border-neutral-800/50">
+                        <span class="w-6 h-6 rounded-full bg-lime-400/10 text-lime-400 text-xs flex items-center justify-center shrink-0 mt-0.5">1</span>
+                        <span class="text-neutral-300">Most values are concentrated around the center (mean).</span>
+                    </div>
+                    <div class="flex items-start gap-3 p-4 rounded-xl bg-neutral-900/30 border border-neutral-800/50">
+                        <span class="w-6 h-6 rounded-full bg-lime-400/10 text-lime-400 text-xs flex items-center justify-center shrink-0 mt-0.5">2</span>
+                        <span class="text-neutral-300">Fewer values exist as we move away from the center.</span>
+                    </div>
+                    <div class="flex items-start gap-3 p-4 rounded-xl bg-neutral-900/30 border border-neutral-800/50">
+                        <span class="w-6 h-6 rounded-full bg-lime-400/10 text-lime-400 text-xs flex items-center justify-center shrink-0 mt-0.5">3</span>
+                        <span class="text-neutral-300">The distribution is symmetric.</span>
+                    </div>
+                </div>
+
+                <!-- Real-life examples -->
+                <h3 class="text-xl font-medium tracking-tight mb-4 text-white">Examples from real life:</h3>
+                <div class="grid grid-cols-2 md:grid-cols-5 gap-3">
+                    <div class="bg-neutral-900/30 border border-neutral-800/50 rounded-xl p-4 text-center">
+                        <i data-lucide="move-vertical" class="w-5 h-5 text-lime-400 mx-auto mb-2"></i>
+                        <p class="text-sm text-neutral-300">Human Height</p>
+                    </div>
+                    <div class="bg-neutral-900/30 border border-neutral-800/50 rounded-xl p-4 text-center">
+                        <i data-lucide="brain" class="w-5 h-5 text-lime-400 mx-auto mb-2"></i>
+                        <p class="text-sm text-neutral-300">IQ Scores</p>
+                    </div>
+                    <div class="bg-neutral-900/30 border border-neutral-800/50 rounded-xl p-4 text-center">
+                        <i data-lucide="file-text" class="w-5 h-5 text-lime-400 mx-auto mb-2"></i>
+                        <p class="text-sm text-neutral-300">Exam Marks</p>
+                    </div>
+                    <div class="bg-neutral-900/30 border border-neutral-800/50 rounded-xl p-4 text-center">
+                        <i data-lucide="heart-pulse" class="w-5 h-5 text-lime-400 mx-auto mb-2"></i>
+                        <p class="text-sm text-neutral-300">Blood Pressure</p>
+                    </div>
+                    <div class="bg-neutral-900/30 border border-neutral-800/50 rounded-xl p-4 text-center col-span-2 md:col-span-1">
+                        <i data-lucide="scale" class="w-5 h-5 text-lime-400 mx-auto mb-2"></i>
+                        <p class="text-sm text-neutral-300">Measurement Errors</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <div class="section-divider mx-6 lg:mx-12"></div>
+
+        <!-- 68-95-99.7 Rule -->
+        <section id="properties" class="py-24 md:py-32 px-6 lg:px-12">
+            <div class="max-w-4xl mx-auto">
+                <div class="flex items-center gap-3 mb-6">
+                    <div class="w-10 h-10 rounded-xl bg-lime-400/10 border border-lime-400/20 flex items-center justify-center">
+                        <i data-lucide="percent" class="w-5 h-5 text-lime-400"></i>
+                    </div>
+                    <span class="font-mono text-xs uppercase tracking-widest text-neutral-500">Empirical Rule</span>
+                </div>
+                <h2 class="text-3xl md:text-5xl font-medium tracking-tight mb-4">Properties of Normal Distribution</h2>
+                <p class="text-lg text-neutral-400 font-light leading-relaxed mb-12">
+                    A normal distribution follows the famous <span class="text-lime-400 font-medium">68–95–99.7 Rule</span>.
+                </p>
+
+                <!-- 3 Cards for 1σ, 2σ, 3σ -->
+                <div class="space-y-6">
+                    <!-- ±1σ -->
+                    <div class="card-hover bg-neutral-900/50 border border-neutral-800 rounded-2xl p-8 relative overflow-hidden">
+                        <div class="absolute top-0 right-0 w-32 h-32 bg-lime-400/5 rounded-full -translate-y-1/2 translate-x-1/2"></div>
+                        <div class="relative">
+                            <div class="flex items-center gap-4 mb-4">
+                                <div class="w-14 h-14 rounded-2xl bg-lime-400/10 border border-lime-400/20 flex items-center justify-center">
+                                    <span class="text-lime-400 font-heading font-semibold text-lg">±1σ</span>
+                                </div>
+                                <div>
+                                    <h3 class="text-xl font-medium tracking-tight">1 Standard Deviation</h3>
+                                    <p class="text-neutral-500 text-sm">Range: μ − σ to μ + σ</p>
+                                </div>
+                            </div>
+                            <div class="flex items-center gap-4">
+                                <div class="h-3 rounded-full bg-lime-400/30 flex-1 overflow-hidden">
+                                    <div class="h-full rounded-full bg-lime-400" style="width: 68%;"></div>
+                                </div>
+                                <span class="text-2xl font-heading font-semibold text-lime-400">68%</span>
+                            </div>
+                            <p class="text-neutral-400 text-sm mt-3">Contains approximately <strong class="text-white">68%</strong> of the observations.</p>
+                        </div>
+                    </div>
+
+                    <!-- ±2σ -->
+                    <div class="card-hover bg-neutral-900/50 border border-neutral-800 rounded-2xl p-8 relative overflow-hidden">
+                        <div class="absolute top-0 right-0 w-32 h-32 bg-lime-400/5 rounded-full -translate-y-1/2 translate-x-1/2"></div>
+                        <div class="relative">
+                            <div class="flex items-center gap-4 mb-4">
+                                <div class="w-14 h-14 rounded-2xl bg-lime-400/10 border border-lime-400/20 flex items-center justify-center">
+                                    <span class="text-lime-400 font-heading font-semibold text-lg">±2σ</span>
+                                </div>
+                                <div>
+                                    <h3 class="text-xl font-medium tracking-tight">2 Standard Deviations</h3>
+                                    <p class="text-neutral-500 text-sm">Range: μ ± 2σ</p>
+                                </div>
+                            </div>
+                            <div class="flex items-center gap-4">
+                                <div class="h-3 rounded-full bg-lime-400/30 flex-1 overflow-hidden">
+                                    <div class="h-full rounded-full bg-lime-400" style="width: 95%;"></div>
+                                </div>
+                                <span class="text-2xl font-heading font-semibold text-lime-400">95%</span>
+                            </div>
+                            <p class="text-neutral-400 text-sm mt-3">Contains approximately <strong class="text-white">95%</strong> of the observations.</p>
+                        </div>
+                    </div>
+
+                    <!-- ±3σ -->
+                    <div class="card-hover bg-neutral-900/50 border border-neutral-800 rounded-2xl p-8 relative overflow-hidden">
+                        <div class="absolute top-0 right-0 w-40 h-40 bg-lime-400/5 rounded-full -translate-y-1/2 translate-x-1/2"></div>
+                        <div class="relative">
+                            <div class="flex items-center gap-4 mb-4">
+                                <div class="w-14 h-14 rounded-2xl bg-red-500/10 border border-red-500/20 flex items-center justify-center">
+                                    <span class="text-red-400 font-heading font-semibold text-lg">±3σ</span>
+                                </div>
+                                <div>
+                                    <h3 class="text-xl font-medium tracking-tight">3 Standard Deviations</h3>
+                                    <p class="text-neutral-500 text-sm">Range: μ ± 3σ</p>
+                                </div>
+                            </div>
+                            <div class="flex items-center gap-4">
+                                <div class="h-3 rounded-full bg-lime-400/30 flex-1 overflow-hidden">
+                                    <div class="h-full rounded-full bg-lime-400" style="width: 99.7%;"></div>
+                                </div>
+                                <span class="text-2xl font-heading font-semibold text-lime-400">99.7%</span>
+                            </div>
+                            <p class="text-neutral-400 text-sm mt-3">Contains approximately <strong class="text-white">99.7%</strong> of all observations.</p>
+                            <div class="mt-4 bg-red-500/5 border border-red-500/20 rounded-xl p-4 flex gap-3">
+                                <i data-lucide="alert-triangle" class="w-5 h-5 text-red-400 shrink-0 mt-0.5"></i>
+                                <p class="text-neutral-300 text-sm">Only <strong class="text-red-400">0.3%</strong> of observations lie outside this range. This is why observations beyond ±3σ are generally considered <strong class="text-red-400">outliers</strong>.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <div class="section-divider mx-6 lg:mx-12"></div>
+
+        <!-- Z-Score Formula -->
+        <section id="formula" class="py-24 md:py-32 px-6 lg:px-12">
+            <div class="max-w-4xl mx-auto">
+                <div class="flex items-center gap-3 mb-6">
+                    <div class="w-10 h-10 rounded-xl bg-lime-400/10 border border-lime-400/20 flex items-center justify-center">
+                        <i data-lucide="sigma" class="w-5 h-5 text-lime-400"></i>
+                    </div>
+                    <span class="font-mono text-xs uppercase tracking-widest text-neutral-500">Formula</span>
+                </div>
+                <h2 class="text-3xl md:text-5xl font-medium tracking-tight mb-8">Z-Score Formula</h2>
+                <p class="text-lg text-neutral-400 font-light leading-relaxed mb-8">
+                    For every observation:
+                </p>
+
+                <!-- Formula display -->
+                <div class="formula-box rounded-2xl p-8 md:p-12 mb-8 text-center">
+                    <div class="text-4xl md:text-6xl font-heading font-medium tracking-tight text-white mb-6" style="font-style: italic;">
+                        Z = <span class="inline-block text-lime-400">
+                            <span class="text-3xl md:text-5xl align-middle">X − μ</span>
+                            <span class="block w-full border-t-2 border-lime-400 my-1"></span>
+                            <span class="text-3xl md:text-5xl align-middle">σ</span>
+                        </span>
+                    </div>
+                </div>
+
+                <!-- Variable explanations -->
+                <div class="grid md:grid-cols-3 gap-4">
+                    <div class="bg-neutral-900/50 border border-neutral-800 rounded-xl p-6 text-center">
+                        <div class="text-3xl font-heading text-white mb-2" style="font-style: italic;">X</div>
+                        <p class="text-neutral-400 text-sm">Data value (the observation)</p>
+                    </div>
+                    <div class="bg-neutral-900/50 border border-neutral-800 rounded-xl p-6 text-center">
+                        <div class="text-3xl font-heading text-white mb-2" style="font-style: italic;">μ</div>
+                        <p class="text-neutral-400 text-sm">Mean of the feature</p>
+                    </div>
+                    <div class="bg-neutral-900/50 border border-neutral-800 rounded-xl p-6 text-center">
+                        <div class="text-3xl font-heading text-white mb-2" style="font-style: italic;">σ</div>
+                        <p class="text-neutral-400 text-sm">Standard deviation</p>
+                    </div>
+                </div>
+
+                <p class="text-lg text-neutral-400 font-light leading-relaxed mt-8">
+                    The Z-score tells us <span class="text-white font-medium">how many standard deviations</span> a value is away from the mean.
+                </p>
+            </div>
+        </section>
+
+        <div class="section-divider mx-6 lg:mx-12"></div>
+
+        <!-- Interactive Z-Score Calculator -->
+        <section class="py-24 md:py-32 px-6 lg:px-12">
+            <div class="max-w-4xl mx-auto">
+                <div class="flex items-center gap-3 mb-6">
+                    <div class="w-10 h-10 rounded-xl bg-lime-400/10 border border-lime-400/20 flex items-center justify-center">
+                        <i data-lucide="calculator" class="w-5 h-5 text-lime-400"></i>
+                    </div>
+                    <span class="font-mono text-xs uppercase tracking-widest text-neutral-500">Interactive</span>
+                </div>
+                <h2 class="text-3xl md:text-5xl font-medium tracking-tight mb-8">Z-Score Calculator</h2>
+                <p class="text-lg text-neutral-400 font-light leading-relaxed mb-8">Try it yourself — enter values and see the Z-score in real time.</p>
+
+                <div class="bg-neutral-900/50 border border-neutral-800 rounded-2xl p-8">
+                    <div class="grid md:grid-cols-2 gap-6 mb-8">
+                        <div>
+                            <label class="block text-sm text-neutral-400 mb-2">Value (X)</label>
+                            <input type="number" id="z-x" value="85" class="w-full bg-black border border-neutral-800 rounded-xl px-4 py-3 text-white text-lg focus:outline-none focus:border-lime-400/50 transition-colors" placeholder="Enter value">
+                        </div>
+                        <div>
+                            <label class="block text-sm text-neutral-400 mb-2">Mean (μ)</label>
+                            <input type="number" id="z-mean" value="70" class="w-full bg-black border border-neutral-800 rounded-xl px-4 py-3 text-white text-lg focus:outline-none focus:border-lime-400/50 transition-colors" placeholder="Enter mean">
+                        </div>
+                        <div>
+                            <label class="block text-sm text-neutral-400 mb-2">Std Dev (σ)</label>
+                            <input type="number" id="z-sd" value="5" step="0.1" class="w-full bg-black border border-neutral-800 rounded-xl px-4 py-3 text-white text-lg focus:outline-none focus:border-lime-400/50 transition-colors" placeholder="Enter std dev">
+                        </div>
+                        <div class="flex items-end">
+                            <div class="w-full bg-black border border-neutral-800 rounded-xl px-4 py-3">
+                                <label class="block text-sm text-neutral-500 mb-1">Z-Score</label>
+                                <div id="z-result" class="text-2xl font-heading font-semibold text-lime-400">3.00</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Visual bar -->
+                    <div class="mb-4">
+                        <div class="flex justify-between text-xs text-neutral-600 mb-1">
+                            <span>-4σ</span>
+                            <span>-3σ</span>
+                            <span>-2σ</span>
+                            <span>-1σ</span>
+                            <span>μ</span>
+                            <span>+1σ</span>
+                            <span>+2σ</span>
+                            <span>+3σ</span>
+                            <span>+4σ</span>
+                        </div>
+                        <div class="relative h-4 bg-neutral-800 rounded-full overflow-hidden">
+                            <!-- Outlier zones -->
+                            <div class="absolute left-0 top-0 w-[12.5%] h-full bg-red-500/20"></div>
+                            <div class="absolute right-0 top-0 w-[12.5%] h-full bg-red-500/20"></div>
+                            <!-- Center line -->
+                            <div class="absolute left-1/2 top-0 w-px h-full bg-neutral-600"></div>
+                            <!-- Z indicator -->
+                            <div id="z-indicator" class="z-bar absolute top-0 h-full w-1.5 bg-lime-400 rounded-full" style="left: 87.5%; box-shadow: 0 0 10px rgba(163,230,53,0.6);"></div>
+                        </div>
+                    </div>
+                    <div id="z-verdict" class="text-center text-sm font-medium text-red-400 mt-2">
+                        ⚠️ Outlier! (|Z| > 3)
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <div class="section-divider mx-6 lg:mx-12"></div>
+
+        <!-- Interpretation -->
+        <section id="interpretation" class="py-24 md:py-32 px-6 lg:px-12">
+            <div class="max-w-4xl mx-auto">
+                <div class="flex items-center gap-3 mb-6">
+                    <div class="w-10 h-10 rounded-xl bg-lime-400/10 border border-lime-400/20 flex items-center justify-center">
+                        <i data-lucide="book-open" class="w-5 h-5 text-lime-400"></i>
+                    </div>
+                    <span class="font-mono text-xs uppercase tracking-widest text-neutral-500">Reference</span>
+                </div>
+                <h2 class="text-3xl md:text-5xl font-medium tracking-tight mb-8">Interpretation</h2>
+
+                <div class="bg-neutral-900/50 border border-neutral-800 rounded-2xl overflow-hidden">
+                    <div class="grid grid-cols-[100px_1fr] md:grid-cols-[120px_1fr]">
+                        <!-- Header -->
+                        <div class="p-4 bg-neutral-800/50 border-b border-neutral-800 flex items-center justify-center">
+                            <span class="text-sm font-mono text-neutral-400">Z Score</span>
+                        </div>
+                        <div class="p-4 bg-neutral-800/50 border-b border-neutral-800 flex items-center">
+                            <span class="text-sm font-mono text-neutral-400">Meaning</span>
+                        </div>
+                        <!-- Rows -->
+                        <div class="p-4 border-b border-neutral-800/50 flex items-center justify-center"><span class="font-heading font-medium text-white">0</span></div>
+                        <div class="p-4 border-b border-neutral-800/50 flex items-center text-neutral-300">Exactly at mean</div>
+
+                        <div class="p-4 border-b border-neutral-800/50 flex items-center justify-center"><span class="font-heading font-medium text-white">1</span></div>
+                        <div class="p-4 border-b border-neutral-800/50 flex items-center text-neutral-300">One SD above mean</div>
+
+                        <div class="p-4 border-b border-neutral-800/50 flex items-center justify-center"><span class="font-heading font-medium text-white">-1</span></div>
+                        <div class="p-4 border-b border-neutral-800/50 flex items-center text-neutral-300">One SD below mean</div>
+
+                        <div class="p-4 border-b border-neutral-800/50 flex items-center justify-center"><span class="font-heading font-medium text-white">2</span></div>
+                        <div class="p-4 border-b border-neutral-800/50 flex items-center text-neutral-300">Two SD above mean</div>
+
+                        <div class="p-4 border-b border-neutral-800/50 flex items-center justify-center"><span class="font-heading font-medium text-white">-2</span></div>
+                        <div class="p-4 border-b border-neutral-800/50 flex items-center text-neutral-300">Two SD below mean</div>
+
+                        <div class="p-4 border-b border-neutral-800/50 flex items-center justify-center"><span class="font-heading font-medium text-white">3</span></div>
+                        <div class="p-4 border-b border-neutral-800/50 flex items-center text-neutral-300">Very far from mean</div>
+
+                        <div class="p-4 flex items-center justify-center bg-red-500/5"><span class="font-heading font-medium text-red-400">&gt;3 or &lt;-3</span></div>
+                        <div class="p-4 flex items-center text-red-400 font-medium bg-red-500/5">
+                            <i data-lucide="alert-triangle" class="w-4 h-4 mr-2 shrink-0"></i>
+                            Usually Outlier
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <div class="section-divider mx-6 lg:mx-12"></div>
+
+        <!-- Detecting Outliers -->
+        <section id="detection" class="py-24 md:py-32 px-6 lg:px-12">
+            <div class="max-w-4xl mx-auto">
+                <div class="flex items-center gap-3 mb-6">
+                    <div class="w-10 h-10 rounded-xl bg-lime-400/10 border border-lime-400/20 flex items-center justify-center">
+                        <i data-lucide="search" class="w-5 h-5 text-lime-400"></i>
+                    </div>
+                    <span class="font-mono text-xs uppercase tracking-widest text-neutral-500">Methods</span>
+                </div>
+                <h2 class="text-3xl md:text-5xl font-medium tracking-tight mb-4">Detecting Outliers</h2>
+                <p class="text-lg text-neutral-400 font-light leading-relaxed mb-12">There are two equivalent approaches.</p>
+
+                <div class="grid md:grid-cols-2 gap-6">
+                    <!-- Method 1 -->
+                    <div class="card-hover bg-neutral-900/50 border border-neutral-800 rounded-2xl p-8">
+                        <div class="flex items-center gap-3 mb-6">
+                            <div class="w-10 h-10 rounded-xl bg-lime-400/10 flex items-center justify-center">
+                                <span class="text-lime-400 font-heading font-semibold">1</span>
+                            </div>
+                            <h3 class="text-lg font-medium tracking-tight">Boundary Method</h3>
+                        </div>
+                        <p class="text-neutral-400 text-sm mb-4">Calculate upper and lower limits:</p>
+                        <div class="formula-box rounded-xl p-4 mb-4 text-center">
+                            <p class="text-lime-400 font-mono text-sm mb-1">Upper Limit = μ + 3σ</p>
+                            <p class="text-lime-400 font-mono text-sm">Lower Limit = μ − 3σ</p>
+                        </div>
+                        <p class="text-neutral-400 text-sm mb-2">Any value:</p>
+                        <div class="space-y-2">
+                            <div class="bg-red-500/5 border border-red-500/20 rounded-lg p-3 text-center">
+                                <code class="text-red-400 text-sm">&lt; Lower Limit</code>
+                            </div>
+                            <p class="text-neutral-600 text-center text-xs">or</p>
+                            <div class="bg-red-500/5 border border-red-500/20 rounded-lg p-3 text-center">
+                                <code class="text-red-400 text-sm">&gt; Upper Limit</code>
+                            </div>
+                        </div>
+                        <p class="text-neutral-400 text-sm mt-3">→ is an <span class="text-red-400 font-medium">outlier</span></p>
+                    </div>
+
+                    <!-- Method 2 -->
+                    <div class="card-hover bg-neutral-900/50 border border-neutral-800 rounded-2xl p-8">
+                        <div class="flex items-center gap-3 mb-6">
+                            <div class="w-10 h-10 rounded-xl bg-lime-400/10 flex items-center justify-center">
+                                <span class="text-lime-400 font-heading font-semibold">2</span>
+                            </div>
+                            <h3 class="text-lg font-medium tracking-tight">Z-Score Method</h3>
+                        </div>
+                        <p class="text-neutral-400 text-sm mb-4">Calculate Z-score for every observation.</p>
+                        <div class="space-y-3">
+                            <div class="bg-lime-400/5 border border-lime-400/20 rounded-lg p-4">
+                                <p class="text-lime-400 text-sm font-mono text-center">−3 ≤ Z ≤ 3</p>
+                                <p class="text-neutral-400 text-xs text-center mt-1">→ Normal observation</p>
+                            </div>
+                            <div class="bg-red-500/5 border border-red-500/20 rounded-lg p-4">
+                                <p class="text-red-400 text-sm font-mono text-center">Z &lt; −3 &nbsp;or&nbsp; Z &gt; 3</p>
+                                <p class="text-neutral-400 text-xs text-center mt-1">→ Outlier</p>
+                            </div>
+                        </div>
+                        <div class="mt-4 bg-neutral-800/50 rounded-lg p-3 text-center">
+                            <p class="text-neutral-500 text-xs">Both methods give the <span class="text-white">same result</span></p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <div class="section-divider mx-6 lg:mx-12"></div>
+
+        <!-- Why Z-Score Name -->
+        <section id="why-name" class="py-24 md:py-32 px-6 lg:px-12">
+            <div class="max-w-4xl mx-auto">
+                <div class="flex items-center gap-3 mb-6">
+                    <div class="w-10 h-10 rounded-xl bg-lime-400/10 border border-lime-400/20 flex items-center justify-center">
+                        <i data-lucide="help-circle" class="w-5 h-5 text-lime-400"></i>
+                    </div>
+                    <span class="font-mono text-xs uppercase tracking-widest text-neutral-500">Naming</span>
+                </div>
+                <h2 class="text-3xl md:text-5xl font-medium tracking-tight mb-8">Why is it called the Z-Score Method?</h2>
+                <div class="bg-neutral-900/50 border border-neutral-800 rounded-2xl p-8">
+                    <p class="text-lg text-neutral-400 font-light leading-relaxed">
+                        Because instead of directly checking <code class="text-lime-400 bg-lime-400/10 px-2 py-0.5 rounded text-sm">Mean ± 3σ</code>, we transform every observation into its <span class="text-white font-medium">standardized score</span> (Z-score).
+                    </p>
+                    <p class="text-lg text-neutral-400 font-light leading-relaxed mt-4">
+                        This transformation converts the feature into a <span class="text-lime-400 font-medium">standardized scale</span> — making it easy to compare across different features with different units and scales.
+                    </p>
+                </div>
+            </div>
+        </section>
+
+        <div class="section-divider mx-6 lg:mx-12"></div>
+
+        <!-- Handling Outliers -->
+        <section id="handling" class="py-24 md:py-32 px-6 lg:px-12">
+            <div class="max-w-4xl mx-auto">
+                <div class="flex items-center gap-3 mb-6">
+                    <div class="w-10 h-10 rounded-xl bg-lime-400/10 border border-lime-400/20 flex items-center justify-center">
+                        <i data-lucide="wrench" class="w-5 h-5 text-lime-400"></i>
+                    </div>
+                    <span class="font-mono text-xs uppercase tracking-widest text-neutral-500">Techniques</span>
+                </div>
+                <h2 class="text-3xl md:text-5xl font-medium tracking-tight mb-4">Handling Outliers</h2>
+                <p class="text-lg text-neutral-400 font-light leading-relaxed mb-12">After detecting outliers, there are two major techniques.</p>
+
+                <!-- Trimming -->
+                <div class="card-hover bg-neutral-900/50 border border-neutral-800 rounded-2xl p-8 mb-8">
+                    <div class="flex items-center gap-4 mb-6">
+                        <div class="w-12 h-12 rounded-2xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center">
+                            <i data-lucide="scissors" class="w-6 h-6 text-amber-400"></i>
+                        </div>
+                        <div>
+                            <h3 class="text-2xl font-medium tracking-tight">1. Trimming</h3>
+                            <p class="text-neutral-500 text-sm">Also called Deletion or Removal</p>
+                        </div>
+                    </div>
+                    <p class="text-neutral-400 font-light leading-relaxed mb-6">Simply remove all rows containing outliers.</p>
+
+                    <!-- Visual -->
+                    <div class="bg-black rounded-xl p-6 mb-6">
+                        <div class="flex items-center gap-3 mb-3">
+                            <span class="text-xs font-mono text-neutral-500">Original dataset</span>
+                        </div>
+                        <div class="flex flex-wrap gap-2 mb-4">
+                            <span class="px-3 py-1.5 rounded-lg bg-neutral-800 text-sm text-white">Row</span>
+                            <span class="px-3 py-1.5 rounded-lg bg-neutral-800 text-sm text-white">Row</span>
+                            <span class="px-3 py-1.5 rounded-lg bg-neutral-800 text-sm text-white">Row</span>
+                            <span class="px-3 py-1.5 rounded-lg bg-neutral-800 text-sm text-white">Row</span>
+                            <span class="px-3 py-1.5 rounded-lg bg-red-500/20 border border-red-500/30 text-sm text-red-400 line-through">Outlier</span>
+                            <span class="px-3 py-1.5 rounded-lg bg-neutral-800 text-sm text-white">Row</span>
+                            <span class="px-3 py-1.5 rounded-lg bg-neutral-800 text-sm text-white">Row</span>
+                        </div>
+                        <div class="flex items-center gap-2 text-neutral-600 text-xs mb-3">
+                            <i data-lucide="arrow-down" class="w-4 h-4"></i>
+                            <span>Remove outlier rows</span>
+                        </div>
+                        <div class="flex flex-wrap gap-2">
+                            <span class="px-3 py-1.5 rounded-lg bg-neutral-800 text-sm text-white">Row</span>
+                            <span class="px-3 py-1.5 rounded-lg bg-neutral-800 text-sm text-white">Row</span>
+                            <span class="px-3 py-1.5 rounded-lg bg-neutral-800 text-sm text-white">Row</span>
+                            <span class="px-3 py-1.5 rounded-lg bg-neutral-800 text-sm text-white">Row</span>
+                            <span class="px-3 py-1.5 rounded-lg bg-neutral-800 text-sm text-white">Row</span>
+                            <span class="px-3 py-1.5 rounded-lg bg-neutral-800 text-sm text-white">Row</span>
+                        </div>
+                    </div>
+
+                    <!-- Example numbers -->
+                    <div class="grid grid-cols-3 gap-3 mb-6">
+                        <div class="text-center p-3 bg-neutral-800/30 rounded-lg">
+                            <p class="text-xs text-neutral-500 mb-1">Original</p>
+                            <p class="font-heading font-semibold text-white">1000</p>
+                        </div>
+                        <div class="text-center p-3 bg-red-500/5 border border-red-500/20 rounded-lg">
+                            <p class="text-xs text-red-400 mb-1">Outliers</p>
+                            <p class="font-heading font-semibold text-red-400">5</p>
+                        </div>
+                        <div class="text-center p-3 bg-lime-400/5 border border-lime-400/20 rounded-lg">
+                            <p class="text-xs text-lime-400 mb-1">New</p>
+                            <p class="font-heading font-semibold text-lime-400">995</p>
+                        </div>
+                    </div>
+
+                    <!-- Pros & Cons -->
+                    <div class="grid md:grid-cols-2 gap-4">
+                        <div>
+                            <p class="text-sm font-medium text-lime-400 mb-2 flex items-center gap-2">
+                                <i data-lucide="thumbs-up" class="w-4 h-4"></i> Advantages
+                            </p>
+                            <ul class="space-y-2 text-sm text-neutral-400">
+                                <li class="flex items-start gap-2"><i data-lucide="check" class="w-4 h-4 text-lime-400 shrink-0 mt-0.5"></i>Very simple</li>
+                                <li class="flex items-start gap-2"><i data-lucide="check" class="w-4 h-4 text-lime-400 shrink-0 mt-0.5"></i>Removes extreme noise</li>
+                            </ul>
+                        </div>
+                        <div>
+                            <p class="text-sm font-medium text-red-400 mb-2 flex items-center gap-2">
+                                <i data-lucide="thumbs-down" class="w-4 h-4"></i> Disadvantages
+                            </p>
+                            <ul class="space-y-2 text-sm text-neutral-400">
+                                <li class="flex items-start gap-2"><i data-lucide="x" class="w-4 h-4 text-red-400 shrink-0 mt-0.5"></i>Data loss</li>
+                                <li class="flex items-start gap-2"><i data-lucide="x" class="w-4 h-4 text-red-400 shrink-0 mt-0.5"></i>Dangerous if dataset is small</li>
+                                <li class="flex items-start gap-2"><i data-lucide="x" class="w-4 h-4 text-red-400 shrink-0 mt-0.5"></i>Genuine observations may be removed</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Capping -->
+                <div class="card-hover bg-neutral-900/50 border border-lime-400/20 rounded-2xl p-8" style="box-shadow: 0 0 30px rgba(132,204,22,0.1);">
+                    <div class="flex items-center gap-4 mb-6">
+                        <div class="w-12 h-12 rounded-2xl bg-lime-400/10 border border-lime-400/20 flex items-center justify-center">
+                            <i data-lucide="clamp" class="w-6 h-6 text-lime-400"></i>
+                        </div>
+                        <div>
+                            <h3 class="text-2xl font-medium tracking-tight">2. Capping <span class="text-neutral-500 text-lg">(Winsorization)</span></h3>
+                            <p class="text-lime-400/60 text-sm">✦ Frequently preferred over trimming</p>
+                        </div>
+                    </div>
+                    <p class="text-neutral-400 font-light leading-relaxed mb-6">Instead of deleting data, <span class="text-white font-medium">replace extreme values with the boundary values</span>.</p>
+
+                    <!-- Visual - Upper -->
+                    <div class="bg-black rounded-xl p-6 mb-4">
+                        <p class="text-xs font-mono text-neutral-500 mb-3">Upper Limit = 80</p>
+                        <div class="flex items-center gap-3 flex-wrap">
+                            <span class="px-3 py-1.5 rounded-lg bg-red-500/10 border border-red-500/20 text-sm text-red-400 line-through">85</span>
+                            <i data-lucide="arrow-right" class="w-4 h-4 text-neutral-600"></i>
+                            <span class="px-3 py-1.5 rounded-lg bg-lime-400/10 border border-lime-400/20 text-sm text-lime-400 font-medium">80</span>
+                            <span class="px-3 py-1.5 rounded-lg bg-red-500/10 border border-red-500/20 text-sm text-red-400 line-through ml-2">88</span>
+                            <i data-lucide="arrow-right" class="w-4 h-4 text-neutral-600"></i>
+                            <span class="px-3 py-1.5 rounded-lg bg-lime-400/10 border border-lime-400/20 text-sm text-lime-400 font-medium">80</span>
+                            <span class="px-3 py-1.5 rounded-lg bg-red-500/10 border border-red-500/20 text-sm text-red-400 line-through ml-2">92</span>
+                            <i data-lucide="arrow-right" class="w-4 h-4 text-neutral-600"></i>
+                            <span class="px-3 py-1.5 rounded-lg bg-lime-400/10 border border-lime-400/20 text-sm text-lime-400 font-medium">80</span>
+                        </div>
+                    </div>
+
+                    <!-- Visual - Lower -->
+                    <div class="bg-black rounded-xl p-6 mb-6">
+                        <p class="text-xs font-mono text-neutral-500 mb-3">Lower Limit = 20</p>
+                        <div class="flex items-center gap-3 flex-wrap">
+                            <span class="px-3 py-1.5 rounded-lg bg-red-500/10 border border-red-500/20 text-sm text-red-400 line-through">10</span>
+                            <i data-lucide="arrow-right" class="w-4 h-4 text-neutral-600"></i>
+                            <span class="px-3 py-1.5 rounded-lg bg-lime-400/10 border border-lime-400/20 text-sm text-lime-400 font-medium">20</span>
+                            <span class="px-3 py-1.5 rounded-lg bg-red-500/10 border border-red-500/20 text-sm text-red-400 line-through ml-2">15</span>
+                            <i data-lucide="arrow-right" class="w-4 h-4 text-neutral-600"></i>
+                            <span class="px-3 py-1.5 rounded-lg bg-lime-400/10 border border-lime-400/20 text-sm text-lime-400 font-medium">20</span>
+                            <span class="px-3 py-1.5 rounded-lg bg-red-500/10 border border-red-500/20 text-sm text-red-400 line-through ml-2">18</span>
+                            <i data-lucide="arrow-right" class="w-4 h-4 text-neutral-600"></i>
+                            <span class="px-3 py-1.5 rounded-lg bg-lime-400/10 border border-lime-400/20 text-sm text-lime-400 font-medium">20</span>
+                        </div>
+                    </div>
+
+                    <p class="text-neutral-300 mb-6 flex items-center gap-2">
+                        <i data-lucide="check-circle" class="w-5 h-5 text-lime-400"></i>
+                        No rows are deleted.
+                    </p>
+
+                    <!-- Pros -->
+                    <div>
+                        <p class="text-sm font-medium text-lime-400 mb-2 flex items-center gap-2">
+                            <i data-lucide="thumbs-up" class="w-4 h-4"></i> Advantages
+                        </p>
+                        <ul class="space-y-2 text-sm text-neutral-400">
+                            <li class="flex items-start gap-2"><i data-lucide="check" class="w-4 h-4 text-lime-400 shrink-0 mt-0.5"></i>Preserves dataset size</li>
+                            <li class="flex items-start gap-2"><i data-lucide="check" class="w-4 h-4 text-lime-400 shrink-0 mt-0.5"></i>Less information loss</li>
+                            <li class="flex items-start gap-2"><i data-lucide="check" class="w-4 h-4 text-lime-400 shrink-0 mt-0.5"></i>Frequently preferred over trimming</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <div class="section-divider mx-6 lg:mx-12"></div>
+
+        <!-- Algorithm Summary -->
+        <section id="algorithm" class="py-24 md:py-32 px-6 lg:px-12">
+            <div class="max-w-4xl mx-auto">
+                <div class="flex items-center gap-3 mb-6">
+                    <div class="w-10 h-10 rounded-xl bg-lime-400/10 border border-lime-400/20 flex items-center justify-center">
+                        <i data-lucide="list-ordered" class="w-5 h-5 text-lime-400"></i>
+                    </div>
+                    <span class="font-mono text-xs uppercase tracking-widest text-neutral-500">Summary</span>
+                </div>
+                <h2 class="text-3xl md:text-5xl font-medium tracking-tight mb-12">Summary of the Algorithm</h2>
+
+                <!-- Timeline -->
+                <div class="relative pl-12">
+                    <!-- Vertical line -->
+                    <div class="absolute left-4 top-2 bottom-2 w-0.5 timeline-line rounded-full"></div>
+
+                    <!-- Step 1 -->
+                    <div class="relative mb-10">
+                        <div class="absolute -left-8 w-7 h-7 rounded-full bg-lime-400 flex items-center justify-center">
+                            <span class="text-black text-xs font-bold">1</span>
+                        </div>
+                        <div class="bg-neutral-900/50 border border-neutral-800 rounded-xl p-5">
+                            <p class="text-white font-medium mb-1">Check Distribution</p>
+                            <p class="text-neutral-400 text-sm">Check whether the feature is normally distributed.</p>
+                        </div>
+                    </div>
+
+                    <!-- Step 2 -->
+                    <div class="relative mb-10">
+                        <div class="absolute -left-8 w-7 h-7 rounded-full bg-lime-400/60 flex items-center justify-center">
+                            <span class="text-black text-xs font-bold">2</span>
+                        </div>
+                        <div class="bg-neutral-900/50 border border-neutral-800 rounded-xl p-5">
+                            <p class="text-white font-medium mb-1">Calculate Mean</p>
+                            <p class="text-neutral-400 text-sm">Compute the mean (μ) of the feature.</p>
+                        </div>
+                    </div>
+
+                    <!-- Step 3 -->
+                    <div class="relative mb-10">
+                        <div class="absolute -left-8 w-7 h-7 rounded-full bg-lime-400/60 flex items-center justify-center">
+                            <span class="text-black text-xs font-bold">3</span>
+                        </div>
+                        <div class="bg-neutral-900/50 border border-neutral-800 rounded-xl p-5">
+                            <p class="text-white font-medium mb-1">Calculate Standard Deviation</p>
+                            <p class="text-neutral-400 text-sm">Compute the standard deviation (σ) of the feature.</p>
+                        </div>
+                    </div>
+
+                    <!-- Step 4 -->
+                    <div class="relative mb-10">
+                        <div class="absolute -left-8 w-7 h-7 rounded-full bg-lime-400/60 flex items-center justify-center">
+                            <span class="text-black text-xs font-bold">4</span>
+                        </div>
+                        <div class="bg-neutral-900/50 border border-neutral-800 rounded-xl p-5">
+                            <p class="text-white font-medium mb-1">Compute Boundaries</p>
+                            <div class="formula-box rounded-lg p-3 mt-2 text-center">
+                                <p class="text-lime-400 font-mono text-sm">Upper Limit = μ + 3σ</p>
+                                <p class="text-lime-400 font-mono text-sm">Lower Limit = μ − 3σ</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Step 5 -->
+                    <div class="relative mb-10">
+                        <div class="absolute -left-8 w-7 h-7 rounded-full bg-lime-400/60 flex items-center justify-center">
+                            <span class="text-black text-xs font-bold">5</span>
+                        </div>
+                        <div class="bg-neutral-900/50 border border-neutral-800 rounded-xl p-5">
+                            <p class="text-white font-medium mb-1">Detect Outliers</p>
+                            <p class="text-neutral-400 text-sm">Detect observations outside these limits.</p>
+                        </div>
+                    </div>
+
+                    <!-- Step 6 -->
+                    <div class="relative">
+                        <div class="absolute -left-8 w-7 h-7 rounded-full bg-lime-400 flex items-center justify-center">
+                            <span class="text-black text-xs font-bold">6</span>
+                        </div>
+                        <div class="bg-neutral-900/50 border border-lime-400/20 rounded-xl p-5">
+                            <p class="text-white font-medium mb-1">Choose Handling Method</p>
+                            <div class="flex gap-3 mt-2">
+                                <span class="px-3 py-1.5 rounded-lg bg-amber-500/10 border border-amber-500/20 text-xs text-amber-400">Trimming</span>
+                                <span class="text-neutral-600 text-xs">or</span>
+                                <span class="px-3 py-1.5 rounded-lg bg-lime-400/10 border border-lime-400/20 text-xs text-lime-400">Capping</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <div class="section-divider mx-6 lg:mx-12"></div>
+
+        <!-- Practical Example -->
+        <section id="practical" class="py-24 md:py-32 px-6 lg:px-12">
+            <div class="max-w-4xl mx-auto">
+                <div class="flex items-center gap-3 mb-6">
+                    <div class="w-10 h-10 rounded-xl bg-lime-400/10 border border-lime-400/20 flex items-center justify-center">
+                        <i data-lucide="code-2" class="w-5 h-5 text-lime-400"></i>
+                    </div>
+                    <span class="font-mono text-xs uppercase tracking-widest text-neutral-500">Hands-On</span>
+                </div>
+                <h2 class="text-3xl md:text-5xl font-medium tracking-tight mb-4">Practical Example</h2>
+                <p class="text-lg text-neutral-400 font-light leading-relaxed mb-8">Dataset: <code class="text-lime-400 bg-lime-400/10 px-2 py-0.5 rounded text-sm">placement.csv</code></p>
+
+                <!-- Dataset description -->
+                <div class="grid md:grid-cols-3 gap-4 mb-12">
+                    <div class="bg-neutral-900/50 border border-neutral-800 rounded-xl p-5 card-hover">
+                        <i data-lucide="graduation-cap" class="w-6 h-6 text-lime-400 mb-3"></i>
+                        <h4 class="text-white font-medium mb-1">CGPA</h4>
+                        <p class="text-neutral-500 text-sm">Student performance after six semesters</p>
+                    </div>
+                    <div class="bg-neutral-900/50 border border-neutral-800 rounded-xl p-5 card-hover">
+                        <i data-lucide="file-check" class="w-6 h-6 text-lime-400 mb-3"></i>
+                        <h4 class="text-white font-medium mb-1">Placement Exam Marks</h4>
+                        <p class="text-neutral-500 text-sm">Aptitude, Coding, English, Logical reasoning</p>
+                    </div>
+                    <div class="bg-neutral-900/50 border border-neutral-800 rounded-xl p-5 card-hover">
+                        <i data-lucide="badge-check" class="w-6 h-6 text-lime-400 mb-3"></i>
+                        <h4 class="text-white font-medium mb-1">Placement</h4>
+                        <p class="text-neutral-500 text-sm">Binary: Placed / Not Placed</p>
+                    </div>
+                </div>
+
+                <!-- Step 1 - Distribution -->
+                <h3 class="text-xl font-medium tracking-tight mb-4 flex items-center gap-3">
+                    <span class="w-8 h-8 rounded-lg bg-lime-400/10 flex items-center justify-center text-lime-400 text-sm font-bold">1</span>
+                    Check Distribution
+                </h3>
+                <p class="text-neutral-400 font-light leading-relaxed mb-4">The instructor first plots the distributions.</p>
+                <div class="grid md:grid-cols-2 gap-4 mb-12">
+                    <div class="bg-lime-400/5 border border-lime-400/20 rounded-xl p-5">
+                        <div class="flex items-center gap-2 mb-2">
+                            <i data-lucide="check-circle" class="w-4 h-4 text-lime-400"></i>
+                            <span class="text-white font-medium text-sm">CGPA</span>
+                        </div>
+                        <p class="text-neutral-400 text-sm">Looks approximately normal.</p>
+                        <p class="text-lime-400 text-xs mt-2 font-mono">✅ Z-score can be applied</p>
+                    </div>
+                    <div class="bg-red-500/5 border border-red-500/20 rounded-xl p-5">
+                        <div class="flex items-center gap-2 mb-2">
+                            <i data-lucide="x-circle" class="w-4 h-4 text-red-400"></i>
+                            <span class="text-white font-medium text-sm">Placement Exam Marks</span>
+                        </div>
+                        <p class="text-neutral-400 text-sm">Heavily left-skewed (negative skew) — exam was difficult.</p>
+                        <p class="text-red-400 text-xs mt-2 font-mono">❌ Z-score cannot be applied</p>
+                    </div>
+                </div>
+
+                <!-- Step 2 - Descriptive Stats -->
+                <h3 class="text-xl font-medium tracking-tight mb-4 flex items-center gap-3">
+                    <span class="w-8 h-8 rounded-lg bg-lime-400/10 flex items-center justify-center text-lime-400 text-sm font-bold">2</span>
+                    Descriptive Statistics (CGPA)
+                </h3>
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-12">
+                    <div class="bg-neutral-900/50 border border-neutral-800 rounded-xl p-4 text-center">
+                        <p class="text-xs text-neutral-500 mb-1">Mean</p>
+                        <p class="font-heading font-semibold text-white text-xl">6.96</p>
+                    </div>
+                    <div class="bg-neutral-900/50 border border-neutral-800 rounded-xl p-4 text-center">
+                        <p class="text-xs text-neutral-500 mb-1">Std Dev</p>
+                        <p class="font-heading font-semibold text-white text-xl">0.61</p>
+                    </div>
+                    <div class="bg-neutral-900/50 border border-neutral-800 rounded-xl p-4 text-center">
+                        <p class="text-xs text-neutral-500 mb-1">Min</p>
+                        <p class="font-heading font-semibold text-white text-xl">4.89</p>
+                    </div>
+                    <div class="bg-neutral-900/50 border border-neutral-800 rounded-xl p-4 text-center">
+                        <p class="text-xs text-neutral-500 mb-1">Max</p>
+                        <p class="font-heading font-semibold text-white text-xl">9.12</p>
+                    </div>
+                </div>
+
+                <!-- Step 3 - Boundaries -->
+                <h3 class="text-xl font-medium tracking-tight mb-4 flex items-center gap-3">
+                    <span class="w-8 h-8 rounded-lg bg-lime-400/10 flex items-center justify-center text-lime-400 text-sm font-bold">3</span>
+                    Calculate Boundaries
+                </h3>
+                <div class="grid md:grid-cols-2 gap-4 mb-12">
+                    <div class="formula-box rounded-xl p-5 text-center">
+                        <p class="text-xs text-neutral-500 mb-2">Upper Limit</p>
+                        <p class="font-mono text-sm text-neutral-400 mb-1">6.96 + 3(0.61) =</p>
+                        <p class="font-heading font-semibold text-lime-400 text-2xl">8.80</p>
+                    </div>
+                    <div class="formula-box rounded-xl p-5 text-center">
+                        <p class="text-xs text-neutral-500 mb-2">Lower Limit</p>
+                        <p class="font-mono text-sm text-neutral-400 mb-1">6.96 − 3(0.61) =</p>
+                        <p class="font-heading font-semibold text-lime-400 text-2xl">5.11</p>
+                    </div>
+                </div>
+                <p class="text-neutral-400 font-light mb-12">Any CGPA <code class="text-red-400 bg-red-400/10 px-2 py-0.5 rounded text-sm">&gt;8.80</code> or <code class="text-red-400 bg-red-400/10 px-2 py-0.5 rounded text-sm">&lt;5.11</code> is considered an outlier.</p>
+
+                <!-- Step 4 - Find Outliers -->
+                <h3 class="text-xl font-medium tracking-tight mb-4 flex items-center gap-3">
+                    <span class="w-8 h-8 rounded-lg bg-lime-400/10 flex items-center justify-center text-lime-400 text-sm font-bold">4</span>
+                    Find Outliers
+                </h3>
+                <p class="text-neutral-400 font-light leading-relaxed mb-4">Using filtering, <span class="text-white font-medium">five students</span> were identified as outliers.</p>
+                <div class="bg-lime-400/5 border border-lime-400/20 rounded-xl p-4 mb-4">
+                    <p class="text-neutral-300 text-sm">Interestingly, most high-CGPA students were placed. Students with extremely low CGPA were not placed.</p>
+                </div>
+
+                <!-- Step 5 - Trimming Code -->
+                <h3 class="text-xl font-medium tracking-tight mb-4 flex items-center gap-3 mt-12">
+                    <span class="w-8 h-8 rounded-lg bg-amber-500/10 flex items-center justify-center text-amber-400 text-sm font-bold">5</span>
+                    Trimming in Code
+                </h3>
+                <div class="code-block p-6 mb-4">
+                    <div class="flex items-center justify-between mb-4">
+                        <div class="flex items-center gap-2">
+                            <div class="w-3 h-3 rounded-full bg-red-500/60"></div>
+                            <div class="w-3 h-3 rounded-full bg-amber-500/60"></div>
+                            <div class="w-3 h-3 rounded-full bg-lime-500/60"></div>
+                            <span class="text-xs text-neutral-600 ml-2">trimming.py</span>
+                        </div>
+                        <button onclick="copyCode(this)" class="text-xs text-neutral-500 hover:text-lime-400 transition-colors flex items-center gap-1">
+                            <i data-lucide="copy" class="w-3.5 h-3.5"></i>
+                            Copy
+                        </button>
+                    </div>
+<pre class="text-neutral-300"><span class="comment"># Filter rows within bounds</span>
+<span class="var">new_df</span> = <span class="var">df</span>[(<span class="var">df</span>[<span class="string">'CGPA'</span>] <span class="keyword">&lt;=</span> <span class="var">upper_limit</span>) <span class="keyword">&</span>
+        (<span class="var">df</span>[<span class="string">'CGPA'</span>] <span class="keyword">&gt;=</span> <span class="var">lower_limit</span>)]
+
+<span class="comment"># Result: 5 rows removed</span>
+<span class="func">print</span>(<span class="var">new_df</span>.shape)  <span class="comment"># (995, 3)</span></pre>
+                </div>
+                <p class="text-neutral-400 text-sm mb-12">Result: Five rows removed. New dataset contains <span class="text-white font-medium">995 rows</span> instead of <span class="text-white font-medium">1000 rows</span>.</p>
+
+                <!-- Alternative Detection -->
+                <h3 class="text-xl font-medium tracking-tight mb-4 flex items-center gap-3">
+                    <span class="w-8 h-8 rounded-lg bg-lime-400/10 flex items-center justify-center text-lime-400 text-sm font-bold">Alt</span>
+                    Alternative Detection using Z-Score
+                </h3>
+                <div class="code-block p-6 mb-4">
+                    <div class="flex items-center justify-between mb-4">
+                        <div class="flex items-center gap-2">
+                            <div class="w-3 h-3 rounded-full bg-red-500/60"></div>
+                            <div class="w-3 h-3 rounded-full bg-amber-500/60"></div>
+                            <div class="w-3 h-3 rounded-full bg-lime-500/60"></div>
+                            <span class="text-xs text-neutral-600 ml-2">zscore_detect.py</span>
+                        </div>
+                        <button onclick="copyCode(this)" class="text-xs text-neutral-500 hover:text-lime-400 transition-colors flex items-center gap-1">
+                            <i data-lucide="copy" class="w-3.5 h-3.5"></i>
+                            Copy
+                        </button>
+                    </div>
+<pre class="text-neutral-300"><span class="comment"># Calculate Z-score for every student</span>
+<span class="var">df</span>[<span class="string">'z_score'</span>] = (<span class="var">df</span>[<span class="string">'CGPA'</span>] - <span class="var">df</span>[<span class="string">'CGPA'</span>].<span class="func">mean</span>()) / <span class="var">df</span>[<span class="string">'CGPA'</span>].<span class="func">std</span>()
+
+<span class="comment"># Keep only -3 ≤ Z ≤ 3</span>
+<span class="var">new_df</span> = <span class="var">df</span>[(<span class="var">df</span>[<span class="string">'z_score'</span>] <span class="keyword">&gt;=</span> <span class="number">-3</span>) <span class="keyword">&</span> (<span class="var">df</span>[<span class="string">'z_score'</span>] <span class="keyword">&lt;=</span> <span class="number">3</span>)]
+
+<span class="comment"># The result is identical</span></pre>
+                </div>
+
+                <!-- Step 6 - Capping Code -->
+                <h3 class="text-xl font-medium tracking-tight mb-4 flex items-center gap-3 mt-12">
+                    <span class="w-8 h-8 rounded-lg bg-lime-400/10 flex items-center justify-center text-lime-400 text-sm font-bold">6</span>
+                    Capping in Code
+                </h3>
+                <div class="code-block p-6 mb-4">
+                    <div class="flex items-center justify-between mb-4">
+                        <div class="flex items-center gap-2">
+                            <div class="w-3 h-3 rounded-full bg-red-500/60"></div>
+                            <div class="w-3 h-3 rounded-full bg-amber-500/60"></div>
+                            <div class="w-3 h-3 rounded-full bg-lime-500/60"></div>
+                            <span class="text-xs text-neutral-600 ml-2">capping.py</span>
+                        </div>
+                        <button onclick="copyCode(this)" class="text-xs text-neutral-500 hover:text-lime-400 transition-colors flex items-center gap-1">
+                            <i data-lucide="copy" class="w-3.5 h-3.5"></i>
+                            Copy
+                        </button>
+                    </div>
+<pre class="text-neutral-300"><span class="keyword">import</span> numpy <span class="keyword">as</span> np
+
+<span class="comment"># Replace values beyond upper limit with upper limit</span>
+<span class="comment"># Replace values below lower limit with lower limit</span>
+<span class="var">df</span>[<span class="string">'CGPA'</span>] = np.<span class="func">where</span>(
+    <span class="var">df</span>[<span class="string">'CGPA'</span>] <span class="keyword">&gt;</span> <span class="var">upper_limit</span>,
+    <span class="var">upper_limit</span>,
+    np.<span class="func">where</span>(
+        <span class="var">df</span>[<span class="string">'CGPA'</span>] <span class="keyword">&lt;</span> <span class="var">lower_limit</span>,
+        <span class="var">lower_limit</span>,
+        <span class="var">df</span>[<span class="string">'CGPA'</span>]
+    )
+)</pre>
+                </div>
+
+                <!-- Result After Capping -->
+                <div class="bg-neutral-900/50 border border-lime-400/20 rounded-2xl p-6 mt-8">
+                    <h4 class="text-white font-medium mb-3 flex items-center gap-2">
+                        <i data-lucide="check-circle" class="w-5 h-5 text-lime-400"></i>
+                        Result After Capping
+                    </h4>
+                    <ul class="space-y-2 text-sm text-neutral-400">
+                        <li class="flex items-start gap-2"><i data-lucide="check" class="w-4 h-4 text-lime-400 shrink-0 mt-0.5"></i>The number of rows remains <span class="text-white font-medium">unchanged</span>.</li>
+                        <li class="flex items-start gap-2"><i data-lucide="check" class="w-4 h-4 text-lime-400 shrink-0 mt-0.5"></i>Only the extreme values are adjusted.</li>
+                        <li class="flex items-start gap-2"><i data-lucide="check" class="w-4 h-4 text-lime-400 shrink-0 mt-0.5"></i>Minimum value becomes <span class="text-lime-400 font-medium">5.11</span></li>
+                        <li class="flex items-start gap-2"><i data-lucide="check" class="w-4 h-4 text-lime-400 shrink-0 mt-0.5"></i>Maximum value becomes <span class="text-lime-400 font-medium">8.80</span></li>
+                        <li class="flex items-start gap-2"><i data-lucide="check" class="w-4 h-4 text-lime-400 shrink-0 mt-0.5"></i>The mean changes only slightly, while the influence of extreme values is <span class="text-white font-medium">greatly reduced</span>.</li>
+                    </ul>
+                </div>
+            </div>
+        </section>
+
+        <div class="section-divider mx-6 lg:mx-12"></div>
+
+        <!-- Advantages -->
+        <section id="advantages" class="py-24 md:py-32 px-6 lg:px-12">
+            <div class="max-w-4xl mx-auto">
+                <div class="flex items-center gap-3 mb-6">
+                    <div class="w-10 h-10 rounded-xl bg-lime-400/10 border border-lime-400/20 flex items-center justify-center">
+                        <i data-lucide="thumbs-up" class="w-5 h-5 text-lime-400"></i>
+                    </div>
+                    <span class="font-mono text-xs uppercase tracking-widest text-neutral-500">Pros</span>
+                </div>
+                <h2 class="text-3xl md:text-5xl font-medium tracking-tight mb-12">Advantages of Z-Score Method</h2>
+
+                <div class="grid md:grid-cols-2 gap-4">
+                    <div class="card-hover bg-neutral-900/50 border border-neutral-800 rounded-xl p-5 flex items-start gap-4">
+                        <div class="w-10 h-10 rounded-lg bg-lime-400/10 flex items-center justify-center shrink-0">
+                            <i data-lucide="brain" class="w-5 h-5 text-lime-400"></i>
+                        </div>
+                        <p class="text-neutral-300 text-sm">Easy to understand and implement.</p>
+                    </div>
+                    <div class="card-hover bg-neutral-900/50 border border-neutral-800 rounded-xl p-5 flex items-start gap-4">
+                        <div class="w-10 h-10 rounded-lg bg-lime-400/10 flex items-center justify-center shrink-0">
+                            <i data-lucide="zap" class="w-5 h-5 text-lime-400"></i>
+                        </div>
+                        <p class="text-neutral-300 text-sm">Computationally efficient.</p>
+                    </div>
+                    <div class="card-hover bg-neutral-900/50 border border-neutral-800 rounded-xl p-5 flex items-start gap-4">
+                        <div class="w-10 h-10 rounded-lg bg-lime-400/10 flex items-center justify-center shrink-0">
+                            <i data-lucide="bell" class="w-5 h-5 text-lime-400"></i>
+                        </div>
+                        <p class="text-neutral-300 text-sm">Works well on Gaussian (normal) data.</p>
+                    </div>
+                    <div class="card-hover bg-neutral-900/50 border border-neutral-800 rounded-xl p-5 flex items-start gap-4">
+                        <div class="w-10 h-10 rounded-lg bg-lime-400/10 flex items-center justify-center shrink-0">
+                            <i data-lucide="globe" class="w-5 h-5 text-lime-400"></i>
+                        </div>
+                        <p class="text-neutral-300 text-sm">Widely used in statistics and machine learning.</p>
+                    </div>
+                    <div class="card-hover bg-neutral-900/50 border border-neutral-800 rounded-xl p-5 flex items-start gap-4 md:col-span-2">
+                        <div class="w-10 h-10 rounded-lg bg-lime-400/10 flex items-center justify-center shrink-0">
+                            <i data-lucide="target" class="w-5 h-5 text-lime-400"></i>
+                        </div>
+                        <p class="text-neutral-300 text-sm">Effective for detecting extreme observations.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <div class="section-divider mx-6 lg:mx-12"></div>
+
+        <!-- Limitations -->
+        <section id="limitations" class="py-24 md:py-32 px-6 lg:px-12">
+            <div class="max-w-4xl mx-auto">
+                <div class="flex items-center gap-3 mb-6">
+                    <div class="w-10 h-10 rounded-xl bg-red-500/10 border border-red-500/20 flex items-center justify-center">
+                        <i data-lucide="thumbs-down" class="w-5 h-5 text-red-400"></i>
+                    </div>
+                    <span class="font-mono text-xs uppercase tracking-widest text-neutral-500">Cons</span>
+                </div>
+                <h2 class="text-3xl md:text-5xl font-medium tracking-tight mb-12">Limitations of Z-Score Method</h2>
+
+                <div class="space-y-4">
+                    <div class="bg-neutral-900/50 border border-neutral-800 rounded-xl p-5 flex items-start gap-4 card-hover">
+                        <div class="w-10 h-10 rounded-lg bg-red-500/10 flex items-center justify-center shrink-0">
+                            <i data-lucide="bar-chart-3" class="w-5 h-5 text-red-400"></i>
+                        </div>
+                        <p class="text-neutral-300 text-sm">Assumes the data is <span class="text-white font-medium">normally distributed</span>.</p>
+                    </div>
+                    <div class="bg-neutral-900/50 border border-neutral-800 rounded-xl p-5 flex items-start gap-4 card-hover">
+                        <div class="w-10 h-10 rounded-lg bg-red-500/10 flex items-center justify-center shrink-0">
+                            <i data-lucide="trending-up" class="w-5 h-5 text-red-400"></i>
+                        </div>
+                        <p class="text-neutral-300 text-sm">Mean and standard deviation are <span class="text-white font-medium">sensitive to outliers</span>, so very extreme values can distort the thresholds.</p>
+                    </div>
+                    <div class="bg-neutral-900/50 border border-neutral-800 rounded-xl p-5 flex items-start gap-4 card-hover">
+                        <div class="w-10 h-10 rounded-lg bg-red-500/10 flex items-center justify-center shrink-0">
+                            <i data-lucide="skew" class="w-5 h-5 text-red-400"></i>
+                        </div>
+                        <p class="text-neutral-300 text-sm">Performs poorly on <span class="text-white font-medium">skewed or heavy-tailed</span> distributions.</p>
+                    </div>
+                    <div class="bg-neutral-900/50 border border-neutral-800 rounded-xl p-5 flex items-start gap-4 card-hover">
+                        <div class="w-10 h-10 rounded-lg bg-red-500/10 flex items-center justify-center shrink-0">
+                            <i data-lucide="hash" class="w-5 h-5 text-red-400"></i>
+                        </div>
+                        <p class="text-neutral-300 text-sm">Not suitable for <span class="text-white font-medium">categorical variables</span>.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <div class="section-divider mx-6 lg:mx-12"></div>
+
+        <!-- When NOT to Use -->
+        <section id="when-not" class="py-24 md:py-32 px-6 lg:px-12">
+            <div class="max-w-4xl mx-auto">
+                <div class="flex items-center gap-3 mb-6">
+                    <div class="w-10 h-10 rounded-xl bg-red-500/10 border border-red-500/20 flex items-center justify-center">
+                        <i data-lucide="ban" class="w-5 h-5 text-red-400"></i>
+                    </div>
+                    <span class="font-mono text-xs uppercase tracking-widest text-neutral-500">Caution</span>
+                </div>
+                <h2 class="text-3xl md:text-5xl font-medium tracking-tight mb-8">When NOT to Use Z-Score</h2>
+                <p class="text-lg text-neutral-400 font-light leading-relaxed mb-8">Avoid using it when:</p>
+
+                <div class="space-y-3 mb-10">
+                    <div class="flex items-start gap-3 p-4 rounded-xl bg-red-500/5 border border-red-500/20">
+                        <i data-lucide="x-circle" class="w-5 h-5 text-red-400 shrink-0 mt-0.5"></i>
+                        <span class="text-neutral-300">Data is highly skewed.</span>
+                    </div>
+                    <div class="flex items-start gap-3 p-4 rounded-xl bg-red-500/5 border border-red-500/20">
+                        <i data-lucide="x-circle" class="w-5 h-5 text-red-400 shrink-0 mt-0.5"></i>
+                        <span class="text-neutral-300">Distribution is unknown and clearly non-normal.</span>
+                    </div>
+                    <div class="flex items-start gap-3 p-4 rounded-xl bg-red-500/5 border border-red-500/20">
+                        <i data-lucide="x-circle" class="w-5 h-5 text-red-400 shrink-0 mt-0.5"></i>
+                        <span class="text-neutral-300">The dataset contains many genuine extreme values.</span>
+                    </div>
+                </div>
+
+                <p class="text-lg text-neutral-400 font-light leading-relaxed mb-6">In such cases, prefer methods like:</p>
+
+                <div class="grid md:grid-cols-2 gap-4">
+                    <div class="card-hover bg-neutral-900/50 border border-neutral-800 rounded-xl p-5">
+                        <div class="flex items-center gap-3 mb-2">
+                            <i data-lucide="bar-chart-2" class="w-5 h-5 text-amber-400"></i>
+                            <h4 class="text-white font-medium">IQR (Interquartile Range)</h4>
+                        </div>
+                        <p class="text-neutral-500 text-sm">For skewed distributions.</p>
+                    </div>
+                    <div class="card-hover bg-neutral-900/50 border border-neutral-800 rounded-xl p-5">
+                        <div class="flex items-center gap-3 mb-2">
+                            <i data-lucide="shield" class="w-5 h-5 text-amber-400"></i>
+                            <h4 class="text-white font-medium">Modified Z-Score</h4>
+                        </div>
+                        <p class="text-neutral-500 text-sm">Uses median and MAD — more robust.</p>
+                    </div>
+                    <div class="card-hover bg-neutral-900/50 border border-neutral-800 rounded-xl p-5">
+                        <div class="flex items-center gap-3 mb-2">
+                            <i data-lucide="trees" class="w-5 h-5 text-amber-400"></i>
+                            <h4 class="text-white font-medium">Isolation Forest</h4>
+                        </div>
+                        <p class="text-neutral-500 text-sm">For multivariate or complex datasets.</p>
+                    </div>
+                    <div class="card-hover bg-neutral-900/50 border border-neutral-800 rounded-xl p-5">
+                        <div class="flex items-center gap-3 mb-2">
+                            <i data-lucide="radar" class="w-5 h-5 text-amber-400"></i>
+                            <h4 class="text-white font-medium">LOF / DBSCAN</h4>
+                        </div>
+                        <p class="text-neutral-500 text-sm">Local Outlier Factor or DBSCAN for complex patterns.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <div class="section-divider mx-6 lg:mx-12"></div>
+
+        <!-- Interview Questions -->
+        <section id="interview" class="py-24 md:py-32 px-6 lg:px-12">
+            <div class="max-w-4xl mx-auto">
+                <div class="flex items-center gap-3 mb-6">
+                    <div class="w-10 h-10 rounded-xl bg-lime-400/10 border border-lime-400/20 flex items-center justify-center">
+                        <i data-lucide="message-circle" class="w-5 h-5 text-lime-400"></i>
+                    </div>
+                    <span class="font-mono text-xs uppercase tracking-widest text-neutral-500">Preparation</span>
+                </div>
+                <h2 class="text-3xl md:text-5xl font-medium tracking-tight mb-4">Interview Questions</h2>
+                <p class="text-lg text-neutral-400 font-light leading-relaxed mb-12">Click each question to reveal the answer.</p>
+
+                <div class="space-y-3">
+                    <!-- Q1 -->
+                    <div class="bg-neutral-900/50 border border-neutral-800 rounded-xl overflow-hidden">
+                        <button onclick="toggleAccordion(this)" class="w-full flex items-center justify-between p-5 text-left hover:bg-neutral-800/30 transition-colors">
+                            <span class="text-white font-medium text-sm pr-4">1. What is an outlier?</span>
+                            <i data-lucide="plus" class="w-5 h-5 text-neutral-500 shrink-0 accordion-icon"></i>
+                        </button>
+                        <div class="accordion-content">
+                            <div class="px-5 pb-5 text-neutral-400 text-sm leading-relaxed border-t border-neutral-800/50 pt-4">
+                                An outlier is a data point that lies significantly far away from the majority of observations. It can occur due to data entry mistakes, measurement errors, equipment malfunction, natural rare events, or genuine exceptional observations. Not every outlier is incorrect — some carry valuable information.
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Q2 -->
+                    <div class="bg-neutral-900/50 border border-neutral-800 rounded-xl overflow-hidden">
+                        <button onclick="toggleAccordion(this)" class="w-full flex items-center justify-between p-5 text-left hover:bg-neutral-800/30 transition-colors">
+                            <span class="text-white font-medium text-sm pr-4">2. What assumptions does the Z-score method make?</span>
+                            <i data-lucide="plus" class="w-5 h-5 text-neutral-500 shrink-0 accordion-icon"></i>
+                        </button>
+                        <div class="accordion-content">
+                            <div class="px-5 pb-5 text-neutral-400 text-sm leading-relaxed border-t border-neutral-800/50 pt-4">
+                                The Z-score method assumes that the feature (column) is normally distributed or approximately normally distributed. If the data is heavily skewed, this method should not be used as it can lead to incorrect outlier detection.
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Q3 -->
+                    <div class="bg-neutral-900/50 border border-neutral-800 rounded-xl overflow-hidden">
+                        <button onclick="toggleAccordion(this)" class="w-full flex items-center justify-between p-5 text-left hover:bg-neutral-800/30 transition-colors">
+                            <span class="text-white font-medium text-sm pr-4">3. Explain the 68–95–99.7 empirical rule.</span>
+                            <i data-lucide="plus" class="w-5 h-5 text-neutral-500 shrink-0 accordion-icon"></i>
+                        </button>
+                        <div class="accordion-content">
+                            <div class="px-5 pb-5 text-neutral-400 text-sm leading-relaxed border-t border-neutral-800/50 pt-4">
+                                In a normal distribution: ±1σ contains ~68% of data, ±2σ contains ~95% of data, and ±3σ contains ~99.7% of data. Only 0.3% of observations lie outside ±3σ, which is why values beyond this range are considered outliers.
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Q4 -->
+                    <div class="bg-neutral-900/50 border border-neutral-800 rounded-xl overflow-hidden">
+                        <button onclick="toggleAccordion(this)" class="w-full flex items-center justify-between p-5 text-left hover:bg-neutral-800/30 transition-colors">
+                            <span class="text-white font-medium text-sm pr-4">4. What is the Z-score formula?</span>
+                            <i data-lucide="plus" class="w-5 h-5 text-neutral-500 shrink-0 accordion-icon"></i>
+                        </button>
+                        <div class="accordion-content">
+                            <div class="px-5 pb-5 text-neutral-400 text-sm leading-relaxed border-t border-neutral-800/50 pt-4">
+                                <strong class="text-white">Z = (X − μ) / σ</strong>, where X is the data value, μ is the mean, and σ is the standard deviation. It tells us how many standard deviations a value is away from the mean.
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Q5 -->
+                    <div class="bg-neutral-900/50 border border-neutral-800 rounded-xl overflow-hidden">
+                        <button onclick="toggleAccordion(this)" class="w-full flex items-center justify-between p-5 text-left hover:bg-neutral-800/30 transition-colors">
+                            <span class="text-white font-medium text-sm pr-4">5. Why are values beyond ±3σ considered outliers?</span>
+                            <i data-lucide="plus" class="w-5 h-5 text-neutral-500 shrink-0 accordion-icon"></i>
+                        </button>
+                        <div class="accordion-content">
+                            <div class="px-5 pb-5 text-neutral-400 text-sm leading-relaxed border-t border-neutral-800/50 pt-4">
+                                According to the empirical rule, 99.7% of data in a normal distribution falls within ±3σ. Only 0.3% lies outside, making such observations extremely rare and statistically suspicious — hence they are flagged as outliers.
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Q6 -->
+                    <div class="bg-neutral-900/50 border border-neutral-800 rounded-xl overflow-hidden">
+                        <button onclick="toggleAccordion(this)" class="w-full flex items-center justify-between p-5 text-left hover:bg-neutral-800/30 transition-colors">
+                            <span class="text-white font-medium text-sm pr-4">6. What is the difference between trimming and capping?</span>
+                            <i data-lucide="plus" class="w-5 h-5 text-neutral-500 shrink-0 accordion-icon"></i>
+                        </button>
+                        <div class="accordion-content">
+                            <div class="px-5 pb-5 text-neutral-400 text-sm leading-relaxed border-t border-neutral-800/50 pt-4">
+                                <strong class="text-white">Trimming</strong> removes the outlier rows entirely, causing data loss. <strong class="text-white">Capping (Winsorization)</strong> replaces extreme values with boundary values without deleting any rows, preserving dataset size. Capping is generally preferred.
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Q7 -->
+                    <div class="bg-neutral-900/50 border border-neutral-800 rounded-xl overflow-hidden">
+                        <button onclick="toggleAccordion(this)" class="w-full flex items-center justify-between p-5 text-left hover:bg-neutral-800/30 transition-colors">
+                            <span class="text-white font-medium text-sm pr-4">7. Why can't Z-score be used on heavily skewed data?</span>
+                            <i data-lucide="plus" class="w-5 h-5 text-neutral-500 shrink-0 accordion-icon"></i>
+                        </button>
+                        <div class="accordion-content">
+                            <div class="px-5 pb-5 text-neutral-400 text-sm leading-relaxed border-t border-neutral-800/50 pt-4">
+                                The Z-score method relies on the symmetric properties of a normal distribution. In skewed data, the mean is pulled toward the tail, making the μ ± 3σ boundaries inaccurate. This can cause legitimate data points to be wrongly flagged as outliers, or actual outliers to be missed.
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Q8 -->
+                    <div class="bg-neutral-900/50 border border-neutral-800 rounded-xl overflow-hidden">
+                        <button onclick="toggleAccordion(this)" class="w-full flex items-center justify-between p-5 text-left hover:bg-neutral-800/30 transition-colors">
+                            <span class="text-white font-medium text-sm pr-4">8. How do you check if data is approximately normally distributed?</span>
+                            <i data-lucide="plus" class="w-5 h-5 text-neutral-500 shrink-0 accordion-icon"></i>
+                        </button>
+                        <div class="accordion-content">
+                            <div class="px-5 pb-5 text-neutral-400 text-sm leading-relaxed border-t border-neutral-800/50 pt-4">
+                                You can use visual methods like <strong class="text-white">histograms</strong>, <strong class="text-white">KDE plots</strong>, or <strong class="text-white">Q-Q plots</strong>. Statistical tests like the <strong class="text-white">Shapiro-Wilk test</strong> or <strong class="text-white">Kolmogorov-Smirnov test</strong> can also be used. Skewness and kurtosis values close to 0 and 3 respectively also indicate normality.
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Q9 -->
+                    <div class="bg-neutral-900/50 border border-neutral-800 rounded-xl overflow-hidden">
+                        <button onclick="toggleAccordion(this)" class="w-full flex items-center justify-between p-5 text-left hover:bg-neutral-800/30 transition-colors">
+                            <span class="text-white font-medium text-sm pr-4">9. What are the advantages and disadvantages of capping?</span>
+                            <i data-lucide="plus" class="w-5 h-5 text-neutral-500 shrink-0 accordion-icon"></i>
+                        </button>
+                        <div class="accordion-content">
+                            <div class="px-5 pb-5 text-neutral-400 text-sm leading-relaxed border-t border-neutral-800/50 pt-4">
+                                <strong class="text-lime-400">Advantages:</strong> Preserves dataset size, less information loss, frequently preferred over trimming.<br>
+                                <strong class="text-red-400">Disadvantages:</strong> Distorts the original distribution at the tails, may introduce artificial clustering at boundary values, and can mask the true nature of extreme observations.
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Q10 -->
+                    <div class="bg-neutral-900/50 border border-neutral-800 rounded-xl overflow-hidden">
+                        <button onclick="toggleAccordion(this)" class="w-full flex items-center justify-between p-5 text-left hover:bg-neutral-800/30 transition-colors">
+                            <span class="text-white font-medium text-sm pr-4">10. Which outlier detection method would you choose for skewed data and why?</span>
+                            <i data-lucide="plus" class="w-5 h-5 text-neutral-500 shrink-0 accordion-icon"></i>
+                        </button>
+                        <div class="accordion-content">
+                            <div class="px-5 pb-5 text-neutral-400 text-sm leading-relaxed border-t border-neutral-800/50 pt-4">
+                                I would choose the <strong class="text-white">IQR (Interquartile Range) method</strong> because it uses the median and quartiles, which are robust to skewness. Unlike Z-score, it doesn't assume normality. The Modified Z-Score (using Median Absolute Deviation) is another excellent choice as it's also resistant to the influence of extreme values.
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <div class="section-divider mx-6 lg:mx-12"></div>
+
+        <!-- Key Takeaways -->
+        <section id="takeaways" class="py-24 md:py-32 px-6 lg:px-12">
+            <div class="max-w-4xl mx-auto">
+                <div class="flex items-center gap-3 mb-6">
+                    <div class="w-10 h-10 rounded-xl bg-lime-400/10 border border-lime-400/20 flex items-center justify-center">
+                        <i data-lucide="bookmark" class="w-5 h-5 text-lime-400"></i>
+                    </div>
+                    <span class="font-mono text-xs uppercase tracking-widest text-neutral-500">Final Notes</span>
+                </div>
+                <h2 class="text-3xl md:text-5xl font-medium tracking-tight mb-12">Key Takeaways</h2>
+
+                <div class="space-y-4">
+                    <div class="flex items-start gap-4 p-5 bg-neutral-900/50 border border-neutral-800 rounded-xl card-hover">
+                        <span class="text-lime-400 text-lg shrink-0">✔️</span>
+                        <p class="text-neutral-300 text-sm leading-relaxed">Z-score standardizes data by measuring how far each value is from the mean in terms of standard deviations.</p>
+                    </div>
+                    <div class="flex items-start gap-4 p-5 bg-neutral-900/50 border border-neutral-800 rounded-xl card-hover">
+                        <span class="text-lime-400 text-lg shrink-0">✔️</span>
+                        <p class="text-neutral-300 text-sm leading-relaxed">It is reliable only for <strong class="text-white">normally or approximately normally distributed</strong> features.</p>
+                    </div>
+                    <div class="flex items-start gap-4 p-5 bg-neutral-900/50 border border-neutral-800 rounded-xl card-hover">
+                        <span class="text-lime-400 text-lg shrink-0">✔️</span>
+                        <p class="text-neutral-300 text-sm leading-relaxed">Values outside <strong class="text-white">Mean ± 3 × Standard Deviation</strong> (or with <strong class="text-white">|Z| &gt; 3</strong>) are typically treated as outliers.</p>
+                    </div>
+                    <div class="flex items-start gap-4 p-5 bg-neutral-900/50 border border-neutral-800 rounded-xl card-hover">
+                        <span class="text-lime-400 text-lg shrink-0">✔️</span>
+                        <p class="text-neutral-300 text-sm leading-relaxed">Outliers can be handled by <strong class="text-white">Trimming</strong> (removing rows) or <strong class="text-white">Capping/Winsorization</strong> (replacing extreme values with boundary values).</p>
+                    </div>
+                    <div class="flex items-start gap-4 p-5 bg-neutral-900/50 border border-neutral-800 rounded-xl card-hover">
+                        <span class="text-lime-400 text-lg shrink-0">✔️</span>
+                        <p class="text-neutral-300 text-sm leading-relaxed">Always visualize the distribution (<strong class="text-white">histogram, KDE plot, or Q-Q plot</strong>) before applying the Z-score method to verify the normality assumption.</p>
+                    </div>
+                    <div class="flex items-start gap-4 p-5 bg-neutral-900/50 border border-lime-400/20 rounded-xl card-hover" style="box-shadow: 0 0 20px rgba(132,204,22,0.1);">
+                        <span class="text-lime-400 text-lg shrink-0">✔️</span>
+                        <p class="text-neutral-300 text-sm leading-relaxed">In practice, <strong class="text-lime-400">IQR</strong> is often preferred for skewed data, while <strong class="text-lime-400">Z-score</strong> remains an excellent choice for approximately Gaussian features.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Footer -->
+        <footer class="py-16 px-6 lg:px-12 border-t border-neutral-800/50">
+            <div class="max-w-4xl mx-auto text-center">
+                <div class="flex items-center justify-center gap-3 mb-4">
+                    <div class="w-8 h-8 rounded-lg bg-lime-400 flex items-center justify-center">
+                        <i data-lucide="book-open" class="w-4 h-4 text-black"></i>
+                    </div>
+                    <span class="font-brand font-semibold text-lg tracking-tight">Day 42</span>
+                </div>
+                <p class="text-neutral-500 text-sm mb-6">Outlier Detection & Removal using Z-Score</p>
+                <p class="text-neutral-600 text-xs">Feature Engineering Series — Complete Notes for Data Science Students</p>
+            </div>
+        </footer>
+
+    </main>
+
+    <script>
+        // Initialize Lucide icons
+        lucide.createIcons();
+
+        // Z-Score Calculator
+        const zX = document.getElementById('z-x');
+        const zMean = document.getElementById('z-mean');
+        const zSd = document.getElementById('z-sd');
+        const zResult = document.getElementById('z-result');
+        const zIndicator = document.getElementById('z-indicator');
+        const zVerdict = document.getElementById('z-verdict');
+
+        function updateZScore() {
+            const x = parseFloat(zX.value) || 0;
+            const mean = parseFloat(zMean.value) || 0;
+            const sd = parseFloat(zSd.value) || 1;
+            const z = (x - mean) / sd;
+            zResult.textContent = z.toFixed(2);
+
+            // Map z from [-4, 4] to [0%, 100%]
+            const clamped = Math.max(-4, Math.min(4, z));
+            const percent = ((clamped + 4) / 8) * 100;
+            zIndicator.style.left = `calc(${percent}% - 3px)`;
+
+            const absZ = Math.abs(z);
+            if (absZ > 3) {
+                zResult.className = 'text-2xl font-heading font-semibold text-red-400';
+                zIndicator.style.background = '#EF4444';
+                zIndicator.style.boxShadow = '0 0 10px rgba(239,68,68,0.6)';
+                zVerdict.className = 'text-center text-sm font-medium text-red-400 mt-2';
+                zVerdict.textContent = '⚠️ Outlier! (|Z| > 3)';
+            } else if (absZ > 2) {
+                zResult.className = 'text-2xl font-heading font-semibold text-amber-400';
+                zIndicator.style.background = '#FBBF24';
+                zIndicator.style.boxShadow = '0 0 10px rgba(251,191,36,0.6)';
+                zVerdict.className = 'text-center text-sm font-medium text-amber-400 mt-2';
+                zVerdict.textContent = '⚡ Borderline (2 < |Z| ≤ 3)';
+            } else {
+                zResult.className = 'text-2xl font-heading font-semibold text-lime-400';
+                zIndicator.style.background = '#A3E635';
+                zIndicator.style.boxShadow = '0 0 10px rgba(163,230,53,0.6)';
+                zVerdict.className = 'text-center text-sm font-medium text-lime-400 mt-2';
+                zVerdict.textContent = '✅ Normal observation (|Z| ≤ 2)';
+            }
+        }
+
+        zX.addEventListener('input', updateZScore);
+        zMean.addEventListener('input', updateZScore);
+        zSd.addEventListener('input', updateZScore);
+        updateZScore();
+
+        // Accordion
+        function toggleAccordion(btn) {
+            const content = btn.nextElementSibling;
+            const icon = btn.querySelector('.accordion-icon');
+            const isOpen = content.classList.contains('open');
+
+            // Close all
+            document.querySelectorAll('.accordion-content').forEach(c => c.classList.remove('open'));
+            document.querySelectorAll('.accordion-icon').forEach(i => i.classList.remove('rotated'));
+
+            if (!isOpen) {
+                content.classList.add('open');
+                icon.classList.add('rotated');
+            }
+        }
+
+        // Copy code
+        function copyCode(btn) {
+            const pre = btn.closest('.code-block').querySelector('pre');
+            const text = pre.textContent;
+            navigator.clipboard.writeText(text).then(() => {
+                showToast('Copied to clipboard!');
+            });
+        }
+
+        // Toast
+        function showToast(msg) {
+            const toast = document.getElementById('toast');
+            const toastMsg = document.getElementById('toast-msg');
+            toastMsg.textContent = msg;
+            toast.classList.add('show');
+            setTimeout(() => toast.classList.remove('show'), 2500);
+        }
+
+        // Sidebar active link on scroll
+        const sections = document.querySelectorAll('section[id]');
+        const sidebarLinks = document.querySelectorAll('.sidebar-link');
+
+        window.addEventListener('scroll', () => {
+            let current = '';
+            sections.forEach(section => {
+                const sectionTop = section.offsetTop - 150;
+                if (window.scrollY >= sectionTop) {
+                    current = section.getAttribute('id');
+                }
+            });
+            sidebarLinks.forEach(link => {
+                link.classList.remove('active');
+                if (link.getAttribute('href') === `#${current}`) {
+                    link.classList.add('active');
+                }
+            });
+        });
+
+        // Scroll-triggered fade-in animations
+        const observerOptions = {
+            threshold: 0.1,
+            rootMargin: '0px 0px -50px 0px'
+        };
+
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.style.opacity = '1';
+                    entry.target.style.transform = 'translateY(0)';
+                }
+            });
+        }, observerOptions);
+
+        document.querySelectorAll('section > div').forEach(el => {
+            el.style.opacity = '0';
+            el.style.transform = 'translateY(30px)';
+            el.style.transition = 'opacity 0.8s cubic-bezier(0.2, 0.8, 0.2, 1), transform 0.8s cubic-bezier(0.2, 0.8, 0.2, 1)';
+            observer.observe(el);
+        });
+    </script>
+</body>
+</html>
